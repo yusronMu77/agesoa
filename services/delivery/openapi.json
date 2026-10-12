@@ -1,0 +1,719 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AGESOA delivery",
+    "description": "Audit reports, institution subscriptions with signed webhooks, status and right-of-reply API; agent Report.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Liveness (no dependencies)",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Readiness: own database reachable",
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A dependency is down",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/outbox/sweep": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Publish outbox events left behind (Cloud Scheduler, every minute)",
+        "operationId": "sweep_internal_outbox_sweep_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SweepResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/probe": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Record a system probe decision through the outbox (end-to-end event path check)",
+        "operationId": "probe_internal_probe_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/cases/{case_id}/audit-report": {
+      "get": {
+        "tags": [
+          "audit reports"
+        ],
+        "summary": "Audit report of a case (public once the finding is validated)",
+        "operationId": "get_audit_report_v1_cases__case_id__audit_report_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditReport"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No audit report for this case yet"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cases/{case_id}/status": {
+      "post": {
+        "tags": [
+          "institution API"
+        ],
+        "summary": "Institution updates the follow-up status of a case",
+        "operationId": "update_status_api_v1_cases__case_id__status_post",
+        "security": [
+          {
+            "InstitutionApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Accepted"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet (planned for CP4)"
+          },
+          "401": {
+            "description": "Missing or invalid institution API key"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    },
+    "/api/v1/cases/{case_id}/reply": {
+      "post": {
+        "tags": [
+          "institution API"
+        ],
+        "summary": "Institution submits a right of reply",
+        "operationId": "submit_reply_api_v1_cases__case_id__reply_post",
+        "security": [
+          {
+            "InstitutionApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reply"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Accepted"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet (planned for CP4)"
+          },
+          "401": {
+            "description": "Missing or invalid institution API key"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Accepted": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Received At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "received_at"
+        ],
+        "title": "Accepted"
+      },
+      "Attachment": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "url"
+        ],
+        "title": "Attachment"
+      },
+      "AuditReport": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "root_causes": {
+            "items": {
+              "$ref": "#/components/schemas/RootCause"
+            },
+            "type": "array",
+            "title": "Root Causes"
+          },
+          "recommendations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "domain",
+          "summary",
+          "root_causes",
+          "recommendations",
+          "region",
+          "synthetic",
+          "created_at"
+        ],
+        "title": "AuditReport"
+      },
+      "DatabaseStatus": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "title": "DatabaseStatus"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          },
+          "release": {
+            "type": "string",
+            "title": "Release"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "demo_mode": {
+            "type": "boolean",
+            "title": "Demo Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "status",
+          "release",
+          "environment",
+          "demo_mode"
+        ],
+        "title": "Health"
+      },
+      "ProbeResult": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "decision_id": {
+            "type": "string",
+            "title": "Decision Id"
+          },
+          "published": {
+            "type": "integer",
+            "title": "Published"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "decision_id",
+          "published"
+        ],
+        "title": "ProbeResult"
+      },
+      "Readiness": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "not_ready"
+            ],
+            "title": "Status"
+          },
+          "release": {
+            "type": "string",
+            "title": "Release"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "demo_mode": {
+            "type": "boolean",
+            "title": "Demo Mode"
+          },
+          "database": {
+            "$ref": "#/components/schemas/DatabaseStatus"
+          },
+          "outbox_pending": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outbox Pending"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "status",
+          "release",
+          "environment",
+          "demo_mode",
+          "database"
+        ],
+        "title": "Readiness"
+      },
+      "Reply": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Body"
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            },
+            "type": "array",
+            "title": "Attachments",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "body"
+        ],
+        "title": "Reply"
+      },
+      "RootCause": {
+        "properties": {
+          "statement": {
+            "type": "string",
+            "title": "Statement"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "alleged",
+              "supported",
+              "proven"
+            ],
+            "title": "Status"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Refs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "statement",
+          "status",
+          "evidence_refs"
+        ],
+        "title": "RootCause"
+      },
+      "StatusUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "received",
+              "in_progress",
+              "done"
+            ],
+            "title": "Status"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Note",
+            "default": ""
+          },
+          "internal_ticket": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Ticket"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StatusUpdate"
+      },
+      "SweepResult": {
+        "properties": {
+          "published": {
+            "type": "integer",
+            "title": "Published"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "published",
+          "failed"
+        ],
+        "title": "SweepResult"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "InstitutionApiKey": {
+        "type": "http",
+        "description": "Bearer <institution API key>",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

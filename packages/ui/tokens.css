@@ -1,0 +1,96 @@
+/*
+ * GENERATED FILE - do not edit by hand.
+ * Source: agesoa-uiux/design-system/tokens.json (version 0.2.0, status draft, updated 2026-10-12)
+ * Generator: packages/ui/scripts/build-tokens.ts (bun run --cwd packages/ui build:tokens)
+ */
+
+:root {
+  --ag-color-brand-primary: #4338CA; /* Primary actions, links, focus ring (indigo; provisional). */
+  --ag-color-brand-primary-hover: #3730A3; /* Hover/pressed state of primary actions (indigo 800). */
+  --ag-color-brand-primary-subtle: #E0E7FF;
+  --ag-color-brand-on-primary: #FFFFFF;
+  --ag-color-neutral-text: #0F172A; /* Body text on light surfaces. */
+  --ag-color-neutral-text-muted: #475569;
+  --ag-color-neutral-border: #CBD5E1;
+  --ag-color-neutral-border-strong: #334155;
+  --ag-color-neutral-surface: #FFFFFF;
+  --ag-color-neutral-surface-alt: #F1F5F9;
+  --ag-color-role-warga: #DBEAFE; /* Citizen / reporter (Witness). */
+  --ag-color-role-warga-stroke: #1D4ED8;
+  --ag-color-role-agen-ai: #EDE9FE; /* AI agent output (marked as AI result). */
+  --ag-color-role-agen-ai-stroke: #6D28D9;
+  --ag-color-role-sistem: #F1F5F9; /* Non-AI system step. */
+  --ag-color-role-sistem-stroke: #475569;
+  --ag-color-role-data: #FEF3C7; /* Data store. */
+  --ag-color-role-log-publik: #FDE68A; /* Hash-chained public decision log. */
+  --ag-color-role-validator: #DCFCE7;
+  --ag-color-role-validator-stroke: #15803D;
+  --ag-color-role-instansi: #FFEDD5; /* Institution / organisation. */
+  --ag-color-role-instansi-stroke: #C2410C;
+  --ag-color-role-publik: #CCFBF1; /* Public dashboard. */
+  --ag-color-role-publik-stroke: #0F766E;
+  --ag-color-role-operator: #FCE7F3; /* Operator (/ops). */
+  --ag-color-role-infra: #E0E7FF;
+  --ag-color-role-infra-stroke: #4338CA;
+  --ag-color-evidence-dugaan: #FEF9C3; /* Dugaan — symptom report only. */
+  --ag-color-evidence-didukung-bukti: #DBEAFE; /* Didukung bukti — label photo, testimony, cross-case pattern, news. */
+  --ag-color-evidence-terbukti: #DCFCE7; /* Terbukti — lab result + specimen, after validator quorum. */
+  --ag-color-feedback-danger: #B91C1C;
+  --ag-color-feedback-warning: #B45309;
+  --ag-color-feedback-success: #15803D;
+  --ag-color-feedback-info: #1D4ED8;
+  --ag-color-simulasi-band: #7C2D12; /* Background of the 'SIMULASI – organisasi fiktif' band. */
+  --ag-color-simulasi-on-band: #FFFFFF;
+  --ag-color-bg-canvas: var(--ag-color-neutral-surface-alt);
+  --ag-color-bg-surface: var(--ag-color-neutral-surface);
+  --ag-color-text-primary: var(--ag-color-neutral-text);
+  --ag-color-text-secondary: var(--ag-color-neutral-text-muted);
+  --ag-color-text-on-primary: var(--ag-color-brand-on-primary);
+  --ag-color-text-danger: var(--ag-color-feedback-danger);
+  --ag-color-text-link: var(--ag-color-brand-primary);
+  --ag-color-border-default: var(--ag-color-neutral-border);
+  --ag-color-border-strong: var(--ag-color-neutral-border-strong);
+  --ag-color-action-primary: var(--ag-color-brand-primary);
+  --ag-color-action-primary-hover: var(--ag-color-brand-primary-hover);
+  --ag-color-action-secondary: var(--ag-color-brand-primary-subtle);
+  --ag-color-action-disabled: var(--ag-color-neutral-surface-alt);
+  --ag-color-focus-ring: var(--ag-color-brand-primary);
+  --ag-color-ai-bg: var(--ag-color-role-agen-ai);
+  --ag-color-ai-fg: var(--ag-color-role-agen-ai-stroke);
+  --ag-color-warga-bg: var(--ag-color-role-warga);
+  --ag-color-warga-fg: var(--ag-color-role-warga-stroke);
+  --ag-font-family-sans: "Inter", "Segoe UI", "Roboto", system-ui, sans-serif; /* Provisional; final at CP0. */
+  --ag-font-family-mono: "JetBrains Mono", "Consolas", ui-monospace, monospace; /* Hashes and IDs in the decision log. */
+  --ag-font-weight-regular: 400;
+  --ag-font-weight-medium: 500;
+  --ag-font-weight-bold: 700;
+  --ag-font-size-xs: 12px;
+  --ag-font-size-sm: 14px;
+  --ag-font-size-md: 16px; /* Body; never smaller on Witness. */
+  --ag-font-size-lg: 20px;
+  --ag-font-size-xl: 24px;
+  --ag-font-size-2xl: 32px;
+  --ag-font-line-height-body: 1.5;
+  --ag-font-line-height-heading: 1.25;
+  --ag-space-1: 4px;
+  --ag-space-2: 8px;
+  --ag-space-3: 12px;
+  --ag-space-4: 16px;
+  --ag-space-6: 24px;
+  --ag-space-8: 32px;
+  --ag-space-12: 48px;
+  --ag-size-touch-target-min: 48px; /* Witness touch targets (WCAG 2.2 + Android guideline). */
+  --ag-radius-sm: 4px;
+  --ag-radius-md: 8px;
+  --ag-radius-lg: 16px;
+  --ag-radius-pill: 9999px;
+  --ag-elevation-1: 0px 1px 3px 0px #0F172A1A;
+  --ag-elevation-2: 0px 4px 12px 0px #0F172A26;
+
+  /* English aliases */
+  --ag-color-evidence-alleged: var(--ag-color-evidence-dugaan);
+  --ag-color-evidence-supported: var(--ag-color-evidence-didukung-bukti);
+  --ag-color-evidence-proven: var(--ag-color-evidence-terbukti);
+  --ag-color-simulation-band: var(--ag-color-simulasi-band);
+  --ag-color-simulation-on-band: var(--ag-color-simulasi-on-band);
+}

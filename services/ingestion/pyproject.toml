@@ -1,0 +1,18 @@
+[project]
+name = "agesoa-ingestion"
+version = "0.1.0"
+description = "Citizen reports (drafts, corrections, media, privacy guard) and public signals; agents Intake and Signal."
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "agesoa-platform",
+  "agesoa-contracts",
+  "agesoa-packs",
+  "google-adk~=2.11.0",
+]
+
+[build-system]
+requires = ["hatchling~=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agesoa_ingestion"]

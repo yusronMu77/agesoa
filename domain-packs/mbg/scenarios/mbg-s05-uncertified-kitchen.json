@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "id": "mbg-s05-uncertified-kitchen",
+  "pack": "mbg",
+  "synthetic": true,
+  "title": { "en": "The third incident at an uncertified kitchen", "id": "Insiden ketiga di dapur tanpa sertifikat higiene" },
+  "summary": {
+    "en": "A kitchen without a hygiene certificate has its third incident in two months; the first two were closed as isolated cases.",
+    "id": "Dapur tanpa sertifikat laik higiene mengalami insiden ketiga dalam dua bulan; dua insiden sebelumnya ditutup sebagai kasus tunggal."
+  },
+  "region": { "regency_code": null, "regency_name": "Kabupaten Sukamaju (fictional)", "district_code": null, "district_name": "Kecamatan Wanasekar (fictional)" },
+  "reports": [
+    {
+      "ref": "r1",
+      "category": "poisoning",
+      "received_at": "2026-10-13T12:10:00+07:00",
+      "fields": {
+        "school": "SDN Wanasekar 1 (fictional)",
+        "kitchen": "SPPG Wanasekar (fictional)",
+        "menu": "Nasi, rendang daging, capcay, apel",
+        "cooked_at": "2026-10-13T05:30:00+07:00",
+        "eaten_at": "2026-10-13T09:50:00+07:00",
+        "meal_date": "2026-10-13",
+        "symptoms": ["vomiting", "dizziness"],
+        "affected_count": 27,
+        "tray_label_text": "Masak 05.30"
+      },
+      "evidence": [
+        { "kind": "photo", "label": "Open drain running beside the cooking area", "captured_at": "2026-10-13T06:10:00+07:00" }
+      ],
+      "narrative": "Ini sudah ketiga kalinya sejak Agustus. Dapurnya dekat selokan terbuka dan setahu kami belum punya sertifikat."
+    },
+    {
+      "ref": "r2",
+      "category": "kitchen_hygiene",
+      "received_at": "2026-10-13T15:30:00+07:00",
+      "fields": {
+        "school": "SDN Wanasekar 3 (fictional)",
+        "kitchen": "SPPG Wanasekar (fictional)",
+        "cooked_at": "2026-10-13T05:30:00+07:00",
+        "eaten_at": "2026-10-13T09:10:00+07:00",
+        "symptoms": ["dizziness"],
+        "affected_count": 4
+      },
+      "evidence": [
+        { "kind": "document", "label": "Kitchen notice board without a hygiene certificate (SLHS)", "captured_at": "2026-10-13T14:00:00+07:00" }
+      ]
+    }
+  ],
+  "signals": [
+    {
+      "ref": "s1",
+      "source_kind": "news",
+      "publisher": "Kabar Sukamaju (fictional)",
+      "published_at": "2026-08-21T15:00:00+07:00",
+      "headline": "Sembilan siswa Wanasekar mual, dinas sebut kasus tunggal",
+      "excerpt": "Dinas menyatakan kejadian bersifat insidental dan dapur tetap beroperasi."
+    },
+    {
+      "ref": "s2",
+      "source_kind": "news",
+      "publisher": "Warta Tirtasari (fictional)",
+      "published_at": "2026-09-18T13:00:00+07:00",
+      "headline": "Keluhan kedua dari dapur MBG Wanasekar, belum ada inspeksi",
+      "excerpt": "Belum ada jadwal inspeksi ke dapur. Pengelola mengaku sertifikat laik higiene masih dalam proses."
+    },
+    {
+      "ref": "s3",
+      "source_kind": "official",
+      "publisher": "Koordinator Wilayah MBG Sukamaju (fictional)",
+      "published_at": "2026-10-13T18:00:00+07:00",
+      "headline": "Siswa makan terlambat, dapur diminta tepat waktu",
+      "excerpt": "Makanan dikonsumsi lewat dari empat jam. Dapur diminta mempercepat distribusi."
+    }
+  ],
+  "witness_script": [
+    { "witness_role": "kitchen_staff", "question": "Apakah dapur sudah memiliki sertifikat laik higiene sanitasi?", "answer": "Belum. Sudah diajukan sejak Juli, tapi belum pernah ada petugas yang datang memeriksa." },
+    { "witness_role": "teacher", "question": "Apa tindak lanjut setelah kejadian Agustus dan September?", "answer": "Tidak ada. Dua-duanya disebut kasus tunggal, dapurnya jalan terus seperti biasa." },
+    { "witness_role": "parent", "question": "Bagaimana kondisi sekitar dapur?", "answer": "Ada selokan terbuka di samping tempat masak, kalau hujan airnya meluap." }
+  ],
+  "answer_key": {
+    "root_cause": {
+      "branch": "oversight",
+      "statement": "An uncertified kitchen keeps operating; earlier incidents were closed as isolated without inspection, so the hygiene problem is never fixed.",
+      "keywords": ["certificate", "inspection", "oversight", "follow-up", "sertifikat", "inspeksi", "pengawasan", "SLHS"]
+    },
+    "contributing": [
+      { "branch": "facility", "statement": "Open drain beside the cooking area." },
+      { "branch": "distribution", "statement": "Meals eaten 4 h 20 min after cooking on the latest day." }
+    ],
+    "expected_rule_violations": ["consume_within_4h"],
+    "pattern": "Third incident at the same kitchen in two months; each was closed as a one-off, nobody linked them.",
+    "distractors": ["Late eating time alone (it was late once, but the earlier incidents were on time)."]
+  }
+}

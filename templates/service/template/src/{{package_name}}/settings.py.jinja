@@ -1,0 +1,27 @@
+from functools import cache
+{%- if with_agent %}
+from pathlib import Path
+{%- endif %}
+
+from agesoa_platform.settings import ServiceSettings
+
+from {{ package_name }} import SERVICE
+
+{%- if with_agent %}
+
+# <repo>/domain-packs, both in a checkout and in the image (/app keeps the repository layout).
+REPO_DOMAIN_PACKS = Path(__file__).resolve().parents[4] / "domain-packs"
+{%- endif %}
+
+
+class Settings(ServiceSettings):
+    service_name: str = SERVICE
+{%- if with_agent %}
+    domain_packs_dir: Path = REPO_DOMAIN_PACKS
+    gemini_model: str = "gemini-3.8-flash"
+{%- endif %}
+
+
+@cache
+def get_settings() -> Settings:
+    return Settings()  # type: ignore[call-arg]  # DATABASE_URL comes from the environment

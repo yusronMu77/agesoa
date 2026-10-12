@@ -1,0 +1,29 @@
+from fastapi import FastAPI
+
+from agesoa_platform.app import create_app
+
+from {{ package_name }} import __version__
+from {{ package_name }}.api import router
+from {{ package_name }}.events import HANDLERS
+from {{ package_name }}.settings import Settings, get_settings
+
+DESCRIPTION = "{{ description }}"
+
+
+def build_app(settings: Settings | None = None) -> FastAPI:
+    return create_app(
+        settings=settings or get_settings(),
+        title="AGESOA {{ service_name }}",
+        description=DESCRIPTION,
+        version=__version__,
+        routers=[router],
+        event_handlers=HANDLERS,
+    )
+
+
+def __getattr__(name: str) -> FastAPI:
+    # `uvicorn {{ package_name }}.main:app` builds the app lazily, so importing this module needs no environment.
+    if name == "app":
+        globals()["app"] = application = build_app()
+        return application
+    raise AttributeError(name)

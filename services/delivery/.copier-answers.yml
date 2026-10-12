@@ -1,0 +1,9 @@
+# Changes here will be overwritten by Copier; do not edit manually.
+_src_path: templates/service
+database_name: delivery
+description: Audit reports, institution subscriptions with signed webhooks, status
+    and right-of-reply API; agent Report.
+package_name: agesoa_delivery
+port: 8004
+service_name: delivery
+with_agent: true

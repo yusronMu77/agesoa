@@ -1,0 +1,17 @@
+# Copy to demo.tfvars (gitignored) and fill in.
+project_id = "your-gcp-project-id"
+
+# The demo environment shows fictional data behind the SIMULASI band.
+demo_mode = true
+
+# Who may impersonate agesoa-ops (probe, manual sweep).
+operators = ["user:you@example.com"]
+
+# Budget: billing account id and its currency. Empty billing_account = no budget.
+billing_account = ""
+budget_amount   = 75
+budget_currency = "USD"
+alert_email     = ""
+
+# Set to false only for a throwaway project you want `tofu destroy` to remove completely.
+deletion_protection = true

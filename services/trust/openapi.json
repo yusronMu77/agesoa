@@ -1,0 +1,583 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AGESOA trust",
+    "description": "Organizations, validators, staff confirmation, validation routing and quorum; agent Role.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Liveness (no dependencies)",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Readiness: own database reachable",
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A dependency is down",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/outbox/sweep": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Publish outbox events left behind (Cloud Scheduler, every minute)",
+        "operationId": "sweep_internal_outbox_sweep_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SweepResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/probe": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Record a system probe decision through the outbox (end-to-end event path check)",
+        "operationId": "probe_internal_probe_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/validation-requests": {
+      "get": {
+        "tags": [
+          "validation"
+        ],
+        "summary": "Findings waiting for validation",
+        "operationId": "list_requests_v1_validation_requests_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationRequest"
+                  },
+                  "type": "array",
+                  "title": "Response List Requests V1 Validation Requests Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/validation-requests/{finding_id}/decisions": {
+      "post": {
+        "tags": [
+          "validation"
+        ],
+        "summary": "Approve or reject a finding; quorum is evaluated by code",
+        "operationId": "decide_v1_validation_requests__finding_id__decisions_post",
+        "parameters": [
+          {
+            "name": "finding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Finding Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionOut"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet (planned for CP2)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DatabaseStatus": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "title": "DatabaseStatus"
+      },
+      "DecisionIn": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject"
+            ],
+            "title": "Decision"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Note",
+            "default": ""
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision"
+        ],
+        "title": "DecisionIn"
+      },
+      "DecisionOut": {
+        "properties": {
+          "finding_id": {
+            "type": "string",
+            "title": "Finding Id"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject"
+            ],
+            "title": "Decision"
+          },
+          "quorum_reached": {
+            "type": "boolean",
+            "title": "Quorum Reached"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "approved",
+                  "rejected"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          }
+        },
+        "type": "object",
+        "required": [
+          "finding_id",
+          "decision",
+          "quorum_reached",
+          "outcome"
+        ],
+        "title": "DecisionOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          },
+          "release": {
+            "type": "string",
+            "title": "Release"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "demo_mode": {
+            "type": "boolean",
+            "title": "Demo Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "status",
+          "release",
+          "environment",
+          "demo_mode"
+        ],
+        "title": "Health"
+      },
+      "ProbeResult": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "decision_id": {
+            "type": "string",
+            "title": "Decision Id"
+          },
+          "published": {
+            "type": "integer",
+            "title": "Published"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "decision_id",
+          "published"
+        ],
+        "title": "ProbeResult"
+      },
+      "Readiness": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "not_ready"
+            ],
+            "title": "Status"
+          },
+          "release": {
+            "type": "string",
+            "title": "Release"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "demo_mode": {
+            "type": "boolean",
+            "title": "Demo Mode"
+          },
+          "database": {
+            "$ref": "#/components/schemas/DatabaseStatus"
+          },
+          "outbox_pending": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outbox Pending"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "status",
+          "release",
+          "environment",
+          "demo_mode",
+          "database"
+        ],
+        "title": "Readiness"
+      },
+      "SweepResult": {
+        "properties": {
+          "published": {
+            "type": "integer",
+            "title": "Published"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "published",
+          "failed"
+        ],
+        "title": "SweepResult"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ValidationRequest": {
+        "properties": {
+          "finding_id": {
+            "type": "string",
+            "title": "Finding Id"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "statement": {
+            "type": "string",
+            "title": "Statement"
+          },
+          "status_label": {
+            "type": "string",
+            "enum": [
+              "alleged",
+              "supported",
+              "proven"
+            ],
+            "title": "Status Label"
+          },
+          "required_roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Required Roles"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Refs"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "approved",
+                  "rejected"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Received At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "finding_id",
+          "case_id",
+          "domain",
+          "statement",
+          "status_label",
+          "required_roles",
+          "evidence_refs",
+          "outcome",
+          "synthetic",
+          "received_at"
+        ],
+        "title": "ValidationRequest"
+      }
+    }
+  }
+}

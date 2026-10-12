@@ -1,0 +1,48 @@
+# uv workspace root (virtual: nothing is built from here). Every Python package in the monorepo is a member.
+[project]
+name = "agesoa-workspace"
+version = "0.0.0"
+requires-python = ">=3.13,<3.14"
+
+[dependency-groups]
+dev = [
+  "pytest~=9.1",
+  "pytest-asyncio~=1.4",
+  "httpx~=0.28",
+  "ruff~=0.17",
+  "copier~=9.18",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = [
+  "packages/contracts",
+  "libs/platform-py",
+  "libs/pack-core",
+  "services/*",
+]
+
+[tool.uv.sources]
+agesoa-contracts = { workspace = true }
+agesoa-platform = { workspace = true }
+agesoa-packs = { workspace = true }
+
+[tool.ruff]
+line-length = 110
+target-version = "py313"
+extend-exclude = ["templates/service/template"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "S", "RUF"]
+ignore = ["S101", "RUF001", "RUF002", "RUF003", "E501"]  # line length: ruff format
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S105", "S106"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+addopts = "--import-mode=importlib"

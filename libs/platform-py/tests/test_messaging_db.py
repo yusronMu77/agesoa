@@ -1,0 +1,106 @@
+"""Outbox + inbox against a real Postgres (isolated schema). Skipped unless TEST_DATABASE_URL is set."""
+
+import json
+import os
+import uuid
+from pathlib import Path
+
+import pytest
+from agesoa_platform.db import Database
+from agesoa_platform.events import new_event
+from agesoa_platform.inbox import process_once
+from agesoa_platform.messaging_tables import inbox, metadata, outbox
+from agesoa_platform.outbox import OutboxDispatcher, add_event
+from agesoa_platform.settings import ServiceSettings
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import create_async_engine
+
+URL = os.environ.get("TEST_DATABASE_URL")
+pytestmark = pytest.mark.skipif(not URL, reason="TEST_DATABASE_URL not set")
+EXAMPLES = Path(__file__).resolve().parents[3] / "packages" / "contracts" / "events" / "examples"
+
+
+class FakePublisher:
+    def __init__(self, fail_first: int = 0):
+        self.sent: list[dict] = []
+        self.fail_first = fail_first
+
+    async def publish(self, event):
+        if self.fail_first:
+            self.fail_first -= 1
+            raise RuntimeError("pubsub down")
+        self.sent.append(event)
+        return str(len(self.sent))
+
+
+@pytest.fixture
+async def db():
+    schema = f"pytest_{uuid.uuid4().hex[:8]}"
+    admin = create_async_engine(URL)
+    async with admin.begin() as conn:
+        await conn.execute(text(f'create schema "{schema}"'))
+    database = Database(ServiceSettings(service_name="trust", database_url=URL, db_search_path=schema))
+    async with database.engine.begin() as conn:
+        await conn.run_sync(metadata.create_all)
+    yield database
+    await database.dispose()
+    async with admin.begin() as conn:
+        await conn.execute(text(f'drop schema "{schema}" cascade'))
+    await admin.dispose()
+
+
+def decision():
+    data = json.loads((EXAMPLES / "keputusan.dicatat.json").read_text(encoding="utf-8"))["data"]
+    return new_event("keputusan.dicatat", source="trust", subject="F-1", data=data)
+
+
+async def test_outbox_publishes_after_commit_and_retries_failures(db):
+    publisher = FakePublisher(fail_first=1)
+    dispatcher = OutboxDispatcher(db, publisher)
+    event = decision()
+    async with db.transaction() as session:
+        await add_event(session, event)
+    assert await dispatcher.pending() == 1
+    assert await dispatcher.dispatch() == {"published": 0, "failed": 1}
+    assert await dispatcher.dispatch() == {"published": 1, "failed": 0}
+    assert publisher.sent == [event]
+    assert await dispatcher.pending() == 0
+    async with db.sessions() as session:
+        row = (await session.execute(select(outbox.c.attempts, outbox.c.last_error))).one()
+    assert row == (2, None)
+
+
+async def test_rolled_back_unit_of_work_leaves_no_event(db):
+    with pytest.raises(RuntimeError):
+        async with db.transaction() as session:
+            await add_event(session, decision())
+            raise RuntimeError("business error")
+    assert await OutboxDispatcher(db, FakePublisher()).pending() == 0
+
+
+async def test_inbox_runs_handler_once_per_event_id(db):
+    calls = []
+
+    async def handler(session, event):
+        calls.append(event["id"])
+
+    event = decision()
+    assert await process_once(db, event, handler) is True
+    assert await process_once(db, event, handler) is False
+    assert calls == [event["id"]]
+    async with db.sessions() as session:
+        assert (await session.execute(select(inbox.c.event_id))).scalars().all() == [event["id"]]
+
+
+async def test_failed_handler_does_not_mark_event_processed(db):
+    async def broken(session, event):
+        raise RuntimeError("boom")
+
+    event = decision()
+    with pytest.raises(RuntimeError):
+        await process_once(db, event, broken)
+
+    async def ok(session, event):
+        return None
+
+    assert await process_once(db, event, ok) is True

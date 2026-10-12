@@ -1,0 +1,19 @@
+"""Write services/{{ service_name }}/openapi.json from the code: uv run python -m {{ package_name }}.export_openapi"""
+
+from pathlib import Path
+
+from agesoa_platform.app import export_openapi
+
+from {{ package_name }}.main import build_app
+from {{ package_name }}.settings import Settings
+
+OPENAPI_FILE = Path(__file__).resolve().parents[2] / "openapi.json"
+
+
+def offline_app():
+    return build_app(Settings(database_url="postgresql+asyncpg://export@localhost/export"))
+
+
+if __name__ == "__main__":
+    export_openapi(offline_app(), OPENAPI_FILE)
+    print(f"wrote {OPENAPI_FILE}")

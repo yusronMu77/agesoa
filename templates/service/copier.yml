@@ -1,0 +1,33 @@
+# Template for an AGESOA service: FastAPI + ADK 2.x + Alembic + uv + Dockerfile, wired to libs/platform-py.
+#   uv run copier copy --trust templates/service services/<name> --data service_name=<name> --data port=<port>
+# Update an existing service after the template changed:
+#   uv run copier update services/<name>
+_subdirectory: template
+_templates_suffix: .jinja
+_answers_file: .copier-answers.yml
+
+service_name:
+  type: str
+  help: Service name in kebab-case (also the CloudEvents source and the Postgres database owner)
+  validator: "{% if not (service_name | regex_search('^[a-z][a-z-]*[a-z]$')) %}kebab-case only{% endif %}"
+
+package_name:
+  type: str
+  default: "agesoa_{{ service_name | replace('-', '_') }}"
+
+database_name:
+  type: str
+  default: "{{ service_name | replace('-', '_') }}"
+
+description:
+  type: str
+  help: One sentence on the domain this service owns
+
+port:
+  type: int
+  help: Local port (ingestion 8001, case-audit 8002, trust 8003, delivery 8004, transparency 8005)
+
+with_agent:
+  type: bool
+  default: true
+  help: Does this service host ADK agents?

@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "id": "mbg-s01-long-route",
+  "pack": "mbg",
+  "synthetic": true,
+  "title": { "en": "Sick pupils at the end of a long delivery route", "id": "Siswa sakit di ujung rute antar yang panjang" },
+  "summary": {
+    "en": "One kitchen cooks for four schools on a two-hour route. Pupils at the last stops fall ill; the first stop does not.",
+    "id": "Satu dapur memasak untuk empat sekolah dengan rute dua jam. Siswa di sekolah terakhir sakit, sekolah pertama tidak."
+  },
+  "region": { "regency_code": null, "regency_name": "Kabupaten Sukamaju (fictional)", "district_code": null, "district_name": "Kecamatan Cibening (fictional)" },
+  "reports": [
+    {
+      "ref": "r1",
+      "category": "poisoning",
+      "received_at": "2026-10-05T11:40:00+07:00",
+      "fields": {
+        "school": "SDN Cibening 3 (fictional)",
+        "kitchen": "SPPG Cibening (fictional)",
+        "menu": "Nasi, pepes ikan, tumis kangkung, pisang",
+        "cooked_at": "2026-10-05T03:10:00+07:00",
+        "eaten_at": "2026-10-05T09:55:00+07:00",
+        "meal_date": "2026-10-05",
+        "symptoms": ["nausea", "vomiting", "diarrhea"],
+        "affected_count": 31,
+        "tray_label_text": "Masak 03.10 / Habis 07.10"
+      },
+      "evidence": [
+        { "kind": "photo", "label": "Tray label: cooked 03:10, consume before 07:10", "captured_at": "2026-10-05T10:20:00+07:00" },
+        { "kind": "voice_note", "label": "Teacher describing when the food arrived", "captured_at": "2026-10-05T11:35:00+07:00" }
+      ],
+      "narrative": "Makanan baru sampai jam setengah sepuluh, label di ompreng tulisannya dimasak jam 3 pagi. Siang ini 31 anak mual dan muntah."
+    },
+    {
+      "ref": "r2",
+      "category": "poisoning",
+      "received_at": "2026-10-05T14:05:00+07:00",
+      "fields": {
+        "school": "SDN Cibening 4 (fictional)",
+        "kitchen": "SPPG Cibening (fictional)",
+        "cooked_at": "2026-10-05T03:10:00+07:00",
+        "eaten_at": "2026-10-05T09:20:00+07:00",
+        "symptoms": ["nausea", "stomach_ache"],
+        "affected_count": 12
+      },
+      "evidence": [
+        { "kind": "photo", "label": "Delivery van arriving at the school gate, clock on the wall at 09:12", "captured_at": "2026-10-05T09:12:00+07:00" }
+      ],
+      "narrative": "Anak saya sakit perut setelah makan MBG. Mobilnya datang sudah jam 9 lewat."
+    }
+  ],
+  "signals": [
+    {
+      "ref": "s1",
+      "source_kind": "news",
+      "publisher": "Kabar Sukamaju (fictional)",
+      "published_at": "2026-10-05T16:30:00+07:00",
+      "headline": "43 siswa di Cibening mual usai makan bergizi gratis",
+      "excerpt": "Puluhan siswa dua SD di Kecamatan Cibening dilarikan ke puskesmas. Siswa SDN Cibening 1, sekolah pertama yang menerima makanan dari dapur yang sama, tidak mengalami keluhan."
+    },
+    {
+      "ref": "s2",
+      "source_kind": "official",
+      "publisher": "Dinas Kesehatan Kabupaten Sukamaju (fictional)",
+      "published_at": "2026-10-06T09:00:00+07:00",
+      "headline": "Dinkes duga ikan dari pemasok tidak segar",
+      "excerpt": "Dugaan awal, bahan ikan dari pemasok tidak dalam kondisi segar. Sampel makanan sedang diuji laboratorium."
+    }
+  ],
+  "witness_script": [
+    { "witness_role": "teacher", "question": "Jam berapa makanan tiba di sekolah, dan apakah sekolah lain menerima lebih dulu?", "answer": "Sekitar jam setengah sepuluh. Mobilnya mampir ke SDN Cibening 1 dan 2 dulu, kami selalu yang terakhir." },
+    { "witness_role": "kitchen_staff", "question": "Kapan dapur mulai memasak untuk empat sekolah itu?", "answer": "Jam tiga pagi, supaya semua ompreng siap sebelum mobil berangkat jam lima. Rutenya hampir dua jam." },
+    { "witness_role": "teacher", "question": "Apakah siswa SDN Cibening 1 makan menu yang sama?", "answer": "Sama persis, ikannya juga sama. Di sana tidak ada yang sakit, mereka makan jam tujuh kurang." }
+  ],
+  "answer_key": {
+    "root_cause": {
+      "branch": "distribution",
+      "statement": "One kitchen serves schools beyond what a 4-hour cook-to-eat window allows: the last stops eat 6+ hours after cooking.",
+      "keywords": ["route", "distance", "delivery", "last stop", "rute", "jarak", "antar"]
+    },
+    "contributing": [
+      { "branch": "process", "statement": "The whole route is cooked in one 03:00 batch instead of staggered batches per stop." },
+      { "branch": "oversight", "statement": "The service area was extended without checking travel time against the 4-hour rule." }
+    ],
+    "expected_rule_violations": ["consume_within_4h"],
+    "pattern": "Illness clusters at the last schools on the route and recurs whenever schools are added to the same kitchen.",
+    "distractors": ["Spoiled fish from the supplier (the first school ate the same fish without symptoms)."]
+  }
+}

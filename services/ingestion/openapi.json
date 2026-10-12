@@ -1,0 +1,1419 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AGESOA ingestion",
+    "description": "Citizen reports (drafts, corrections, media, privacy guard) and public signals; agents Intake and Signal.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Liveness (no dependencies)",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Readiness: own database reachable",
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A dependency is down",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/outbox/sweep": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Publish outbox events left behind (Cloud Scheduler, every minute)",
+        "operationId": "sweep_internal_outbox_sweep_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SweepResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/probe": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Record a system probe decision through the outbox (end-to-end event path check)",
+        "operationId": "probe_internal_probe_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/domain-packs": {
+      "get": {
+        "tags": [
+          "domain packs"
+        ],
+        "summary": "Domain packs loaded by the core engine",
+        "operationId": "list_packs_v1_domain_packs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DomainPackSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Packs V1 Domain Packs Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/domain-packs/{pack_id}": {
+      "get": {
+        "tags": [
+          "domain packs"
+        ],
+        "summary": "Full pack document (categories, report fields, rules, cause framework, ...)",
+        "operationId": "get_pack_v1_domain_packs__pack_id__get",
+        "parameters": [
+          {
+            "name": "pack_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pack Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Pack V1 Domain Packs  Pack Id  Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown pack"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/domain-packs/{pack_id}/evaluate": {
+      "post": {
+        "tags": [
+          "domain packs"
+        ],
+        "summary": "Evaluate the pack's rules and evidence deadline for a set of report fields",
+        "operationId": "evaluate_v1_domain_packs__pack_id__evaluate_post",
+        "parameters": [
+          {
+            "name": "pack_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pack Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluateResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown pack"
+          },
+          "422": {
+            "description": "Invalid fields (e.g. datetime without offset)"
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    },
+    "/v1/reports": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Start a report draft",
+        "operationId": "create_report_v1_reports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet (planned for CP1)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    },
+    "/v1/reports/{report_id}": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Read one of my reports",
+        "operationId": "get_report_v1_reports__report_id__get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet (planned for CP1)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Correct a draft",
+        "operationId": "patch_report_v1_reports__report_id__patch",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet (planned for CP1)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    },
+    "/v1/reports/{report_id}/media": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Get a signed upload URL",
+        "operationId": "request_upload_v1_reports__report_id__media_post",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaUpload"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet (planned for CP1)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    },
+    "/v1/reports/{report_id}/submit": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Confirm the draft; publishes laporan.diterima",
+        "operationId": "submit_report_v1_reports__report_id__submit_post",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet (planned for CP1)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/demo/scenarios": {
+      "get": {
+        "tags": [
+          "demo"
+        ],
+        "summary": "Synthetic scenarios (demo_mode only)",
+        "operationId": "list_scenarios_v1_demo_scenarios_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScenarioSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Scenarios V1 Demo Scenarios Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (also returned for every route when demo_mode is off)"
+          }
+        }
+      }
+    },
+    "/v1/demo/scenarios/{scenario_id}": {
+      "get": {
+        "tags": [
+          "demo"
+        ],
+        "summary": "One synthetic scenario without its answer key (demo_mode only)",
+        "operationId": "get_scenario_v1_demo_scenarios__scenario_id__get",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Scenario V1 Demo Scenarios  Scenario Id  Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (also returned for every route when demo_mode is off)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DatabaseStatus": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "title": "DatabaseStatus"
+      },
+      "DomainPackSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "name": {
+            "$ref": "#/components/schemas/Label"
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Categories"
+          },
+          "rules": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Rules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "name",
+          "categories",
+          "rules"
+        ],
+        "title": "DomainPackSummary"
+      },
+      "EvaluateRequest": {
+        "properties": {
+          "fields": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Fields",
+            "description": "Report fields keyed by the pack's report_fields ids; datetimes in ISO 8601 with offset"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Received At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fields",
+          "received_at"
+        ],
+        "title": "EvaluateRequest"
+      },
+      "EvaluateResponse": {
+        "properties": {
+          "rule_results": {
+            "items": {
+              "$ref": "#/components/schemas/RuleResultOut"
+            },
+            "type": "array",
+            "title": "Rule Results"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/EvidenceStatusOut"
+          },
+          "evidence_tips": {
+            "items": {
+              "$ref": "#/components/schemas/Label"
+            },
+            "type": "array",
+            "title": "Evidence Tips",
+            "description": "Shown to the reporter while physical evidence is still available"
+          },
+          "missing_required": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Required"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rule_results",
+          "evidence",
+          "evidence_tips",
+          "missing_required"
+        ],
+        "title": "EvaluateResponse"
+      },
+      "EvidenceOut": {
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "title": "Evidence Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "photo",
+              "audio",
+              "video",
+              "screenshot"
+            ],
+            "title": "Kind"
+          },
+          "media_type": {
+            "type": "string",
+            "title": "Media Type"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evidence_id",
+          "kind",
+          "media_type",
+          "sha256"
+        ],
+        "title": "EvidenceOut"
+      },
+      "EvidenceStatusOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "likely_lost",
+              "unknown"
+            ],
+            "title": "Status"
+          },
+          "deadline_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline At"
+          },
+          "max_finding_status": {
+            "type": "string",
+            "enum": [
+              "alleged",
+              "supported",
+              "proven"
+            ],
+            "title": "Max Finding Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "deadline_at",
+          "max_finding_status"
+        ],
+        "title": "EvidenceStatusOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          },
+          "release": {
+            "type": "string",
+            "title": "Release"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "demo_mode": {
+            "type": "boolean",
+            "title": "Demo Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "status",
+          "release",
+          "environment",
+          "demo_mode"
+        ],
+        "title": "Health"
+      },
+      "Label": {
+        "properties": {
+          "en": {
+            "type": "string",
+            "title": "En"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "en",
+          "id"
+        ],
+        "title": "Label"
+      },
+      "MediaUpload": {
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "title": "Evidence Id"
+          },
+          "upload_url": {
+            "type": "string",
+            "title": "Upload Url",
+            "description": "Signed URL for a single PUT"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evidence_id",
+          "upload_url",
+          "expires_at"
+        ],
+        "title": "MediaUpload"
+      },
+      "MediaUploadRequest": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "photo",
+              "audio",
+              "video",
+              "screenshot"
+            ],
+            "title": "Kind"
+          },
+          "media_type": {
+            "type": "string",
+            "title": "Media Type",
+            "examples": [
+              "image/jpeg",
+              "audio/webm"
+            ]
+          },
+          "size_bytes": {
+            "type": "integer",
+            "maximum": 52428800.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Size Bytes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "media_type",
+          "size_bytes"
+        ],
+        "title": "MediaUploadRequest"
+      },
+      "ProbeResult": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "decision_id": {
+            "type": "string",
+            "title": "Decision Id"
+          },
+          "published": {
+            "type": "integer",
+            "title": "Published"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "decision_id",
+          "published"
+        ],
+        "title": "ProbeResult"
+      },
+      "Readiness": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "not_ready"
+            ],
+            "title": "Status"
+          },
+          "release": {
+            "type": "string",
+            "title": "Release"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "demo_mode": {
+            "type": "boolean",
+            "title": "Demo Mode"
+          },
+          "database": {
+            "$ref": "#/components/schemas/DatabaseStatus"
+          },
+          "outbox_pending": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outbox Pending"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "status",
+          "release",
+          "environment",
+          "demo_mode",
+          "database"
+        ],
+        "title": "Readiness"
+      },
+      "Report": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "submitted",
+              "withdrawn"
+            ],
+            "title": "Status"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "narrative": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narrative"
+          },
+          "fields": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Fields"
+          },
+          "missing_required": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Required"
+          },
+          "rule_results": {
+            "items": {
+              "$ref": "#/components/schemas/RuleResultOut"
+            },
+            "type": "array",
+            "title": "Rule Results"
+          },
+          "evidence_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceStatusOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_tips": {
+            "items": {
+              "$ref": "#/components/schemas/Label"
+            },
+            "type": "array",
+            "title": "Evidence Tips"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceOut"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/agesoa_ingestion__api__Region"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "domain",
+          "category",
+          "narrative",
+          "fields",
+          "missing_required",
+          "rule_results",
+          "evidence_status",
+          "evidence_tips",
+          "evidence",
+          "region",
+          "created_at",
+          "updated_at",
+          "submitted_at"
+        ],
+        "title": "Report"
+      },
+      "ReportCreate": {
+        "properties": {
+          "domain": {
+            "type": "string",
+            "title": "Domain",
+            "default": "mbg"
+          },
+          "narrative": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narrative"
+          },
+          "shared_post_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared Post Url",
+            "description": "Link to a social post the reporter shares"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location",
+            "description": "Approximate [lat, lon]; converted to a district on arrival and never stored"
+          }
+        },
+        "type": "object",
+        "title": "ReportCreate"
+      },
+      "ReportPatch": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields"
+          },
+          "narrative": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narrative"
+          }
+        },
+        "type": "object",
+        "title": "ReportPatch"
+      },
+      "RuleResultOut": {
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "title": "Rule Id"
+          },
+          "violated": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Violated",
+            "description": "null when the rule could not be evaluated (missing field)"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rule_id",
+          "violated",
+          "detail"
+        ],
+        "title": "RuleResultOut"
+      },
+      "ScenarioSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "pack": {
+            "type": "string",
+            "title": "Pack"
+          },
+          "title": {
+            "$ref": "#/components/schemas/Label"
+          },
+          "region": {
+            "$ref": "#/components/schemas/agesoa_ingestion__demo__Region"
+          },
+          "reports": {
+            "type": "integer",
+            "title": "Reports"
+          },
+          "signals": {
+            "type": "integer",
+            "title": "Signals"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "pack",
+          "title",
+          "region",
+          "reports",
+          "signals",
+          "synthetic"
+        ],
+        "title": "ScenarioSummary"
+      },
+      "SweepResult": {
+        "properties": {
+          "published": {
+            "type": "integer",
+            "title": "Published"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "published",
+          "failed"
+        ],
+        "title": "SweepResult"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "agesoa_ingestion__api__Region": {
+        "properties": {
+          "regency_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regency Code"
+          },
+          "regency_name": {
+            "type": "string",
+            "title": "Regency Name"
+          },
+          "district_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District Code"
+          },
+          "district_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "regency_name"
+        ],
+        "title": "Region"
+      },
+      "agesoa_ingestion__demo__Region": {
+        "properties": {
+          "regency_code": {
+            "type": "null",
+            "title": "Regency Code"
+          },
+          "regency_name": {
+            "type": "string",
+            "title": "Regency Name"
+          },
+          "district_code": {
+            "type": "null",
+            "title": "District Code"
+          },
+          "district_name": {
+            "type": "string",
+            "title": "District Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "regency_code",
+          "regency_name",
+          "district_code",
+          "district_name"
+        ],
+        "title": "Region"
+      }
+    }
+  }
+}

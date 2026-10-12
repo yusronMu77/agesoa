@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agesoa:schema:event:laporan.diterima:v1",
+  "title": "Citizen report received",
+  "allOf": [
+    {
+      "$ref": "urn:agesoa:schema:cloudevent:v1"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "agesoa.laporan.diterima"
+    },
+    "dataschema": {
+      "const": "urn:agesoa:schema:event:laporan.diterima:v1"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "report_id",
+        "domain",
+        "category",
+        "received_at",
+        "region",
+        "fields",
+        "rule_results",
+        "evidence",
+        "reporter_ref",
+        "synthetic"
+      ],
+      "properties": {
+        "report_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "domain": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1
+        },
+        "received_at": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/timestamp"
+        },
+        "region": {
+          "anyOf": [
+            {
+              "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/region"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fields": {
+          "type": "object",
+          "description": "Fields extracted per the domain pack's report_fields (keys = field ids)."
+        },
+        "rule_results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "rule_id",
+              "violated"
+            ],
+            "properties": {
+              "rule_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "violated": {
+                "type": "boolean"
+              },
+              "detail": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "evidence_id",
+              "media_type",
+              "sha256"
+            ],
+            "properties": {
+              "evidence_id": {
+                "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/evidence_ref"
+              },
+              "media_type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "reporter_ref": {
+          "type": "string",
+          "description": "Opaque pseudonymous reporter id (anonymous auth uid). Never a name."
+        },
+        "synthetic": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/synthetic"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agesoa:schema:scenario:v1",
+  "title": "AGESOA synthetic scenario (domain-packs/<pack>/scenarios/<id>.json)",
+  "description": "A fictional case with a planted root cause and its answer key. Used as demo data (only behind demo_mode) and as an agent eval item (the planted root cause must appear in the top 3 hypotheses). Locations are fictional: no administrative codes, every place name is marked (fictional).",
+  "type": "object",
+  "required": ["schema_version", "id", "pack", "synthetic", "title", "summary", "region", "reports", "signals", "witness_script", "answer_key"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{2,63}$" },
+    "pack": { "$ref": "urn:agesoa:schema:domain-pack:v1#/$defs/slug" },
+    "synthetic": { "const": true },
+    "title": { "$ref": "urn:agesoa:schema:domain-pack:v1#/$defs/label" },
+    "summary": { "$ref": "urn:agesoa:schema:domain-pack:v1#/$defs/label" },
+    "region": { "$ref": "#/$defs/fictional_region" },
+    "reports": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["ref", "category", "received_at", "fields", "evidence"],
+        "properties": {
+          "ref": { "$ref": "#/$defs/ref" },
+          "category": { "$ref": "urn:agesoa:schema:domain-pack:v1#/$defs/slug" },
+          "received_at": { "type": "string", "format": "date-time" },
+          "district_name": { "$ref": "#/$defs/fictional_name" },
+          "fields": { "type": "object", "description": "Values keyed by the pack's report field ids." },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["kind", "label", "captured_at"],
+              "properties": {
+                "kind": { "enum": ["photo", "voice_note", "document"] },
+                "label": { "type": "string", "minLength": 1, "description": "What the (synthetic) file shows." },
+                "captured_at": { "type": "string", "format": "date-time" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "narrative": { "type": "string", "description": "The reporter's own words (Indonesian, as typed or transcribed)." }
+        },
+        "additionalProperties": false
+      }
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref", "source_kind", "publisher", "published_at", "headline", "excerpt"],
+        "properties": {
+          "ref": { "$ref": "#/$defs/ref" },
+          "source_kind": { "enum": ["news", "official", "social_shared"] },
+          "publisher": { "$ref": "#/$defs/fictional_name" },
+          "published_at": { "type": "string", "format": "date-time" },
+          "headline": { "type": "string", "minLength": 1 },
+          "excerpt": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "witness_script": {
+      "type": "array",
+      "description": "Scripted witness interview used by the demo fallback (demo_mode only).",
+      "items": {
+        "type": "object",
+        "required": ["witness_role", "question", "answer"],
+        "properties": {
+          "witness_role": { "type": "string", "minLength": 1 },
+          "question": { "type": "string", "minLength": 1 },
+          "answer": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "answer_key": {
+      "type": "object",
+      "description": "Never served by the public API; read only by eval and tests.",
+      "required": ["root_cause", "contributing", "expected_rule_violations", "pattern", "distractors"],
+      "properties": {
+        "root_cause": { "$ref": "#/$defs/cause" },
+        "contributing": { "type": "array", "items": { "$ref": "#/$defs/cause" } },
+        "expected_rule_violations": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "pattern": { "type": "string", "minLength": 1, "description": "Why it keeps happening (the recurrence the audit should surface)." },
+        "distractors": { "type": "array", "items": { "type": "string", "minLength": 1 }, "description": "Plausible but wrong explanations planted in the data." }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ref": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$" },
+    "fictional_name": { "type": "string", "pattern": "\\(fictional\\)$" },
+    "fictional_region": {
+      "type": "object",
+      "required": ["regency_code", "regency_name", "district_code", "district_name"],
+      "properties": {
+        "regency_code": { "const": null },
+        "regency_name": { "$ref": "#/$defs/fictional_name" },
+        "district_code": { "const": null },
+        "district_name": { "$ref": "#/$defs/fictional_name" }
+      },
+      "additionalProperties": false
+    },
+    "cause": {
+      "type": "object",
+      "required": ["branch", "statement"],
+      "properties": {
+        "branch": { "$ref": "urn:agesoa:schema:domain-pack:v1#/$defs/slug" },
+        "statement": { "type": "string", "minLength": 1 },
+        "keywords": { "type": "array", "items": { "type": "string" }, "description": "Terms an eval matcher may look for in a hypothesis." }
+      },
+      "additionalProperties": false
+    }
+  }
+}

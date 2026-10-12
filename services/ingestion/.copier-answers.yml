@@ -1,0 +1,9 @@
+# Changes here will be overwritten by Copier; do not edit manually.
+_src_path: templates/service
+database_name: ingestion
+description: Citizen reports (drafts, corrections, media, privacy guard) and public
+    signals; agents Intake and Signal.
+package_name: agesoa_ingestion
+port: 8001
+service_name: ingestion
+with_agent: true

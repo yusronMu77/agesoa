@@ -1,0 +1,9 @@
+# Changes here will be overwritten by Copier; do not edit manually.
+_src_path: templates/service
+database_name: case_audit
+description: Cases, evidence deadlines, witness interviews, audit trail and findings;
+    agent Audit.
+package_name: agesoa_case_audit
+port: 8002
+service_name: case-audit
+with_agent: true

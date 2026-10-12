@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "id": "mbg-s03-staff-turnover",
+  "pack": "mbg",
+  "synthetic": true,
+  "title": { "en": "Untrained kitchen crew after a walk-out", "id": "Kru dapur tanpa pelatihan setelah pekerja lama mundur" },
+  "summary": {
+    "en": "After most of the trained crew quit over late wages, new volunteers cook without food-handling training.",
+    "id": "Setelah sebagian besar kru terlatih mundur karena upah telat, relawan baru memasak tanpa pelatihan penanganan pangan."
+  },
+  "region": { "regency_code": null, "regency_name": "Kabupaten Sukamaju (fictional)", "district_code": null, "district_name": "Kecamatan Tirtasari (fictional)" },
+  "reports": [
+    {
+      "ref": "r1",
+      "category": "poisoning",
+      "received_at": "2026-10-07T12:50:00+07:00",
+      "fields": {
+        "school": "SDN Tirtasari 1 (fictional)",
+        "kitchen": "SPPG Tirtasari (fictional)",
+        "menu": "Nasi, telur balado, urap sayur, semangka",
+        "cooked_at": "2026-10-07T06:00:00+07:00",
+        "eaten_at": "2026-10-07T09:15:00+07:00",
+        "meal_date": "2026-10-07",
+        "symptoms": ["vomiting", "diarrhea"],
+        "affected_count": 22,
+        "tray_label_text": "Masak 06.00 / Habis 10.00"
+      },
+      "evidence": [
+        { "kind": "photo", "label": "Urap vegetables mixed by hand in an open basin", "captured_at": "2026-10-07T05:40:00+07:00" }
+      ],
+      "narrative": "Saya lihat sendiri urapnya diaduk pakai tangan tanpa sarung tangan. Anak-anak muntah setelah makan."
+    },
+    {
+      "ref": "r2",
+      "category": "kitchen_hygiene",
+      "received_at": "2026-10-08T08:10:00+07:00",
+      "fields": {
+        "school": "SDN Tirtasari 2 (fictional)",
+        "kitchen": "SPPG Tirtasari (fictional)",
+        "cooked_at": "2026-10-08T06:10:00+07:00",
+        "eaten_at": "2026-10-08T08:00:00+07:00",
+        "symptoms": ["none"],
+        "affected_count": 0
+      },
+      "evidence": [
+        { "kind": "photo", "label": "Hand-washing sink blocked by stacked crates", "captured_at": "2026-10-08T06:30:00+07:00" }
+      ],
+      "narrative": "Wastafel cuci tangan di dapur tertutup tumpukan krat, tidak bisa dipakai."
+    }
+  ],
+  "signals": [
+    {
+      "ref": "s1",
+      "source_kind": "official",
+      "publisher": "Puskesmas Tirtasari (fictional)",
+      "published_at": "2026-10-08T10:00:00+07:00",
+      "headline": "Hasil uji air dapur SPPG Tirtasari memenuhi syarat",
+      "excerpt": "Sampel air sumur dapur diuji dan memenuhi baku mutu. Penyebab keluhan siswa masih ditelusuri."
+    },
+    {
+      "ref": "s2",
+      "source_kind": "news",
+      "publisher": "Warta Tirtasari (fictional)",
+      "published_at": "2026-09-30T14:00:00+07:00",
+      "headline": "Belasan pekerja dapur MBG Tirtasari mundur, upah dua bulan belum dibayar",
+      "excerpt": "Pengelola dapur merekrut relawan pengganti dari warga sekitar agar layanan tidak berhenti."
+    }
+  ],
+  "witness_script": [
+    { "witness_role": "kitchen_staff", "question": "Berapa lama Anda bekerja di dapur ini dan pelatihan apa yang sudah diikuti?", "answer": "Baru seminggu, menggantikan yang mundur. Belum ada pelatihan, langsung disuruh bantu masak." },
+    { "witness_role": "kitchen_staff", "question": "Bagaimana prosedur cuci tangan dan sarung tangan di dapur?", "answer": "Sarung tangan habis sejak minggu lalu, wastafelnya ketutup krat. Kami cuci tangan di ember." },
+    { "witness_role": "parent", "question": "Apakah ada masalah air atau jajanan di sekitar sekolah?", "answer": "Air sumur sudah diuji puskesmas, katanya aman. Anak saya tidak jajan hari itu." }
+  ],
+  "answer_key": {
+    "root_cause": {
+      "branch": "people",
+      "statement": "Most trained cooks left over unpaid wages; replacements handle ready-to-eat food without food-safety training.",
+      "keywords": ["training", "staff", "turnover", "hygiene", "pelatihan", "relawan", "pekerja"]
+    },
+    "contributing": [
+      { "branch": "oversight", "statement": "Late wage payments and no check that new crew are trained before cooking." },
+      { "branch": "facility", "statement": "Hand-washing station unusable; gloves out of stock." }
+    ],
+    "expected_rule_violations": [],
+    "pattern": "Incidents begin the week the crew changed and hit raw or hand-mixed dishes (urap, salad), not fully cooked ones.",
+    "distractors": ["Contaminated well water (lab test passed)."]
+  }
+}

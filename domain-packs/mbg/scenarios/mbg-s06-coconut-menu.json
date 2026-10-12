@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "mbg-s06-coconut-menu",
+  "pack": "mbg",
+  "synthetic": true,
+  "title": { "en": "Coconut-milk dishes under a one-size holding time", "id": "Menu bersantan dengan batas simpan yang disamakan" },
+  "summary": {
+    "en": "Every rule is met, but coconut-milk dishes kept warm in closed containers spoil within the 4-hour window.",
+    "id": "Semua aturan terpenuhi, tetapi masakan bersantan yang disimpan hangat di wadah tertutup basi dalam rentang 4 jam."
+  },
+  "region": { "regency_code": null, "regency_name": "Kabupaten Sukamaju (fictional)", "district_code": null, "district_name": "Kecamatan Cibening (fictional)" },
+  "reports": [
+    {
+      "ref": "r1",
+      "category": "spoiled_food",
+      "received_at": "2026-10-14T11:00:00+07:00",
+      "fields": {
+        "school": "SMPN Cibening 2 (fictional)",
+        "kitchen": "SPPG Cibening Timur (fictional)",
+        "menu": "Nasi, opor ayam, sayur labu santan, kerupuk",
+        "cooked_at": "2026-10-14T06:00:00+07:00",
+        "eaten_at": "2026-10-14T09:35:00+07:00",
+        "meal_date": "2026-10-14",
+        "symptoms": ["nausea", "stomach_ache"],
+        "affected_count": 19,
+        "tray_label_text": "Masak 06.00 / Habis 10.00"
+      },
+      "evidence": [
+        { "kind": "photo", "label": "Curdled, sour-looking opor gravy in the tray", "captured_at": "2026-10-14T09:40:00+07:00" }
+      ],
+      "narrative": "Kuah opornya sudah pecah dan asam, padahal label masih dalam batas jam."
+    },
+    {
+      "ref": "r2",
+      "category": "poisoning",
+      "received_at": "2026-09-30T13:00:00+07:00",
+      "fields": {
+        "school": "SDN Cibening 5 (fictional)",
+        "kitchen": "SPPG Cibening Timur (fictional)",
+        "menu": "Nasi, gulai telur, tempe, pisang",
+        "cooked_at": "2026-09-30T06:10:00+07:00",
+        "eaten_at": "2026-09-30T09:45:00+07:00",
+        "symptoms": ["diarrhea"],
+        "affected_count": 9
+      },
+      "evidence": [
+        { "kind": "photo", "label": "Insulated container closed with lid, condensation inside", "captured_at": "2026-09-30T07:00:00+07:00" }
+      ]
+    }
+  ],
+  "signals": [
+    {
+      "ref": "s1",
+      "source_kind": "official",
+      "publisher": "SPPG Cibening Timur (fictional)",
+      "published_at": "2026-10-14T15:00:00+07:00",
+      "headline": "Dapur: semua makanan dikonsumsi kurang dari empat jam",
+      "excerpt": "Pengelola menegaskan label waktu dipatuhi dan makanan dikonsumsi sebelum batas empat jam, sehingga dapur sudah sesuai pedoman."
+    }
+  ],
+  "witness_script": [
+    { "witness_role": "kitchen_staff", "question": "Bagaimana masakan disimpan dari selesai dimasak sampai dikirim?", "answer": "Langsung masuk wadah tertutup supaya tetap hangat. Opor dan gulai juga sama, ditutup rapat sampai sekolah." },
+    { "witness_role": "nutritionist", "question": "Apakah ada aturan simpan berbeda untuk menu bersantan?", "answer": "Di pedoman dapur ini semua menu disamakan empat jam. Santan yang ditahan hangat dan tertutup bisa rusak lebih cepat dari itu." },
+    { "witness_role": "teacher", "question": "Kapan saja keluhan muncul?", "answer": "Akhir September waktu gulai, dan sekarang opor. Hari biasa tanpa santan tidak ada masalah." }
+  ],
+  "answer_key": {
+    "root_cause": {
+      "branch": "process",
+      "statement": "Coconut-milk dishes are held warm in sealed containers under the same 4-hour limit as every other menu; they spoil inside the window.",
+      "keywords": ["coconut milk", "santan", "holding", "menu", "warm", "wadah tertutup", "opor", "gulai"]
+    },
+    "contributing": [
+      { "branch": "oversight", "statement": "The 4-hour rule is applied uniformly with no menu-specific risk check." }
+    ],
+    "expected_rule_violations": [],
+    "pattern": "Incidents only on coconut-milk menu days while every report meets the 4-hour rule.",
+    "distractors": ["The kitchen is compliant because the 4-hour rule was met."]
+  }
+}

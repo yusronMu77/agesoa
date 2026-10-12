@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agesoa:schema:event:validator.diaktifkan:v1",
+  "title": "Validator activated",
+  "allOf": [
+    {
+      "$ref": "urn:agesoa:schema:cloudevent:v1"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "agesoa.validator.diaktifkan"
+    },
+    "dataschema": {
+      "const": "urn:agesoa:schema:event:validator.diaktifkan:v1"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "validator_ref",
+        "role",
+        "field",
+        "region",
+        "organization_id",
+        "tier",
+        "status",
+        "activated_at",
+        "synthetic"
+      ],
+      "properties": {
+        "validator_ref": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "region": {
+          "anyOf": [
+            {
+              "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/region"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "organization_id": {
+          "anyOf": [
+            {
+              "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tier": {
+          "enum": [
+            "high",
+            "medium"
+          ]
+        },
+        "status": {
+          "enum": [
+            "probation",
+            "active"
+          ]
+        },
+        "activated_at": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/timestamp"
+        },
+        "synthetic": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/synthetic"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agesoa:schema:webhook:audit_report.final:v1",
+  "title": "Webhook body: audit_report.final",
+  "type": "object",
+  "required": ["event", "event_id", "case", "parties_mentioned"],
+  "properties": {
+    "event": { "enum": ["audit_report.final", "test_event"] },
+    "event_id": { "type": "string", "format": "uuid" },
+    "case": {
+      "type": "object",
+      "required": ["id", "domain", "category", "region", "summary", "root_causes", "recommendations", "validations", "url", "synthetic"],
+      "properties": {
+        "id": { "type": "string" },
+        "domain": { "type": "string" },
+        "category": { "type": "string" },
+        "region": { "type": "string" },
+        "summary": { "type": "string" },
+        "root_causes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["statement", "status", "evidence"],
+            "properties": {
+              "statement": { "type": "string" },
+              "status": { "enum": ["alleged", "supported", "proven"] },
+              "evidence": { "type": "array", "items": { "type": "string" } }
+            },
+            "additionalProperties": false
+          }
+        },
+        "recommendations": { "type": "array", "items": { "type": "string" } },
+        "validations": { "type": "array", "items": { "type": "string" }, "description": "Validator role + region labels, never names." },
+        "url": { "type": "string", "format": "uri" },
+        "synthetic": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "parties_mentioned": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

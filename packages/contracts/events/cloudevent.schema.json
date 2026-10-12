@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agesoa:schema:cloudevent:v1",
+  "title": "AGESOA CloudEvent envelope",
+  "description": "CloudEvents 1.0 structured JSON mode, as published to Pub/Sub (message data) and delivered to POST /events/{type}.",
+  "type": "object",
+  "required": ["specversion", "id", "source", "type", "time", "datacontenttype", "dataschema", "data"],
+  "properties": {
+    "specversion": { "const": "1.0" },
+    "id": { "type": "string", "format": "uuid", "description": "Unique event id; consumers deduplicate on it (inbox)." },
+    "source": { "type": "string", "pattern": "^//agesoa/(ingestion|case-audit|trust|delivery|transparency)$" },
+    "type": { "type": "string", "pattern": "^agesoa\\.[a-z_]+\\.[a-z_]+$" },
+    "subject": { "type": "string", "minLength": 1, "description": "Main entity id, e.g. a case or report id." },
+    "time": { "type": "string", "format": "date-time" },
+    "datacontenttype": { "const": "application/json" },
+    "dataschema": { "type": "string", "pattern": "^urn:agesoa:schema:event:[a-z_]+\\.[a-z_]+:v[0-9]+$" },
+    "traceparent": { "type": "string", "pattern": "^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$", "description": "W3C trace context (CloudEvents distributed tracing extension)." },
+    "data": { "type": "object" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "synthetic": { "type": "boolean", "description": "True for demo data (fictional regency, seeded organizations). Shown openly as SIMULATION." },
+    "finding_status": { "enum": ["alleged", "supported", "proven"], "description": "Evidence status ladder: alleged < supported < proven." },
+    "evidence_ref": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "region": {
+      "type": "object",
+      "description": "Administrative area by code + name only, never raw coordinates.",
+      "required": ["regency_name"],
+      "properties": {
+        "regency_code": { "type": ["string", "null"] },
+        "regency_name": { "type": "string" },
+        "district_code": { "type": ["string", "null"] },
+        "district_name": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    }
+  }
+}

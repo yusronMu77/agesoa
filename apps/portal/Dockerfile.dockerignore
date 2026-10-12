@@ -1,0 +1,14 @@
+# Build context for apps/portal/Dockerfile (context = monorepo root).
+# Whitelist: only the root manifests and the workspaces the portal needs.
+*
+!package.json
+!bun.lock
+!apps/portal
+!packages/ui
+
+**/node_modules
+**/.next
+**/.env
+**/.env.*
+**/*.test.ts
+apps/portal/Dockerfile*

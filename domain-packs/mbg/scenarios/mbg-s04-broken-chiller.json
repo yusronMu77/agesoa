@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "mbg-s04-broken-chiller",
+  "pack": "mbg",
+  "synthetic": true,
+  "title": { "en": "A chiller broken for three weeks", "id": "Chiller rusak selama tiga minggu" },
+  "summary": {
+    "en": "Vegetables and sauces are prepared the day before and kept overnight in a chiller that stopped working; the repair request is pending.",
+    "id": "Sayur dan bumbu disiapkan sehari sebelumnya dan disimpan semalam di chiller yang sudah mati; permintaan perbaikan belum dijawab."
+  },
+  "region": { "regency_code": null, "regency_name": "Kabupaten Sukamaju (fictional)", "district_code": null, "district_name": "Kecamatan Kertabumi (fictional)" },
+  "reports": [
+    {
+      "ref": "r1",
+      "category": "poisoning",
+      "received_at": "2026-10-12T13:30:00+07:00",
+      "fields": {
+        "school": "SDN Kertabumi 2 (fictional)",
+        "kitchen": "SPPG Kertabumi (fictional)",
+        "menu": "Nasi, ayam suwir, sambal goreng buncis, melon",
+        "cooked_at": "2026-10-12T06:20:00+07:00",
+        "eaten_at": "2026-10-12T09:00:00+07:00",
+        "meal_date": "2026-10-12",
+        "symptoms": ["nausea", "diarrhea"],
+        "affected_count": 15,
+        "tray_label_text": "Masak 06.20 / Habis 10.20"
+      },
+      "evidence": [
+        { "kind": "photo", "label": "Chiller display reading 19 °C", "captured_at": "2026-10-12T05:50:00+07:00" },
+        { "kind": "document", "label": "Repair request form dated 21 September, status pending", "captured_at": "2026-10-12T07:00:00+07:00" }
+      ],
+      "narrative": "Chiller dapur sudah tiga minggu mati, layar suhunya 19 derajat. Bumbu dan buncis disiapkan sore sebelumnya."
+    },
+    {
+      "ref": "r2",
+      "category": "spoiled_food",
+      "received_at": "2026-10-12T10:05:00+07:00",
+      "fields": {
+        "school": "SDN Kertabumi 1 (fictional)",
+        "kitchen": "SPPG Kertabumi (fictional)",
+        "cooked_at": "2026-10-12T06:20:00+07:00",
+        "eaten_at": "2026-10-12T08:30:00+07:00",
+        "symptoms": ["none"],
+        "affected_count": 0
+      },
+      "evidence": [
+        { "kind": "photo", "label": "Sour-smelling sambal goreng separated from the tray", "captured_at": "2026-10-12T08:35:00+07:00" }
+      ],
+      "narrative": "Sambal gorengnya asam, guru menyuruh anak-anak tidak memakannya."
+    }
+  ],
+  "signals": [
+    {
+      "ref": "s1",
+      "source_kind": "official",
+      "publisher": "Koordinator Wilayah MBG Sukamaju (fictional)",
+      "published_at": "2026-10-12T17:00:00+07:00",
+      "headline": "Siswa diduga jajan sembarangan di luar sekolah",
+      "excerpt": "Koordinator wilayah menyebut kemungkinan siswa mengonsumsi jajanan di luar sekolah sebelum makan siang."
+    }
+  ],
+  "witness_script": [
+    { "witness_role": "kitchen_staff", "question": "Bahan apa saja yang disiapkan sehari sebelumnya dan di mana disimpan?", "answer": "Buncis dipotong dan bumbu sambal goreng diulek sore hari, lalu masuk chiller. Chillernya mati sejak akhir September." },
+    { "witness_role": "kitchen_staff", "question": "Apakah kerusakan sudah dilaporkan?", "answer": "Sudah, formulir perbaikan kami kirim 21 September. Sampai sekarang belum ada teknisi." },
+    { "witness_role": "teacher", "question": "Apakah siswa jajan di luar sebelum makan?", "answer": "Hari itu gerbang ditutup sampai jam makan, tidak ada yang jajan." }
+  ],
+  "answer_key": {
+    "root_cause": {
+      "branch": "facility",
+      "statement": "Pre-prepared vegetables and sauces are stored overnight in a broken chiller (around 19 °C).",
+      "keywords": ["chiller", "refrigerator", "storage temperature", "broken", "kulkas", "rusak", "suhu"]
+    },
+    "contributing": [
+      { "branch": "oversight", "statement": "A repair request filed three weeks earlier was never acted on." },
+      { "branch": "process", "statement": "Prep is done the day before instead of the same morning." }
+    ],
+    "expected_rule_violations": [],
+    "pattern": "Complaints start after the chiller failed and hit dishes prepared the day before; cooked-the-same-morning dishes are fine.",
+    "distractors": ["Pupils eating street snacks (the gate was closed until lunch)."]
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agesoa:schema:event:hak_jawab.diterima:v1",
+  "title": "Right of reply received",
+  "allOf": [
+    {
+      "$ref": "urn:agesoa:schema:cloudevent:v1"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "agesoa.hak_jawab.diterima"
+    },
+    "dataschema": {
+      "const": "urn:agesoa:schema:event:hak_jawab.diterima:v1"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "reply_id",
+        "case_id",
+        "organization_id",
+        "body",
+        "attachments",
+        "received_at",
+        "synthetic"
+      ],
+      "properties": {
+        "reply_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "case_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "organization_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "url"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "received_at": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/timestamp"
+        },
+        "synthetic": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/synthetic"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

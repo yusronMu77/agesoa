@@ -1,0 +1,9 @@
+# Changes here will be overwritten by Copier; do not edit manually.
+_src_path: templates/service
+database_name: transparency
+description: Hash-chained public decision log (its only writer) and the public read
+    models.
+package_name: agesoa_transparency
+port: 8005
+service_name: transparency
+with_agent: false

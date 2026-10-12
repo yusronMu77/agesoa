@@ -1,0 +1,6 @@
+"""Tables owned by {{ service_name }} (database `{{ database_name }}`). Every change ships with an Alembic migration.
+No other service reads these tables: other domains learn about changes through events."""
+
+from sqlalchemy import MetaData
+
+metadata = MetaData()

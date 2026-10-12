@@ -1,0 +1,49 @@
+{
+  "specversion": "1.0",
+  "id": "00000000-0000-0000-0000-000000000001",
+  "source": "//agesoa/ingestion",
+  "type": "agesoa.laporan.diterima",
+  "subject": "R-2026-0001",
+  "time": "2026-10-14T03:15:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "urn:agesoa:schema:event:laporan.diterima:v1",
+  "data": {
+    "report_id": "R-2026-0001",
+    "domain": "mbg",
+    "category": "poisoning",
+    "received_at": "2026-10-14T03:15:00Z",
+    "region": {
+      "regency_code": null,
+      "regency_name": "Kabupaten Sukamaju (fictional)",
+      "district_code": null,
+      "district_name": "Kecamatan Cibening (fictional)"
+    },
+    "fields": {
+      "school": "SDN Cibening 2 (fictional)",
+      "kitchen": "SPPG Cibening (fictional)",
+      "cooked_at": "2026-10-13T22:00:00Z",
+      "eaten_at": "2026-10-14T04:30:00Z",
+      "symptoms": [
+        "nausea",
+        "vomiting"
+      ],
+      "affected_count": 23
+    },
+    "rule_results": [
+      {
+        "rule_id": "consume_within_4h",
+        "violated": true,
+        "detail": "eaten 390 min after cooking (max 240)"
+      }
+    ],
+    "evidence": [
+      {
+        "evidence_id": "E-12",
+        "media_type": "image/jpeg",
+        "sha256": "9f2c000000000000000000000000000000000000000000000000000000000000"
+      }
+    ],
+    "reporter_ref": "anon-7f3a",
+    "synthetic": true
+  }
+}

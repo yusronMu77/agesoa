@@ -1,0 +1,682 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AGESOA transparency",
+    "description": "Hash-chained public decision log (its only writer) and the public read models.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Liveness (no dependencies)",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Readiness: own database reachable",
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A dependency is down",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/outbox/sweep": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Publish outbox events left behind (Cloud Scheduler, every minute)",
+        "operationId": "sweep_internal_outbox_sweep_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SweepResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/probe": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Record a system probe decision through the outbox (end-to-end event path check)",
+        "operationId": "probe_internal_probe_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/log": {
+      "get": {
+        "tags": [
+          "decision log"
+        ],
+        "summary": "Decision log, oldest first",
+        "operationId": "list_log_v1_log_get",
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "description": "Return entries with seq greater than this",
+              "default": 0,
+              "title": "After"
+            },
+            "description": "Return entries with seq greater than this"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "subject_kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Kind"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/log/head": {
+      "get": {
+        "tags": [
+          "decision log"
+        ],
+        "summary": "Current chain tip",
+        "operationId": "get_head_v1_log_head_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChainHead"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/log/verify": {
+      "get": {
+        "tags": [
+          "decision log"
+        ],
+        "summary": "Recompute the whole chain and report the first broken entry, if any",
+        "operationId": "verify_v1_log_verify_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChainVerification"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/log/{seq}": {
+      "get": {
+        "tags": [
+          "decision log"
+        ],
+        "summary": "One decision log entry",
+        "operationId": "get_entry_v1_log__seq__get",
+        "parameters": [
+          {
+            "name": "seq",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogEntry"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No entry with this seq"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChainHead": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "title": "Seq"
+          },
+          "hash": {
+            "type": "string",
+            "title": "Hash"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seq",
+          "hash",
+          "updated_at"
+        ],
+        "title": "ChainHead"
+      },
+      "ChainVerification": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "length": {
+            "type": "integer",
+            "title": "Length"
+          },
+          "head_hash": {
+            "type": "string",
+            "title": "Head Hash"
+          },
+          "first_invalid_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Invalid Seq"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "length",
+          "head_hash"
+        ],
+        "title": "ChainVerification"
+      },
+      "DatabaseStatus": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "title": "DatabaseStatus"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          },
+          "release": {
+            "type": "string",
+            "title": "Release"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "demo_mode": {
+            "type": "boolean",
+            "title": "Demo Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "status",
+          "release",
+          "environment",
+          "demo_mode"
+        ],
+        "title": "Health"
+      },
+      "LogEntry": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "title": "Seq"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "decision_id": {
+            "type": "string",
+            "title": "Decision Id"
+          },
+          "source_service": {
+            "type": "string",
+            "title": "Source Service"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "subject_kind": {
+            "type": "string",
+            "title": "Subject Kind"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "entry": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Entry"
+          },
+          "prev_hash": {
+            "type": "string",
+            "title": "Prev Hash"
+          },
+          "hash": {
+            "type": "string",
+            "title": "Hash"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recorded At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seq",
+          "event_id",
+          "decision_id",
+          "source_service",
+          "action",
+          "subject_kind",
+          "subject_id",
+          "entry",
+          "prev_hash",
+          "hash",
+          "recorded_at"
+        ],
+        "title": "LogEntry"
+      },
+      "LogPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LogEntry"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_after": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_after"
+        ],
+        "title": "LogPage"
+      },
+      "ProbeResult": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "decision_id": {
+            "type": "string",
+            "title": "Decision Id"
+          },
+          "published": {
+            "type": "integer",
+            "title": "Published"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "decision_id",
+          "published"
+        ],
+        "title": "ProbeResult"
+      },
+      "Readiness": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "not_ready"
+            ],
+            "title": "Status"
+          },
+          "release": {
+            "type": "string",
+            "title": "Release"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "demo_mode": {
+            "type": "boolean",
+            "title": "Demo Mode"
+          },
+          "database": {
+            "$ref": "#/components/schemas/DatabaseStatus"
+          },
+          "outbox_pending": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outbox Pending"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "status",
+          "release",
+          "environment",
+          "demo_mode",
+          "database"
+        ],
+        "title": "Readiness"
+      },
+      "SweepResult": {
+        "properties": {
+          "published": {
+            "type": "integer",
+            "title": "Published"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "published",
+          "failed"
+        ],
+        "title": "SweepResult"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

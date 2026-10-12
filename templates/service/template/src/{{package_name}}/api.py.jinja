@@ -1,0 +1,5 @@
+"""Public HTTP API of {{ service_name }} (exported to openapi.json)."""
+
+from fastapi import APIRouter
+
+router = APIRouter(prefix="/v1", tags=["{{ service_name }}"])

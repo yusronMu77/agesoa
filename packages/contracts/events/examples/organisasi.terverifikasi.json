@@ -1,0 +1,19 @@
+{
+  "specversion": "1.0",
+  "id": "00000000-0000-0000-0000-000000000006",
+  "source": "//agesoa/trust",
+  "type": "agesoa.organisasi.terverifikasi",
+  "subject": "O-0001",
+  "time": "2026-10-14T03:15:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "urn:agesoa:schema:event:organisasi.terverifikasi:v1",
+  "data": {
+    "organization_id": "O-0001",
+    "name": "Warta Sukamaju (fictional)",
+    "kind": "newsroom",
+    "domain": "warta.example.org",
+    "method": "dns_txt",
+    "verified_at": "2026-10-14T03:15:00Z",
+    "synthetic": true
+  }
+}

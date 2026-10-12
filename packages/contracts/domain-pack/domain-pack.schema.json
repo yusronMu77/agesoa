@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agesoa:schema:domain-pack:v1",
+  "title": "AGESOA domain pack (pack.json)",
+  "description": "Everything domain-specific the core engine needs: categories, report fields, rules, evidence deadline, cause framework, validator roles and public signal sources. The core engine never hard-codes a domain.",
+  "type": "object",
+  "required": ["schema_version", "id", "version", "name", "description", "categories", "report_fields", "rules", "evidence_deadline", "evidence_ladder", "cause_framework", "validator_roles", "signal_sources", "evidence_tips"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "$ref": "#/$defs/slug" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "name": { "$ref": "#/$defs/label" },
+    "description": { "$ref": "#/$defs/label" },
+    "categories": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "required": ["id", "label"],
+        "properties": { "id": { "$ref": "#/$defs/slug" }, "label": { "$ref": "#/$defs/label" }, "description": { "$ref": "#/$defs/label" } },
+        "additionalProperties": false
+      }
+    },
+    "report_fields": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "required": ["id", "type", "label", "required"],
+        "properties": {
+          "id": { "$ref": "#/$defs/slug" },
+          "type": { "enum": ["string", "integer", "datetime", "date", "enum", "string_list"] },
+          "label": { "$ref": "#/$defs/label" },
+          "required": { "type": "boolean", "description": "Core field: the Intake agent must ask for it when missing." },
+          "sources": { "type": "array", "items": { "enum": ["voice", "text", "photo", "photo_label", "shared_post"] }, "description": "Where the Intake agent is expected to find the value." },
+          "options": { "type": "array", "items": { "$ref": "#/$defs/slug" }, "minItems": 1, "description": "Allowed values when type = enum." },
+          "hint": { "$ref": "#/$defs/label" }
+        },
+        "additionalProperties": false,
+        "if": { "properties": { "type": { "const": "enum" } } },
+        "then": { "required": ["options"] }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["id", "kind", "label", "params"],
+        "properties": {
+          "id": { "$ref": "#/$defs/slug" },
+          "kind": { "enum": ["max_interval"], "description": "Rule kinds are implemented (and tested) in the core engine; packs only set parameters." },
+          "label": { "$ref": "#/$defs/label" },
+          "standard": { "$ref": "#/$defs/label", "description": "The reference standard the rule comes from." },
+          "params": { "type": "object" }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": { "properties": { "kind": { "const": "max_interval" } } },
+            "then": {
+              "properties": {
+                "params": {
+                  "type": "object", "required": ["from_field", "to_field", "max_minutes"],
+                  "properties": {
+                    "from_field": { "$ref": "#/$defs/slug" },
+                    "to_field": { "$ref": "#/$defs/slug" },
+                    "max_minutes": { "type": "integer", "minimum": 1 }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "evidence_deadline": {
+      "type": "object",
+      "required": ["anchor_field", "hours", "after_deadline_max_status"],
+      "properties": {
+        "anchor_field": { "$ref": "#/$defs/slug", "description": "Datetime field the deadline counts from (not the report time)." },
+        "fallback_anchor_field": { "$ref": "#/$defs/slug", "description": "Used when anchor_field is missing; a date field counts from 00:00 local time." },
+        "hours": { "type": "integer", "minimum": 1 },
+        "after_deadline_max_status": { "enum": ["alleged", "supported"], "description": "Highest finding status still reachable once physical evidence is likely gone." }
+      },
+      "additionalProperties": false
+    },
+    "evidence_ladder": {
+      "type": "array", "minItems": 3, "maxItems": 3,
+      "items": {
+        "type": "object", "required": ["status", "evidence"],
+        "properties": {
+          "status": { "enum": ["proven", "supported", "alleged"] },
+          "evidence": { "type": "array", "items": { "$ref": "#/$defs/label" }, "minItems": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "cause_framework": {
+      "type": "object", "required": ["method", "branches"],
+      "properties": {
+        "method": { "enum": ["fishbone", "five_whys"] },
+        "branches": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "required": ["id", "label", "examples"],
+            "properties": {
+              "id": { "$ref": "#/$defs/slug" },
+              "label": { "$ref": "#/$defs/label" },
+              "examples": { "type": "array", "items": { "$ref": "#/$defs/label" }, "minItems": 1, "description": "Hypothesis seeds for the Audit agent." },
+              "witness_questions": { "type": "array", "items": { "$ref": "#/$defs/label" } },
+              "pattern_metrics": { "type": "array", "items": { "$ref": "#/$defs/slug" }, "description": "Cross-case metrics the Audit agent may test (implemented as fixed queries)." }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "validator_roles": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "required": ["id", "label"],
+        "properties": { "id": { "$ref": "#/$defs/slug" }, "label": { "$ref": "#/$defs/label" } },
+        "additionalProperties": false
+      }
+    },
+    "signal_sources": {
+      "type": "object", "required": ["keywords", "source_kinds"],
+      "properties": {
+        "keywords": { "type": "array", "items": { "type": "string", "minLength": 2 }, "minItems": 1 },
+        "source_kinds": { "type": "array", "items": { "enum": ["news", "official", "social_shared"] }, "minItems": 1 },
+        "official_publishers": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "evidence_tips": { "type": "array", "items": { "$ref": "#/$defs/label" }, "minItems": 1, "description": "Shown to the reporter while evidence is still available." }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "slug": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,47}$" },
+    "label": {
+      "type": "object", "required": ["en", "id"],
+      "properties": { "en": { "type": "string", "minLength": 1 }, "id": { "type": "string", "minLength": 1 } },
+      "additionalProperties": false
+    }
+  }
+}

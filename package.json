@@ -1,0 +1,12 @@
+{
+  "name": "agesoa-prototype",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "portal:dev": "bun run --cwd apps/portal dev",
+    "portal:build": "bun run --cwd apps/portal build",
+    "portal:start": "bun run --cwd apps/portal start",
+    "portal:test": "bun run --cwd apps/portal test",
+    "ui:tokens": "bun run --cwd packages/ui build:tokens"
+  }
+}

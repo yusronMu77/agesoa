@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "id": "mbg",
+  "version": "1.0.0",
+  "name": { "en": "Free school meals (MBG) food safety", "id": "Keamanan pangan Makan Bergizi Gratis (MBG)" },
+  "description": {
+    "en": "Incidents around the free nutritious meal program: food poisoning, spoiled food, short portions and kitchen hygiene. First domain pack and demo case.",
+    "id": "Kejadian seputar program Makan Bergizi Gratis: keracunan, makanan basi, porsi kurang, dan kebersihan dapur. Paket domain pertama dan kasus demo."
+  },
+  "categories": [
+    { "id": "poisoning", "label": { "en": "Food poisoning", "id": "Keracunan" } },
+    { "id": "spoiled_food", "label": { "en": "Spoiled or unfit food", "id": "Makanan basi / tidak layak" } },
+    { "id": "short_portion", "label": { "en": "Short portion", "id": "Porsi kurang" } },
+    { "id": "kitchen_hygiene", "label": { "en": "Kitchen hygiene", "id": "Kebersihan dapur" } }
+  ],
+  "report_fields": [
+    {
+      "id": "school", "type": "string", "required": true, "sources": ["voice", "text", "shared_post"],
+      "label": { "en": "School", "id": "Sekolah" }
+    },
+    {
+      "id": "kitchen", "type": "string", "required": false, "sources": ["voice", "text", "photo_label"],
+      "label": { "en": "Kitchen (SPPG)", "id": "Dapur (SPPG)" },
+      "hint": { "en": "Satuan Pelayanan Pemenuhan Gizi printed on the tray label", "id": "Nama SPPG pada label ompreng" }
+    },
+    {
+      "id": "menu", "type": "string_list", "required": false, "sources": ["voice", "text", "photo"],
+      "label": { "en": "Menu", "id": "Menu" }
+    },
+    {
+      "id": "cooked_at", "type": "datetime", "required": true, "sources": ["photo_label", "voice", "text"],
+      "label": { "en": "Cooked at", "id": "Jam masak" },
+      "hint": { "en": "Read from the time label on the meal tray (ompreng)", "id": "Dibaca dari label waktu di ompreng" }
+    },
+    {
+      "id": "eaten_at", "type": "datetime", "required": true, "sources": ["voice", "text"],
+      "label": { "en": "Eaten at", "id": "Jam makan" }
+    },
+    {
+      "id": "meal_date", "type": "date", "required": false, "sources": ["voice", "text"],
+      "label": { "en": "Meal date", "id": "Tanggal makan" },
+      "hint": { "en": "Used for the evidence deadline when the tray label is missing", "id": "Dipakai untuk tenggat bukti kalau label ompreng tidak ada" }
+    },
+    {
+      "id": "symptoms", "type": "string_list", "required": true, "sources": ["voice", "text"],
+      "label": { "en": "Symptoms", "id": "Gejala" }
+    },
+    {
+      "id": "affected_count", "type": "integer", "required": false, "sources": ["voice", "text", "shared_post"],
+      "label": { "en": "People affected", "id": "Jumlah orang terdampak" }
+    },
+    {
+      "id": "tray_label_text", "type": "string", "required": false, "sources": ["photo_label"],
+      "label": { "en": "Tray label text", "id": "Teks label ompreng" }
+    }
+  ],
+  "rules": [
+    {
+      "id": "consume_within_4h", "kind": "max_interval",
+      "label": { "en": "Eaten within 4 hours of cooking", "id": "Dikonsumsi paling lama 4 jam setelah dimasak" },
+      "standard": { "en": "MBG program guidance: consume at most 4 hours after cooking; every tray carries a time label", "id": "Pedoman MBG: konsumsi paling lama 4 jam setelah dimasak; label waktu di tiap ompreng" },
+      "params": { "from_field": "cooked_at", "to_field": "eaten_at", "max_minutes": 240 }
+    }
+  ],
+  "evidence_deadline": {
+    "anchor_field": "cooked_at",
+    "fallback_anchor_field": "meal_date",
+    "hours": 48,
+    "after_deadline_max_status": "supported"
+  },
+  "evidence_ladder": [
+    { "status": "proven", "evidence": [{ "en": "Lab result of a food sample and patient specimens", "id": "Hasil lab sampel makanan dan spesimen" }] },
+    {
+      "status": "supported",
+      "evidence": [
+        { "en": "Photo of the tray label", "id": "Foto label ompreng" },
+        { "en": "Witness statements", "id": "Kesaksian" },
+        { "en": "Pattern across cases", "id": "Pola lintas kasus" },
+        { "en": "News reports", "id": "Berita" }
+      ]
+    },
+    { "status": "alleged", "evidence": [{ "en": "Symptom report only", "id": "Laporan gejala saja" }] }
+  ],
+  "cause_framework": {
+    "method": "fishbone",
+    "branches": [
+      {
+        "id": "ingredients", "label": { "en": "Ingredients", "id": "Bahan" },
+        "examples": [
+          { "en": "Raw ingredients past their prime or from an unchecked supplier", "id": "Bahan baku tidak segar atau dari pemasok yang tidak diperiksa" }
+        ],
+        "witness_questions": [{ "en": "Did the food smell or taste unusual?", "id": "Apakah makanannya berbau atau berasa tidak biasa?" }],
+        "pattern_metrics": ["incidents_per_supplier"]
+      },
+      {
+        "id": "process", "label": { "en": "Process (temperature, delay)", "id": "Proses (suhu, jeda)" },
+        "examples": [
+          { "en": "Long gap between cooking and eating", "id": "Jeda masak ke makan terlalu panjang" },
+          { "en": "Cooked food kept at room temperature", "id": "Makanan matang disimpan di suhu ruang" }
+        ],
+        "witness_questions": [
+          { "en": "What time is printed on the tray label?", "id": "Jam berapa yang tertulis di label ompreng?" },
+          { "en": "Was the food still warm when served?", "id": "Apakah makanan masih hangat saat dibagikan?" }
+        ],
+        "pattern_metrics": ["cook_to_meal_minutes", "rule_violations_per_kitchen"]
+      },
+      {
+        "id": "people", "label": { "en": "People (training, working hours)", "id": "Orang (pelatihan, jam kerja)" },
+        "examples": [{ "en": "Kitchen staff without food-handling training or working night shifts", "id": "Staf dapur belum dilatih penanganan pangan atau kerja shift malam" }],
+        "pattern_metrics": []
+      },
+      {
+        "id": "facility", "label": { "en": "Facility (certificate, capacity)", "id": "Fasilitas (sertifikat, kapasitas)" },
+        "examples": [{ "en": "Kitchen without a hygiene certificate or above its capacity", "id": "Dapur tanpa sertifikat laik higiene atau melebihi kapasitas" }],
+        "pattern_metrics": ["portions_per_kitchen"]
+      },
+      {
+        "id": "distribution", "label": { "en": "Distribution (distance, schools per kitchen)", "id": "Distribusi (jarak, jumlah sekolah)" },
+        "examples": [{ "en": "One kitchen serves too many schools, so cooking starts hours before meal time", "id": "Satu dapur melayani terlalu banyak sekolah sehingga masak dimulai berjam-jam sebelum makan" }],
+        "witness_questions": [{ "en": "When does the delivery usually arrive at the school?", "id": "Biasanya jam berapa kiriman tiba di sekolah?" }],
+        "pattern_metrics": ["schools_per_kitchen", "incidents_per_kitchen"]
+      },
+      {
+        "id": "oversight", "label": { "en": "Oversight", "id": "Pengawasan" },
+        "examples": [{ "en": "Samples not kept, no inspection after earlier incidents", "id": "Sampel tidak disimpan, tidak ada inspeksi setelah kejadian sebelumnya" }],
+        "witness_questions": [{ "en": "Did the school keep a sample of that day's meal?", "id": "Apakah sekolah menyimpan sampel makanan hari itu?" }],
+        "pattern_metrics": ["repeat_incidents_same_kitchen"]
+      }
+    ]
+  },
+  "validator_roles": [
+    { "id": "nutritionist", "label": { "en": "Nutritionist", "id": "Ahli gizi" } },
+    { "id": "health_worker", "label": { "en": "Health worker", "id": "Tenaga kesehatan" } },
+    { "id": "journalist", "label": { "en": "Journalist", "id": "Jurnalis" } },
+    { "id": "education_watchdog", "label": { "en": "Education watchdog NGO", "id": "LSM pemantau pendidikan" } }
+  ],
+  "signal_sources": {
+    "keywords": ["keracunan MBG", "makan bergizi gratis keracunan", "SPPG keracunan", "makanan basi MBG"],
+    "source_kinds": ["news", "official", "social_shared"],
+    "official_publishers": ["Badan Gizi Nasional", "Kementerian Kesehatan"]
+  },
+  "evidence_tips": [
+    { "en": "Keep leftover food in a closed container in the fridge.", "id": "Simpan sisa makanan di wadah tertutup di kulkas." },
+    { "en": "Photograph the time label on the tray.", "id": "Foto label waktu di ompreng." },
+    { "en": "Ask the school to keep the day's food sample.", "id": "Minta sekolah menyimpan sampel makanan hari itu." }
+  ]
+}

@@ -1,0 +1,140 @@
+# Deploys changed services and the portal to the demo environment on every push to main.
+# A build, migration or startup failure leaves the previous healthy revision serving: Cloud Run only moves
+# traffic to a revision that started, and a failed /readyz check after the switch rolls traffic back.
+# Repository variables come from `tofu output github_variables` (infra/tofu/envs/demo).
+# Off until the repository variable DEPLOY_ENABLED is set to 'true': until then development runs against the
+# local environment (agesoa-devenv: Postgres + Pub/Sub and Firestore emulators) and nothing reaches GCP.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      services:
+        description: "Targets to deploy (comma-separated services and/or portal) or 'all'"
+        default: all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: false
+
+env:
+  SERVICES: ingestion case-audit trust delivery transparency
+  TARGETS: ingestion case-audit trust delivery transparency portal
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      services: ${{ steps.detect.outputs.services }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: detect
+        env:
+          BEFORE: ${{ github.event.before }}
+          REQUESTED: ${{ inputs.services }}
+        run: |
+          set -eu
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            if [ "$REQUESTED" = all ]; then list="$TARGETS"; else list=$(echo "$REQUESTED" | tr ',' ' '); fi
+          elif [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            list="$TARGETS"
+          else
+            changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
+            # Shared code, contracts, domain packs and the lockfile go into every image.
+            if echo "$changed" | grep -qE '^(libs/|packages/contracts/|domain-packs/|uv\.lock$|pyproject\.toml$|\.python-version$)'; then
+              list="$SERVICES"
+            else
+              list=""
+              for s in $SERVICES; do
+                if echo "$changed" | grep -q "^services/$s/"; then list="$list $s"; fi
+              done
+            fi
+            if echo "$changed" | grep -qE '^(apps/portal/|packages/ui/|package\.json$|bun\.lock$)'; then
+              list="$list portal"
+            fi
+          fi
+          json=$(printf '%s\n' $list | jq -R . | jq -cs 'map(select(length > 0))')
+          echo "services=$json" >> "$GITHUB_OUTPUT"
+          echo "Targets to deploy: $json"
+
+  deploy:
+    needs: [ci, changes]
+    if: needs.changes.outputs.services != '[]' && vars.DEPLOY_ENABLED == 'true' && vars.GCP_PROJECT_ID != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    env:
+      REGION: ${{ vars.GCP_REGION }}
+      RUN_SERVICE: agesoa-${{ matrix.service }}
+      IMAGE: ${{ vars.GCP_ARTIFACT_REPOSITORY }}/${{ matrix.service }}:${{ github.sha }}
+      DOCKERFILE: ${{ matrix.service == 'portal' && 'apps/portal/Dockerfile' || format('services/{0}/Dockerfile', matrix.service) }}
+      # Services must reach their database; the portal has none.
+      CHECK_PATH: ${{ matrix.service == 'portal' && '/api/healthz' || '/readyz' }}
+      CHECK_STATUS: ${{ matrix.service == 'portal' && 'ok' || 'ready' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ env.DOCKERFILE }}
+          build-args: RELEASE=${{ github.sha }}
+          tags: ${{ env.IMAGE }}
+          push: true
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+      - name: Deploy revision
+        id: deploy
+        run: |
+          set -eu
+          previous=$(gcloud run services describe "$RUN_SERVICE" --region "$REGION" --format 'value(status.latestReadyRevisionName)')
+          echo "previous=$previous" >> "$GITHUB_OUTPUT"
+          # Migrations run at container start; if they or the server fail, the revision never becomes
+          # ready and traffic stays on $previous.
+          gcloud run deploy "$RUN_SERVICE" --region "$REGION" --image "$IMAGE" \
+            --revision-suffix "${GITHUB_SHA::7}-${GITHUB_RUN_ATTEMPT}" \
+            --update-labels "commit-sha=${GITHUB_SHA}" --quiet
+          # Undo a traffic pin left by an earlier rollback; the new revision is ready at this point.
+          gcloud run services update-traffic "$RUN_SERVICE" --region "$REGION" --to-latest --quiet
+          url=$(gcloud run services describe "$RUN_SERVICE" --region "$REGION" --format 'value(status.url)')
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Check readiness (roll back on failure)
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+          PREVIOUS: ${{ steps.deploy.outputs.previous }}
+        run: |
+          set -u
+          for i in 1 2 3 4 5 6; do
+            body=$(curl -fsS --max-time 10 "$URL$CHECK_PATH") &&
+              echo "$body" | jq -e --arg sha "$GITHUB_SHA" --arg st "$CHECK_STATUS" '.status == $st and .release == $sha' >/dev/null && {
+              echo "$body" | jq -c '{service, status, release, database: .database.name?}'
+              exit 0
+            }
+            sleep 10
+          done
+          echo "::error::$RUN_SERVICE is not ready on $GITHUB_SHA; routing traffic back to $PREVIOUS"
+          if [ -n "$PREVIOUS" ]; then
+            gcloud run services update-traffic "$RUN_SERVICE" --region "$REGION" --to-revisions "$PREVIOUS=100" --quiet
+          fi
+          exit 1

@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "mbg-s02-supplier-cold-chain",
+  "pack": "mbg",
+  "synthetic": true,
+  "title": { "en": "Chicken from a new supplier without a cold chain", "id": "Ayam dari pemasok baru tanpa rantai dingin" },
+  "summary": {
+    "en": "Food is eaten well within four hours, yet pupils fall ill on chicken days only, since a cheaper supplier took over.",
+    "id": "Makanan dimakan jauh di bawah empat jam, tetapi siswa sakit hanya pada hari menu ayam, sejak pemasok yang lebih murah masuk."
+  },
+  "region": { "regency_code": null, "regency_name": "Kabupaten Sukamaju (fictional)", "district_code": null, "district_name": "Kecamatan Mekarlaras (fictional)" },
+  "reports": [
+    {
+      "ref": "r1",
+      "category": "poisoning",
+      "received_at": "2026-10-09T13:15:00+07:00",
+      "fields": {
+        "school": "SMPN Mekarlaras 1 (fictional)",
+        "kitchen": "SPPG Mekarlaras (fictional)",
+        "menu": "Nasi, ayam goreng, sayur sop, jeruk",
+        "cooked_at": "2026-10-09T06:30:00+07:00",
+        "eaten_at": "2026-10-09T09:40:00+07:00",
+        "meal_date": "2026-10-09",
+        "symptoms": ["diarrhea", "fever", "stomach_ache"],
+        "affected_count": 18,
+        "tray_label_text": "Masak 06.30 / Habis 10.30"
+      },
+      "evidence": [
+        { "kind": "photo", "label": "Chicken pieces with pink meat near the bone", "captured_at": "2026-10-09T09:50:00+07:00" }
+      ],
+      "narrative": "Ayamnya bagian dalam masih agak merah dan baunya aneh. Sorenya banyak anak diare dan demam."
+    },
+    {
+      "ref": "r2",
+      "category": "spoiled_food",
+      "received_at": "2026-10-06T12:20:00+07:00",
+      "fields": {
+        "school": "SDN Mekarlaras 2 (fictional)",
+        "kitchen": "SPPG Mekarlaras (fictional)",
+        "menu": "Nasi, ayam bumbu kecap, tahu, pisang",
+        "cooked_at": "2026-10-06T06:15:00+07:00",
+        "eaten_at": "2026-10-06T09:10:00+07:00",
+        "symptoms": ["stomach_ache"],
+        "affected_count": 6
+      },
+      "evidence": [
+        { "kind": "photo", "label": "Tray with chicken left mostly uneaten", "captured_at": "2026-10-06T09:30:00+07:00" }
+      ]
+    }
+  ],
+  "signals": [
+    {
+      "ref": "s1",
+      "source_kind": "social_shared",
+      "publisher": "Grup orang tua SMPN Mekarlaras 1 (fictional)",
+      "published_at": "2026-10-09T15:00:00+07:00",
+      "headline": "Anak-anak diare lagi setelah menu ayam",
+      "excerpt": "Ini sudah kedua kalinya minggu ini, dua-duanya pas menu ayam. Katanya juru masak tidak cuci tangan."
+    }
+  ],
+  "witness_script": [
+    { "witness_role": "kitchen_staff", "question": "Kapan ayam untuk menu hari ini diterima dan disimpan di mana?", "answer": "Datang jam tujuh malam sebelumnya dari pemasok baru, pakai mobil bak terbuka. Chiller kami penuh, jadi ayamnya ditaruh di ember di lantai dapur sampai pagi." },
+    { "witness_role": "kitchen_staff", "question": "Sejak kapan pemasok ini dipakai?", "answer": "Sejak akhir September. Pemasok lama yang pakai boks es diganti karena harganya lebih mahal." },
+    { "witness_role": "teacher", "question": "Apakah keluhan muncul juga pada hari menu ikan atau telur?", "answer": "Tidak, hanya hari Senin dan Jumat waktu menunya ayam." }
+  ],
+  "answer_key": {
+    "root_cause": {
+      "branch": "ingredients",
+      "statement": "Raw chicken from the new, cheaper supplier arrives the evening before without refrigeration and sits overnight at room temperature.",
+      "keywords": ["supplier", "chicken", "cold chain", "storage", "pemasok", "ayam", "rantai dingin"]
+    },
+    "contributing": [
+      { "branch": "facility", "statement": "The kitchen chiller is too small for a full day's raw protein." },
+      { "branch": "oversight", "statement": "The supplier switch was approved on price without a cold-chain requirement." }
+    ],
+    "expected_rule_violations": [],
+    "pattern": "Cases occur only on chicken days and started when the supplier changed; the 4-hour rule is met every time.",
+    "distractors": ["Cooks not washing hands (would affect every menu, not only chicken days)."]
+  }
+}
