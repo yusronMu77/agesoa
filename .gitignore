@@ -1,0 +1,54 @@
+# --- Python / uv ---
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Node / bun ---
+node_modules/
+dist/
+.next/
+out/
+*.tsbuildinfo
+.turbo/
+
+# --- IaC (OpenTofu / Terraform) ---
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+!*.tfvars.example
+override.tf
+override.tf.json
+
+# --- Android / Capacitor ---
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+*-sa.json
+service-account*.json
+*.pem
+*.key
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+*.swp
