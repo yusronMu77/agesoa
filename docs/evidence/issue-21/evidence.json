@@ -1,0 +1,27 @@
+{
+  "issue": 21,
+  "date": "2026-10-13 07:45 +07:00",
+  "product_commit": "a1809c00bfce",
+  "e2e_commit": "2099b51f6953",
+  "cases": [
+    {
+      "tc": "TC-032",
+      "tests": [
+        {
+          "title": "demo-only routes do not exist when demo_mode is off @p0 @TC-032",
+          "project": "api-ingestion",
+          "result": "passed",
+          "ms": 363
+        },
+        {
+          "title": "synthetic scenarios are served when demo_mode is on, without answer keys @p0 @TC-032",
+          "project": "api-ingestion",
+          "result": "passed",
+          "ms": 174
+        }
+      ],
+      "manual": false,
+      "files": []
+    }
+  ]
+}
