@@ -125,6 +125,51 @@
         }
       }
     },
+    "/v1/validation-requests/{finding_id}": {
+      "get": {
+        "tags": [
+          "validation"
+        ],
+        "summary": "One finding with its quorum status",
+        "operationId": "get_request_v1_validation_requests__finding_id__get",
+        "parameters": [
+          {
+            "name": "finding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Finding Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such finding"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/validation-requests/{finding_id}/decisions": {
       "post": {
         "tags": [
@@ -164,8 +209,14 @@
               }
             }
           },
-          "501": {
-            "description": "Not implemented yet (planned for CP2)"
+          "404": {
+            "description": "No such finding"
+          },
+          "403": {
+            "description": "Not an active validator"
+          },
+          "409": {
+            "description": "Already decided, validation closed, or conflict of interest"
           },
           "422": {
             "description": "Validation Error",
@@ -260,6 +311,12 @@
               }
             ],
             "title": "Confidence"
+          },
+          "conflict": {
+            "type": "boolean",
+            "title": "Conflict",
+            "description": "Declared conflict of interest: the decision is recorded but not counted.",
+            "default": false
           }
         },
         "type": "object",
@@ -282,6 +339,10 @@
             ],
             "title": "Decision"
           },
+          "counted": {
+            "type": "boolean",
+            "title": "Counted"
+          },
           "quorum_reached": {
             "type": "boolean",
             "title": "Quorum Reached"
@@ -300,14 +361,19 @@
               }
             ],
             "title": "Outcome"
+          },
+          "quorum": {
+            "$ref": "#/components/schemas/QuorumStatus"
           }
         },
         "type": "object",
         "required": [
           "finding_id",
           "decision",
+          "counted",
           "quorum_reached",
-          "outcome"
+          "outcome",
+          "quorum"
         ],
         "title": "DecisionOut"
       },
@@ -380,6 +446,39 @@
           "published"
         ],
         "title": "ProbeResult"
+      },
+      "QuorumStatus": {
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected",
+              "pending"
+            ],
+            "title": "Outcome"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "approvals": {
+            "type": "integer",
+            "title": "Approvals"
+          },
+          "rejections": {
+            "type": "integer",
+            "title": "Rejections"
+          }
+        },
+        "type": "object",
+        "required": [
+          "outcome",
+          "reason",
+          "approvals",
+          "rejections"
+        ],
+        "title": "QuorumStatus"
       },
       "Readiness": {
         "properties": {
@@ -456,6 +555,119 @@
           "failed"
         ],
         "title": "SweepResult"
+      },
+      "ValidationDetail": {
+        "properties": {
+          "finding_id": {
+            "type": "string",
+            "title": "Finding Id"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "statement": {
+            "type": "string",
+            "title": "Statement"
+          },
+          "status_label": {
+            "type": "string",
+            "enum": [
+              "alleged",
+              "supported",
+              "proven"
+            ],
+            "title": "Status Label"
+          },
+          "required_roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Required Roles"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Refs"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "approved",
+                  "rejected"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Received At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "quorum": {
+            "$ref": "#/components/schemas/QuorumStatus"
+          },
+          "my_decision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "My Decision"
+          }
+        },
+        "type": "object",
+        "required": [
+          "finding_id",
+          "case_id",
+          "domain",
+          "statement",
+          "status_label",
+          "required_roles",
+          "evidence_refs",
+          "outcome",
+          "synthetic",
+          "received_at",
+          "quorum",
+          "my_decision"
+        ],
+        "title": "ValidationDetail"
       },
       "ValidationError": {
         "properties": {
@@ -561,6 +773,18 @@
             "type": "string",
             "format": "date-time",
             "title": "Received At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
           }
         },
         "type": "object",

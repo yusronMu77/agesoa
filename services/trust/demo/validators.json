@@ -1,0 +1,69 @@
+{
+  "$comment": "Demo fallback (demo_mode only): fictional organizations + validators so a finding can reach quorum without the registration flow. Role ids come from the domain pack's validator_roles. Local sign-in: Bearer dev:<auth_uid>:validator.",
+  "organizations": [
+    {
+      "id": "ORG-DEMO-NEWS",
+      "name": "Redaksi Sukamaju (fictional)",
+      "kind": "newsroom",
+      "domain": "redaksi-sukamaju.example",
+      "status": "verified",
+      "verification_token": "demo",
+      "region": {
+        "regency_code": null,
+        "regency_name": "Kabupaten Sukamaju (fictional)",
+        "district_code": null,
+        "district_name": null
+      },
+      "synthetic": true
+    }
+  ],
+  "validators": [
+    {
+      "id": "VAL-DEMO-1",
+      "auth_uid": "demo-validator-1",
+      "role": "journalist",
+      "field": "Health and education desk",
+      "region": {
+        "regency_code": null,
+        "regency_name": "Kabupaten Sukamaju (fictional)",
+        "district_code": null,
+        "district_name": null
+      },
+      "organization_id": "ORG-DEMO-NEWS",
+      "path": "org_confirmed",
+      "tier": "high",
+      "status": "active",
+      "extracted": {
+        "demo": true
+      },
+      "synthetic": true
+    },
+    {
+      "id": "VAL-DEMO-2",
+      "auth_uid": "demo-validator-2",
+      "role": "nutritionist",
+      "field": "Public nutrition",
+      "region": {
+        "regency_code": null,
+        "regency_name": "Kabupaten Sukamaju (fictional)",
+        "district_code": null,
+        "district_name": null
+      },
+      "organization_id": null,
+      "path": "self_declared",
+      "tier": "medium",
+      "status": "active",
+      "extracted": {
+        "demo": true
+      },
+      "synthetic": true
+    }
+  ],
+  "staff_confirmations": [
+    {
+      "validator_id": "VAL-DEMO-1",
+      "organization_id": "ORG-DEMO-NEWS",
+      "status": "confirmed"
+    }
+  ]
+}
