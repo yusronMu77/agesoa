@@ -11,7 +11,7 @@ first). Five Python services (FastAPI + ADK) talk through events; two frontends 
 
 ```sh
 bash scripts/agent/setup.sh        # once per environment (Jules: Initial Setup script, then "Run and Snapshot")
-bash scripts/agent/db.sh           # throwaway PostGIS for DB tests (same image as CI), idempotent
+bash scripts/agent/db.sh           # start Postgres 17 + PostGIS for DB tests (same versions as CI), idempotent; run it every task
 export TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
 ```
 
