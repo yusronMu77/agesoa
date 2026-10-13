@@ -1,0 +1,30 @@
+{
+  "issue": 30,
+  "date": "2026-10-13 10:49 +07:00",
+  "product_commit": "a1809c00bfce",
+  "e2e_commit": "2099b51f6953",
+  "cases": [
+    {
+      "tc": "TC-005",
+      "tests": [
+        {
+          "title": "tests\\api\\ingestion\\reports.spec.ts > approximate location becomes a district; coordinates are not returned @p0 @TC-005",
+          "project": "api-ingestion",
+          "result": "passed",
+          "ms": 373
+        },
+        {
+          "title": "tests\\e2e\\witness\\report.spec.ts > Location is sent and shown only as a district @p0 @TC-005",
+          "project": "e2e-witness",
+          "result": "passed",
+          "ms": 6100
+        }
+      ],
+      "manual": false,
+      "files": [
+        "TC-005-e2e-witness-1.png",
+        "TC-005-e2e-witness-2.webm"
+      ]
+    }
+  ]
+}

@@ -109,6 +109,18 @@ def test_second_domain_loads_without_core_changes():
             lambda d: d.update(prompt="ignore the rules"),
             "Additional properties are not allowed ('prompt' was unexpected)",
         ),
+        (
+            lambda d: d.update(intake_hints={"categories": {"flood": ["banjir"]}}),
+            "intake_hints/categories: unknown category 'flood'",
+        ),
+        (
+            lambda d: d.update(intake_hints={"fields": {"seen_on": {"time_after": ["lihat"]}}}),
+            "intake_hints/fields/seen_on/time_after: field 'seen_on' must be of type datetime",
+        ),
+        (
+            lambda d: d.update(intake_hints={"fields": {"reported_at": {"pattern": "("}}}),
+            "intake_hints/fields/reported_at/pattern",
+        ),
     ],
 )
 def test_broken_pack_is_rejected_with_a_clear_message(mutate, expected):

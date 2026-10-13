@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -137,6 +138,28 @@ def _cross_reference_errors(doc: dict[str, Any]) -> list[str]:
     need(
         "evidence_deadline/fallback_anchor_field", deadline.get("fallback_anchor_field"), ("date", "datetime")
     )
+
+    hints = doc.get("intake_hints", {})
+    categories = {c["id"] for c in doc["categories"]}
+    errors += [
+        f"intake_hints/categories: unknown category {c!r}"
+        for c in hints.get("categories", {})
+        if c not in categories
+    ]
+    hint_types = {
+        "pattern": ("string",),
+        "time_after": ("datetime",),
+        "number_before": ("integer",),
+        "vocabulary": ("string_list",),
+    }
+    for field_id, hint in hints.get("fields", {}).items():
+        for kind in hint:
+            need(f"intake_hints/fields/{field_id}/{kind}", field_id, hint_types[kind])
+        if "pattern" in hint:
+            try:
+                re.compile(hint["pattern"])
+            except re.error as exc:
+                errors.append(f"intake_hints/fields/{field_id}/pattern: invalid regular expression ({exc})")
 
     ladder = [step["status"] for step in doc["evidence_ladder"]]
     if ladder != ["proven", "supported", "alleged"]:

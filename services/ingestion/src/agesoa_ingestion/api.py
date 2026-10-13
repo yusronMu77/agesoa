@@ -1,11 +1,10 @@
 """Public HTTP API of ingestion (exported to openapi.json)."""
 
 from datetime import datetime
-from typing import Annotated, Any, Literal
+from typing import Any, Literal
 
 from agesoa_packs import DomainPack, evaluate_rules, evidence_status
-from agesoa_platform.auth import Principal, authenticate
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/v1")
@@ -99,109 +98,3 @@ async def evaluate(pack_id: str, body: EvaluateRequest, request: Request) -> Eva
         evidence_tips=pack.document["evidence_tips"] if evidence.status == "available" else [],
         missing_required=[f for f in pack.required_field_ids() if body.fields.get(f) in (None, "", [])],
     )
-
-
-# --- Citizen reports (contract for CP1: AGESOA Witness draft -> correction -> submit) ---------------------------
-
-
-class Region(BaseModel):
-    regency_code: str | None = None
-    regency_name: str
-    district_code: str | None = None
-    district_name: str | None = None
-
-
-class ReportCreate(BaseModel):
-    domain: str = "mbg"
-    narrative: str | None = Field(None, max_length=5000)
-    shared_post_url: str | None = Field(None, description="Link to a social post the reporter shares")
-    location: tuple[float, float] | None = Field(
-        None, description="Approximate [lat, lon]; converted to a district on arrival and never stored"
-    )
-
-
-class ReportPatch(BaseModel):
-    category: str | None = None
-    fields: dict[str, Any] | None = None
-    narrative: str | None = Field(None, max_length=5000)
-
-
-class EvidenceOut(BaseModel):
-    evidence_id: str
-    kind: Literal["photo", "audio", "video", "screenshot"]
-    media_type: str
-    sha256: str
-
-
-class Report(BaseModel):
-    id: str
-    status: Literal["draft", "submitted", "withdrawn"]
-    domain: str
-    category: str | None
-    narrative: str | None
-    fields: dict[str, Any]
-    missing_required: list[str]
-    rule_results: list[RuleResultOut]
-    evidence_status: EvidenceStatusOut | None
-    evidence_tips: list[Label]
-    evidence: list[EvidenceOut]
-    region: Region | None
-    created_at: datetime
-    updated_at: datetime
-    submitted_at: datetime | None
-
-
-class MediaUploadRequest(BaseModel):
-    kind: Literal["photo", "audio", "video", "screenshot"]
-    media_type: str = Field(examples=["image/jpeg", "audio/webm"])
-    size_bytes: int = Field(gt=0, le=50 * 1024 * 1024)
-
-
-class MediaUpload(BaseModel):
-    evidence_id: str
-    upload_url: str = Field(description="Signed URL for a single PUT")
-    expires_at: datetime
-
-
-Reporter = Annotated[Principal, Depends(authenticate)]
-PLANNED = {501: {"description": "Not implemented yet (planned for CP1)"}}
-
-
-def _planned() -> None:
-    raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, "planned for CP1")
-
-
-@router.post("/reports", tags=["reports"], status_code=201, summary="Start a report draft", responses=PLANNED)
-async def create_report(body: ReportCreate, reporter: Reporter) -> Report:
-    _planned()
-
-
-@router.get("/reports/{report_id}", tags=["reports"], summary="Read one of my reports", responses=PLANNED)
-async def get_report(report_id: str, reporter: Reporter) -> Report:
-    _planned()
-
-
-@router.patch("/reports/{report_id}", tags=["reports"], summary="Correct a draft", responses=PLANNED)
-async def patch_report(report_id: str, body: ReportPatch, reporter: Reporter) -> Report:
-    _planned()
-
-
-@router.post(
-    "/reports/{report_id}/media",
-    tags=["reports"],
-    status_code=201,
-    summary="Get a signed upload URL",
-    responses=PLANNED,
-)
-async def request_upload(report_id: str, body: MediaUploadRequest, reporter: Reporter) -> MediaUpload:
-    _planned()
-
-
-@router.post(
-    "/reports/{report_id}/submit",
-    tags=["reports"],
-    summary="Confirm the draft; publishes laporan.diterima",
-    responses=PLANNED,
-)
-async def submit_report(report_id: str, reporter: Reporter) -> Report:
-    _planned()

@@ -84,20 +84,14 @@ module "service" {
   depends_on = [google_project_service.apis]
 }
 
-# Evidence media: private bucket, uploads through signed URLs issued by ingestion.
+# Evidence media: private bucket written only by ingestion, after the privacy guard (EXIF removed, hashed).
+# Clients upload through the ingestion API, never to the bucket, so there is no CORS and no signed URL.
 resource "google_storage_bucket" "media" {
   name                        = "${var.project_id}-agesoa-media"
   location                    = var.region
   uniform_bucket_level_access = true
   public_access_prevention    = "enforced"
   force_destroy               = !var.deletion_protection
-
-  cors {
-    origin          = local.cors_origins
-    method          = ["GET", "PUT", "HEAD"]
-    response_header = ["Content-Type", "x-goog-content-sha256"]
-    max_age_seconds = 3600
-  }
 
   depends_on = [google_project_service.apis]
 }
@@ -106,13 +100,6 @@ resource "google_storage_bucket_iam_member" "media_ingestion" {
   bucket = google_storage_bucket.media.name
   role   = "roles/storage.objectUser"
   member = module.service["ingestion"].service_account.member
-}
-
-# Signed URLs are signed with the runtime account itself (iam.signBlob), no key file.
-resource "google_service_account_iam_member" "ingestion_sign_blob" {
-  service_account_id = module.service["ingestion"].service_account.name
-  role               = "roles/iam.serviceAccountTokenCreator"
-  member             = module.service["ingestion"].service_account.member
 }
 
 # Read models only (written by services, read by clients).

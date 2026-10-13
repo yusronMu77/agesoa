@@ -41,7 +41,7 @@ variable "operators" {
 variable "extra_cors_origins" {
   type        = list(string)
   default     = ["http://localhost:3000", "http://localhost:5173", "capacitor://localhost", "https://localhost"]
-  description = "Browser origins allowed by the services and the media bucket, besides the portal."
+  description = "Browser origins allowed by the services (Witness dev server, Capacitor app), besides the portal."
 }
 
 variable "billing_account" {

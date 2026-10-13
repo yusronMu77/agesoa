@@ -1,0 +1,188 @@
+{
+ "type": "FeatureCollection",
+ "name": "Kabupaten Sukamaju (fictional)",
+ "synthetic": true,
+ "description": "Fictional regency of the demo scenarios. Rectangles over an arbitrary area; not real boundaries. Loaded only when demo_mode is on.",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "district_code": "99.01.01",
+    "district_name": "Kecamatan Cibening (fictional)",
+    "regency_code": "99.01",
+    "regency_name": "Kabupaten Sukamaju (fictional)"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       106.8,
+       -6.95
+      ],
+      [
+       106.95,
+       -6.95
+      ],
+      [
+       106.95,
+       -6.85
+      ],
+      [
+       106.8,
+       -6.85
+      ],
+      [
+       106.8,
+       -6.95
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "district_code": "99.01.02",
+    "district_name": "Kecamatan Mekarlaras (fictional)",
+    "regency_code": "99.01",
+    "regency_name": "Kabupaten Sukamaju (fictional)"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       106.95,
+       -6.95
+      ],
+      [
+       107.1,
+       -6.95
+      ],
+      [
+       107.1,
+       -6.85
+      ],
+      [
+       106.95,
+       -6.85
+      ],
+      [
+       106.95,
+       -6.95
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "district_code": "99.01.03",
+    "district_name": "Kecamatan Tirtasari (fictional)",
+    "regency_code": "99.01",
+    "regency_name": "Kabupaten Sukamaju (fictional)"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       106.8,
+       -7.05
+      ],
+      [
+       106.9,
+       -7.05
+      ],
+      [
+       106.9,
+       -6.95
+      ],
+      [
+       106.8,
+       -6.95
+      ],
+      [
+       106.8,
+       -7.05
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "district_code": "99.01.04",
+    "district_name": "Kecamatan Kertabumi (fictional)",
+    "regency_code": "99.01",
+    "regency_name": "Kabupaten Sukamaju (fictional)"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       106.9,
+       -7.05
+      ],
+      [
+       107.0,
+       -7.05
+      ],
+      [
+       107.0,
+       -6.95
+      ],
+      [
+       106.9,
+       -6.95
+      ],
+      [
+       106.9,
+       -7.05
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "district_code": "99.01.05",
+    "district_name": "Kecamatan Wanasekar (fictional)",
+    "regency_code": "99.01",
+    "regency_name": "Kabupaten Sukamaju (fictional)"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       107.0,
+       -7.05
+      ],
+      [
+       107.1,
+       -7.05
+      ],
+      [
+       107.1,
+       -6.95
+      ],
+      [
+       107.0,
+       -6.95
+      ],
+      [
+       107.0,
+       -7.05
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

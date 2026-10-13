@@ -41,11 +41,10 @@ def test_evaluate_rejects_naive_datetimes():
         assert c.post("/v1/domain-packs/mbg/evaluate", json=body).status_code == 422
 
 
-def test_report_endpoints_require_a_user_and_are_planned():
+def test_report_endpoints_require_a_user():
     with client() as c:
         assert c.post("/v1/reports", json={}).status_code == 401
-        planned = c.post("/v1/reports", json={}, headers={"Authorization": "Bearer dev:anon-1:"})
-    assert planned.status_code == 501
+        assert c.post("/v1/regions/resolve", json={"lat": 0, "lon": 0}).status_code == 401
 
 
 def demo_client(demo_mode: bool):
@@ -64,10 +63,11 @@ def test_scenarios_do_not_exist_without_demo_mode():
 
 
 def test_scenarios_are_served_in_demo_mode_without_answer_key():
-    with demo_client(True) as c:
-        listed = c.get("/v1/demo/scenarios").json()
-        one = c.get("/v1/demo/scenarios/mbg-s01-long-route").json()
-        missing = c.get("/v1/demo/scenarios/nope")
+    # No `with`: the lifespan (database, demo districts) is not needed to serve scenarios.
+    c = demo_client(True)
+    listed = c.get("/v1/demo/scenarios").json()
+    one = c.get("/v1/demo/scenarios/mbg-s01-long-route").json()
+    missing = c.get("/v1/demo/scenarios/nope")
     assert 5 <= len(listed) <= 8
     assert all(s["synthetic"] and s["region"]["regency_code"] is None for s in listed)
     assert one["id"] == "mbg-s01-long-route"

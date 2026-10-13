@@ -1,0 +1,27 @@
+{
+  "name": "@agesoa/witness",
+  "version": "0.1.0",
+  "description": "AGESOA Witness: anonymous citizen reporting app (PWA + Android)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5173 --strictPort",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 5173 --strictPort",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@agesoa/ui": "workspace:*",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "^5.9",
+    "vite": "8.3.4"
+  }
+}

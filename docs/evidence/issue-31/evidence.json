@@ -1,0 +1,51 @@
+{
+  "issue": 31,
+  "date": "2026-10-13 10:49 +07:00",
+  "product_commit": "a1809c00bfce",
+  "e2e_commit": "2099b51f6953",
+  "cases": [
+    {
+      "tc": "TC-008",
+      "tests": [
+        {
+          "title": "tests\\api\\ingestion\\reports.spec.ts > a pasted text that is not a link is refused @p0 @TC-008",
+          "project": "api-ingestion",
+          "result": "passed",
+          "ms": 536
+        },
+        {
+          "title": "tests\\e2e\\witness\\report.spec.ts > Shared social post link: validation and canonicalisation @p0 @TC-008",
+          "project": "e2e-witness",
+          "result": "passed",
+          "ms": 7206
+        },
+        {
+          "title": "tests\\e2e\\witness\\report.spec.ts > Shared social post: Kembali without saving attaches nothing @p0 @TC-008",
+          "project": "e2e-witness",
+          "result": "passed",
+          "ms": 3074
+        }
+      ],
+      "manual": false,
+      "files": [
+        "TC-008-e2e-witness-1.png",
+        "TC-008-e2e-witness-2.webm",
+        "TC-008-e2e-witness-3.png",
+        "TC-008-e2e-witness-4.webm"
+      ]
+    },
+    {
+      "tc": "TC-009",
+      "tests": [
+        {
+          "title": "tests\\api\\ingestion\\reports.spec.ts > reposts of one post become one shared post, stored without the username @p0 @TC-009",
+          "project": "api-ingestion",
+          "result": "passed",
+          "ms": 577
+        }
+      ],
+      "manual": false,
+      "files": []
+    }
+  ]
+}

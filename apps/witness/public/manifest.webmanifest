@@ -1,0 +1,13 @@
+{
+  "name": "AGESOA Witness",
+  "short_name": "Witness",
+  "description": "Lapor kejadian secara anonim dengan foto, suara, dan lokasi kecamatan.",
+  "lang": "id",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#4338CA",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

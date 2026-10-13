@@ -1,0 +1,109 @@
+/**
+ * UI text (Indonesian). Source of truth: agesoa-uiux/copy/microcopy.md; the E2E tests expect the same text, so
+ * change the microcopy first, then here. Keys are the microcopy text ids.
+ */
+
+export const T = {
+  "TXT-EVD-001": "Dugaan",
+  "TXT-EVD-002": "Didukung bukti",
+  "TXT-EVD-003": "Terbukti",
+
+  "TXT-WIT-001": "AGESOA Witness",
+  "TXT-WIT-002": "SIMULASI – wilayah dan data fiktif",
+  "TXT-WIT-003": "Laporan Anda anonim. Kami tidak meminta nama, nomor HP, atau email.",
+  "TXT-WIT-010": "Laporkan kejadian",
+  "TXT-WIT-011": "Foto",
+  "TXT-WIT-012": "Ambil foto",
+  "TXT-WIT-013": "Pilih dari galeri",
+  "TXT-WIT-014": "Potret",
+  "TXT-WIT-015": "Tutup kamera",
+  "TXT-WIT-016": "Hapus",
+  "TXT-WIT-017": "Suara",
+  "TXT-WIT-018": "Rekam suara",
+  "TXT-WIT-019": "Berhenti merekam",
+  "TXT-WIT-020": "Rekaman suara ({detik} detik)",
+  "TXT-WIT-021": "Ceritakan kejadiannya",
+  "TXT-WIT-022": "Apa yang terjadi, di mana, jam berapa, dan berapa orang yang terdampak.",
+  "TXT-WIT-023": "Lokasi",
+  "TXT-WIT-024": "Pakai lokasi saya",
+  "TXT-WIT-025": "Pilih kecamatan sendiri",
+  "TXT-WIT-026": "Kecamatan",
+  "TXT-WIT-027": "Yang disimpan hanya nama kecamatan, bukan titik lokasi Anda.",
+  "TXT-WIT-028": "Lokasi Anda di luar wilayah yang kami kenal. Pilih kecamatan sendiri.",
+  "TXT-WIT-029": "Tambah link atau screenshot medsos",
+  "TXT-WIT-030": "Lanjut ke draf",
+  "TXT-WIT-031": "Tambahkan cerita, foto, suara, atau link dulu.",
+  "TXT-WIT-032": "Menyiapkan draf…",
+  "TXT-WIT-040": "Izinkan kamera?",
+  "TXT-WIT-041":
+    "Kamera dipakai untuk memotret bukti di lokasi. Info lokasi dan merek HP di dalam foto dihapus sebelum disimpan.",
+  "TXT-WIT-042": "Izinkan mikrofon?",
+  "TXT-WIT-043": "Mikrofon dipakai untuk merekam cerita Anda. Kalau tidak mau, Anda bisa mengetik ceritanya.",
+  "TXT-WIT-044": "Izinkan lokasi?",
+  "TXT-WIT-045":
+    "Lokasi dipakai untuk mengetahui kecamatan kejadian. Yang disimpan hanya nama kecamatan, bukan titik lokasi Anda.",
+  "TXT-WIT-046": "Lanjutkan",
+  "TXT-WIT-047": "Tidak sekarang",
+  "TXT-WIT-048": "Izin kamera tidak diberikan. Anda tetap bisa memilih foto dari galeri.",
+  "TXT-WIT-049": "Izin mikrofon tidak diberikan. Ketik ceritanya di kolom cerita.",
+  "TXT-WIT-050": "Izin lokasi tidak diberikan. Pilih kecamatan sendiri.",
+  "TXT-WIT-060": "Link atau screenshot medsos",
+  "TXT-WIT-061": "Link postingan",
+  "TXT-WIT-062": "Tempel link postingan, misalnya dari Instagram, TikTok, X, atau Facebook.",
+  "TXT-WIT-063": "Kutipan singkat (opsional)",
+  "TXT-WIT-064": "Nama akun pengunggah tidak disimpan. Nama akun di dalam kutipan disamarkan.",
+  "TXT-WIT-065": "Ini bukan link. Tempel link yang diawali https://",
+  "TXT-WIT-066": "Unggah screenshot",
+  "TXT-WIT-067": "Simpan",
+  "TXT-WIT-068": "Kembali",
+  "TXT-WIT-069": "Link terlampir",
+  "TXT-WIT-080": "Periksa draf laporan",
+  "TXT-WIT-081": "Hasil AI (Agen Intake). Periksa dan perbaiki kalau ada yang salah.",
+  "TXT-WIT-082": "Agen Intake sedang tidak bisa dipakai. Isi draf sendiri.",
+  "TXT-WIT-083": "Kategori",
+  "TXT-WIT-084": "Pilih kategori",
+  "TXT-WIT-085": "wajib",
+  "TXT-WIT-086": "Pisahkan dengan koma",
+  "TXT-WIT-087": "Cek aturan",
+  "TXT-WIT-088": "Dihitung oleh sistem dari isian di atas, bukan oleh AI.",
+  "TXT-WIT-089": "Tidak sesuai aturan",
+  "TXT-WIT-090": "Sesuai aturan",
+  "TXT-WIT-091": "Belum bisa dicek, isi kolom yang dibutuhkan dulu",
+  "TXT-WIT-092": "Bukti terlampir",
+  "TXT-WIT-093": "Simpan dan cek ulang",
+  "TXT-WIT-094": "Kirim laporan",
+  "TXT-WIT-095": "Pilih kategori dulu sebelum mengirim.",
+  "TXT-WIT-096": "Transkrip suara (hasil AI)",
+  "TXT-WIT-097": "Diubah dari usulan AI",
+  "TXT-WIT-098": "Isian {kolom} belum benar. Periksa lagi formatnya.",
+  "TXT-WIT-099": "Kolom wajib yang masih kosong: {kolom}",
+  "TXT-WIT-110": "Laporan terkirim",
+  "TXT-WIT-111": "Kode laporan",
+  "TXT-WIT-112": "Sidik jari bukti (SHA-256)",
+  "TXT-WIT-113": "Sidik jari ini membuktikan file tidak berubah setelah dikirim. Simpan kode laporan ini.",
+  "TXT-WIT-114": "Amankan bukti sebelum {tenggat}",
+  "TXT-WIT-115": "Tenggat bukti fisik sudah lewat. Laporan tetap diproses dengan bukti yang ada.",
+  "TXT-WIT-116": "Status bukti",
+  "TXT-WIT-117": "Buat laporan baru",
+  "TXT-WIT-118": "Wilayah fiktif (simulasi)",
+  "TXT-WIT-119": "Foto",
+  "TXT-WIT-120": "Rekaman suara",
+  "TXT-WIT-121": "Screenshot medsos",
+  "TXT-WIT-130": "Tidak tersambung ke server. Periksa koneksi lalu coba lagi.",
+  "TXT-WIT-131": "File ini tidak bisa dipakai. Gunakan foto JPG, PNG, atau WebP, atau rekaman suara.",
+  "TXT-WIT-132": "File terlalu besar (maksimal 20 MB).",
+} as const;
+
+export type TextId = keyof typeof T;
+
+/** Label of an evidence kind as stored by the service. */
+export const EVIDENCE_KIND: Record<"photo" | "audio" | "screenshot", string> = {
+  photo: T["TXT-WIT-119"],
+  audio: T["TXT-WIT-120"],
+  screenshot: T["TXT-WIT-121"],
+};
+
+/** Text with `{name}` placeholders filled in. */
+export function t(id: TextId, values: Record<string, string | number> = {}): string {
+  return T[id].replace(/\{(\w+)\}/g, (match, name: string) => (name in values ? String(values[name]) : match));
+}

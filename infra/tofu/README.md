@@ -22,7 +22,7 @@ envs/demo/         the demo environment (everything below)
 | Events | from `packages/contracts/events/catalog.json`: one topic per event type, publisher IAM per producer, one push subscription per consumer (`POST /events/{type}`, Google-signed OIDC token, audience `agesoa-demo-<service>`), dead letters after 5 attempts to `agesoa-dead-letter` |
 | Analytics | BigQuery `agesoa_events.events` (partitioned by publish time) fed by one BigQuery subscription per topic |
 | Jobs | Cloud Scheduler: `/internal/outbox/sweep` per service every 5 minutes (OIDC, scheduler SA) |
-| Storage | private media bucket `<project>-agesoa-media` (CORS for portal + Witness, signed URLs from ingestion) |
+| Storage | private media bucket `<project>-agesoa-media` (written only by ingestion after EXIF removal; no browser access) |
 | Read models | Firestore `(default)` in `asia-southeast2` |
 | Identity | Firebase project, web apps (portal, Witness), Identity Platform (anonymous + e-mail link) |
 | Portal | Cloud Run `agesoa-portal` (Next.js standalone, server-side calls to the five services). Not on Firebase App Hosting: its buildpacks support npm/yarn/pnpm only (this repository uses bun) and it is not offered in `asia-southeast2` |

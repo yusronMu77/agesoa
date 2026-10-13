@@ -52,3 +52,6 @@ Thumbs.db
 desktop.ini
 *.log
 *.swp
+
+# Local evidence media (ingestion, local/test only)
+services/ingestion/.media/

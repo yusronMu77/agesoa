@@ -223,12 +223,86 @@
         }
       }
     },
+    "/v1/regions/districts": {
+      "get": {
+        "tags": [
+          "reports",
+          "regions"
+        ],
+        "summary": "Districts for manual selection",
+        "operationId": "list_districts_v1_regions_districts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DistrictOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Districts V1 Regions Districts Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/regions/resolve": {
+      "post": {
+        "tags": [
+          "reports",
+          "regions"
+        ],
+        "summary": "Approximate position -> district (the position is not stored or logged)",
+        "operationId": "resolve_district_v1_regions_resolve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Coordinates"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DistrictOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Outside every known district; pick one by hand"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    },
     "/v1/reports": {
       "post": {
         "tags": [
           "reports"
         ],
-        "summary": "Start a report draft",
+        "summary": "Start a report draft (anonymous)",
         "operationId": "create_report_v1_reports_post",
         "requestBody": {
           "content": {
@@ -250,9 +324,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "Not implemented yet (planned for CP1)"
           },
           "422": {
             "description": "Validation Error",
@@ -299,8 +370,8 @@
               }
             }
           },
-          "501": {
-            "description": "Not implemented yet (planned for CP1)"
+          "404": {
+            "description": "No such report for this reporter"
           },
           "422": {
             "description": "Validation Error",
@@ -352,18 +423,14 @@
               }
             }
           },
-          "501": {
-            "description": "Not implemented yet (planned for CP1)"
+          "404": {
+            "description": "No such report for this reporter"
+          },
+          "409": {
+            "description": "The report was already submitted"
           },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "Unknown category/field or wrong value type"
           },
           "400": {
             "description": "Malformed request body (not valid JSON)"
@@ -371,13 +438,13 @@
         }
       }
     },
-    "/v1/reports/{report_id}/media": {
+    "/v1/reports/{report_id}/evidence": {
       "post": {
         "tags": [
           "reports"
         ],
-        "summary": "Get a signed upload URL",
-        "operationId": "request_upload_v1_reports__report_id__media_post",
+        "summary": "Upload one evidence file (photo, screenshot or voice note); metadata is removed before storage",
+        "operationId": "upload_evidence_v1_reports__report_id__evidence_post",
         "parameters": [
           {
             "name": "report_id",
@@ -392,9 +459,9 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/MediaUploadRequest"
+                "$ref": "#/components/schemas/Body_upload_evidence_v1_reports__report_id__evidence_post"
               }
             }
           }
@@ -405,13 +472,68 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MediaUpload"
+                  "$ref": "#/components/schemas/EvidenceOut"
                 }
               }
             }
           },
-          "501": {
-            "description": "Not implemented yet (planned for CP1)"
+          "404": {
+            "description": "No such report for this reporter"
+          },
+          "409": {
+            "description": "The report was already submitted"
+          },
+          "413": {
+            "description": "File larger than 20 MB"
+          },
+          "415": {
+            "description": "Not an accepted image/audio format"
+          },
+          "422": {
+            "description": "More than 10 files"
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    },
+    "/v1/reports/{report_id}/evidence/{evidence_id}": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Download one of my stored evidence files (as stored: after metadata removal)",
+        "operationId": "download_evidence_v1_reports__report_id__evidence__evidence_id__get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          },
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evidence Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/octet-stream": {}
+            }
+          },
+          "404": {
+            "description": "No such report for this reporter"
           },
           "422": {
             "description": "Validation Error",
@@ -422,9 +544,57 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/v1/reports/{report_id}/intake": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Run Agen Intake on the narrative and evidence; fills the draft (AI result, to be corrected)",
+        "operationId": "run_intake_v1_reports__report_id__intake_post",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
           },
-          "400": {
-            "description": "Malformed request body (not valid JSON)"
+          "404": {
+            "description": "No such report for this reporter"
+          },
+          "409": {
+            "description": "The report was already submitted"
+          },
+          "503": {
+            "description": "Agen Intake is unavailable; fill the draft by hand"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
@@ -434,7 +604,7 @@
         "tags": [
           "reports"
         ],
-        "summary": "Confirm the draft; publishes laporan.diterima",
+        "summary": "Confirm the draft; publishes laporan.diterima and a decision-log entry",
         "operationId": "submit_report_v1_reports__report_id__submit_post",
         "parameters": [
           {
@@ -458,18 +628,14 @@
               }
             }
           },
-          "501": {
-            "description": "Not implemented yet (planned for CP1)"
+          "404": {
+            "description": "No such report for this reporter"
+          },
+          "409": {
+            "description": "The report was already submitted"
           },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "No category yet, or nothing to report (no narrative and no evidence)"
           }
         }
       }
@@ -552,6 +718,53 @@
   },
   "components": {
     "schemas": {
+      "Body_upload_evidence_v1_reports__report_id__evidence_post": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "photo",
+              "audio",
+              "screenshot"
+            ],
+            "title": "Kind"
+          },
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "The file; its declared content type is not trusted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "file"
+        ],
+        "title": "Body_upload_evidence_v1_reports__report_id__evidence_post"
+      },
+      "Coordinates": {
+        "properties": {
+          "lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lat",
+          "lon"
+        ],
+        "title": "Coordinates"
+      },
       "DatabaseStatus": {
         "properties": {
           "ok": {
@@ -597,6 +810,57 @@
           "ok"
         ],
         "title": "DatabaseStatus"
+      },
+      "DistrictOut": {
+        "properties": {
+          "regency_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regency Code"
+          },
+          "regency_name": {
+            "type": "string",
+            "title": "Regency Name"
+          },
+          "district_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District Code"
+          },
+          "district_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District Name"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "regency_name",
+          "synthetic"
+        ],
+        "title": "DistrictOut"
       },
       "DomainPackSummary": {
         "properties": {
@@ -705,7 +969,6 @@
             "enum": [
               "photo",
               "audio",
-              "video",
               "screenshot"
             ],
             "title": "Kind"
@@ -716,7 +979,16 @@
           },
           "sha256": {
             "type": "string",
-            "title": "Sha256"
+            "title": "Sha256",
+            "description": "SHA-256 of the stored file (after metadata removal)"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "metadata_removed": {
+            "type": "boolean",
+            "title": "Metadata Removed"
           }
         },
         "type": "object",
@@ -724,7 +996,9 @@
           "evidence_id",
           "kind",
           "media_type",
-          "sha256"
+          "sha256",
+          "size_bytes",
+          "metadata_removed"
         ],
         "title": "EvidenceOut"
       },
@@ -816,6 +1090,56 @@
         ],
         "title": "Health"
       },
+      "IntakeOut": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "fields": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Fields"
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript"
+          },
+          "drafted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Drafted At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "category",
+          "fields",
+          "transcript",
+          "drafted_at"
+        ],
+        "title": "IntakeOut",
+        "description": "What Agen Intake proposed. Shown as an AI result; the reporter's corrections are in `fields`."
+      },
       "Label": {
         "properties": {
           "en": {
@@ -833,66 +1157,6 @@
           "id"
         ],
         "title": "Label"
-      },
-      "MediaUpload": {
-        "properties": {
-          "evidence_id": {
-            "type": "string",
-            "title": "Evidence Id"
-          },
-          "upload_url": {
-            "type": "string",
-            "title": "Upload Url",
-            "description": "Signed URL for a single PUT"
-          },
-          "expires_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Expires At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "evidence_id",
-          "upload_url",
-          "expires_at"
-        ],
-        "title": "MediaUpload"
-      },
-      "MediaUploadRequest": {
-        "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "photo",
-              "audio",
-              "video",
-              "screenshot"
-            ],
-            "title": "Kind"
-          },
-          "media_type": {
-            "type": "string",
-            "title": "Media Type",
-            "examples": [
-              "image/jpeg",
-              "audio/webm"
-            ]
-          },
-          "size_bytes": {
-            "type": "integer",
-            "maximum": 52428800.0,
-            "exclusiveMinimum": 0.0,
-            "title": "Size Bytes"
-          }
-        },
-        "type": "object",
-        "required": [
-          "kind",
-          "media_type",
-          "size_bytes"
-        ],
-        "title": "MediaUploadRequest"
       },
       "ProbeResult": {
         "properties": {
@@ -985,8 +1249,7 @@
             "type": "string",
             "enum": [
               "draft",
-              "submitted",
-              "withdrawn"
+              "submitted"
             ],
             "title": "Status"
           },
@@ -1062,12 +1325,36 @@
           "region": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/agesoa_ingestion__api__Region"
+                "$ref": "#/components/schemas/agesoa_ingestion__reports__Region"
               },
               {
                 "type": "null"
               }
             ]
+          },
+          "shared_post": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SharedPostOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "intake": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IntakeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic"
           },
           "created_at": {
             "type": "string",
@@ -1106,6 +1393,9 @@
           "evidence_tips",
           "evidence",
           "region",
+          "shared_post",
+          "intake",
+          "synthetic",
           "created_at",
           "updated_at",
           "submitted_at"
@@ -1131,39 +1421,39 @@
             ],
             "title": "Narrative"
           },
-          "shared_post_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Shared Post Url",
-            "description": "Link to a social post the reporter shares"
-          },
           "location": {
             "anyOf": [
               {
-                "prefixItems": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "number"
-                  }
-                ],
-                "type": "array",
-                "maxItems": 2,
-                "minItems": 2
+                "$ref": "#/components/schemas/Coordinates"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Location",
-            "description": "Approximate [lat, lon]; converted to a district on arrival and never stored"
+            "description": "Approximate position; converted to a district on arrival and never stored"
+          },
+          "district_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District Code",
+            "description": "District picked by hand"
+          },
+          "shared_post": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SharedPostIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -1192,7 +1482,8 @@
                 "type": "null"
               }
             ],
-            "title": "Fields"
+            "title": "Fields",
+            "description": "Corrections by field id; null removes a value. Merged into the current fields."
           },
           "narrative": {
             "anyOf": [
@@ -1205,6 +1496,38 @@
               }
             ],
             "title": "Narrative"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Coordinates"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "district_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District Code"
+          },
+          "shared_post": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SharedPostIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -1282,6 +1605,76 @@
         ],
         "title": "ScenarioSummary"
       },
+      "SharedPostIn": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "title": "Url",
+            "description": "Link to a social post, pasted by the reporter"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt",
+            "description": "Optional short quote; @handles are masked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "SharedPostIn"
+      },
+      "SharedPostOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "Canonical link without the poster's username"
+          },
+          "platform": {
+            "type": "string",
+            "title": "Platform"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "reports": {
+            "type": "integer",
+            "title": "Reports",
+            "description": "Reports that shared this post (reposts count once per report)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "platform",
+          "excerpt",
+          "reports"
+        ],
+        "title": "SharedPostOut"
+      },
       "SweepResult": {
         "properties": {
           "published": {
@@ -1340,7 +1733,35 @@
         ],
         "title": "ValidationError"
       },
-      "agesoa_ingestion__api__Region": {
+      "agesoa_ingestion__demo__Region": {
+        "properties": {
+          "regency_code": {
+            "type": "null",
+            "title": "Regency Code"
+          },
+          "regency_name": {
+            "type": "string",
+            "title": "Regency Name"
+          },
+          "district_code": {
+            "type": "null",
+            "title": "District Code"
+          },
+          "district_name": {
+            "type": "string",
+            "title": "District Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "regency_code",
+          "regency_name",
+          "district_code",
+          "district_name"
+        ],
+        "title": "Region"
+      },
+      "agesoa_ingestion__reports__Region": {
         "properties": {
           "regency_code": {
             "anyOf": [
@@ -1383,34 +1804,6 @@
         "type": "object",
         "required": [
           "regency_name"
-        ],
-        "title": "Region"
-      },
-      "agesoa_ingestion__demo__Region": {
-        "properties": {
-          "regency_code": {
-            "type": "null",
-            "title": "Regency Code"
-          },
-          "regency_name": {
-            "type": "string",
-            "title": "Regency Name"
-          },
-          "district_code": {
-            "type": "null",
-            "title": "District Code"
-          },
-          "district_name": {
-            "type": "string",
-            "title": "District Name"
-          }
-        },
-        "type": "object",
-        "required": [
-          "regency_code",
-          "regency_name",
-          "district_code",
-          "district_name"
         ],
         "title": "Region"
       }

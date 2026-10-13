@@ -143,5 +143,30 @@
     { "en": "Keep leftover food in a closed container in the fridge.", "id": "Simpan sisa makanan di wadah tertutup di kulkas." },
     { "en": "Photograph the time label on the tray.", "id": "Foto label waktu di ompreng." },
     { "en": "Ask the school to keep the day's food sample.", "id": "Minta sekolah menyimpan sampel makanan hari itu." }
-  ]
+  ],
+  "intake_hints": {
+    "categories": {
+      "poisoning": ["keracunan", "mual", "muntah", "diare", "mencret", "sakit perut", "pusing", "demam", "puskesmas", "dirawat"],
+      "spoiled_food": ["basi", "asam", "bau", "berlendir", "berjamur", "busuk", "tidak layak", "masih merah"],
+      "short_portion": ["porsi kurang", "porsi sedikit", "tidak kebagian", "kurang porsi", "porsinya kecil"],
+      "kitchen_hygiene": ["dapur kotor", "wastafel", "sarung tangan", "lalat", "tikus", "kecoa", "selokan", "jorok"]
+    },
+    "fields": {
+      "school": { "pattern": "\\b(?:SDN|SD|SMPN|SMP|SMAN|SMA|SMKN|SMK|MIN|MI|MTsN|MTs|TK|PAUD)\\s+[A-Z0-9][\\w]*(?:\\s+[A-Z0-9][\\w]*)*" },
+      "kitchen": { "pattern": "\\bSPPG\\s+[A-Z][\\w]*(?:\\s+[A-Z0-9][\\w]*)*" },
+      "cooked_at": { "time_after": ["dimasak", "masak"] },
+      "eaten_at": { "time_after": ["dimakan", "makan", "sampai", "datang", "tiba", "dibagikan"] },
+      "symptoms": {
+        "vocabulary": {
+          "nausea": ["mual"],
+          "vomiting": ["muntah"],
+          "diarrhea": ["diare", "mencret"],
+          "stomach_ache": ["sakit perut", "mules", "perut melilit"],
+          "dizziness": ["pusing"],
+          "fever": ["demam", "panas badan"]
+        }
+      },
+      "affected_count": { "number_before": ["anak", "siswa", "murid", "orang", "korban", "pelajar"] }
+    }
+  }
 }

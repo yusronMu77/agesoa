@@ -129,7 +129,34 @@
       },
       "additionalProperties": false
     },
-    "evidence_tips": { "type": "array", "items": { "$ref": "#/$defs/label" }, "minItems": 1, "description": "Shown to the reporter while evidence is still available." }
+    "evidence_tips": { "type": "array", "items": { "$ref": "#/$defs/label" }, "minItems": 1, "description": "Shown to the reporter while evidence is still available." },
+    "intake_hints": {
+      "type": "object",
+      "description": "Optional words for the rule-based Intake fallback (no LLM configured; local or demo_mode only). Domain vocabulary lives here, never in the core engine.",
+      "properties": {
+        "categories": {
+          "type": "object", "description": "Category id -> lowercase words that point to it.",
+          "additionalProperties": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 }
+        },
+        "fields": {
+          "type": "object", "description": "Report field id -> how to find it in free text.",
+          "additionalProperties": {
+            "type": "object", "minProperties": 1,
+            "properties": {
+              "pattern": { "type": "string", "description": "Regular expression; the whole match is the value (string fields)." },
+              "time_after": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "description": "Words followed by a clock time (datetime fields)." },
+              "number_before": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "description": "Words preceded by a number (integer fields)." },
+              "vocabulary": {
+                "type": "object", "description": "Canonical value -> lowercase synonyms (string_list fields).",
+                "additionalProperties": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
   },
   "additionalProperties": false,
   "$defs": {
