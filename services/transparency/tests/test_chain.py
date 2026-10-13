@@ -8,6 +8,7 @@ from agesoa_platform.events import new_event
 from agesoa_platform.hashing import GENESIS_HASH
 from agesoa_platform.testing import TEST_DATABASE_URL, RecordingPublisher, isolated_schema, push_envelope
 from agesoa_transparency.main import build_app
+from agesoa_transparency.read_model import MemoryStore
 from agesoa_transparency.settings import Settings
 from fastapi.testclient import TestClient
 from sqlalchemy import text
@@ -39,7 +40,7 @@ async def ctx():
             TEST_DATABASE_URL, connect_args={"server_settings": {"search_path": schema}}
         )
         settings = Settings(database_url=TEST_DATABASE_URL, db_search_path=schema, environment="test")
-        app = build_app(settings)
+        app = build_app(settings, store=MemoryStore())  # read model is tested in test_read_model.py
         app.state.test_publisher = RecordingPublisher()
         with TestClient(app) as c:
             app.state.outbox.publisher = app.state.test_publisher

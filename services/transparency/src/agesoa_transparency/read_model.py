@@ -256,9 +256,17 @@ class DocumentStore(Protocol):
 
 class FirestoreStore:
     def __init__(self, project: str):
-        from google.cloud import firestore  # imported lazily: unit tests use MemoryStore
+        self.project = project
+        self._client: Any = None
 
-        self.client = firestore.AsyncClient(project=project)
+    @property
+    def client(self) -> Any:
+        # Created on first write, so starting the service never needs Google credentials.
+        if self._client is None:
+            from google.cloud import firestore
+
+            self._client = firestore.AsyncClient(project=self.project)
+        return self._client
 
     async def set(self, collection: str, doc_id: str, data: dict[str, Any]) -> None:
         await self.client.collection(collection).document(doc_id).set(data)
