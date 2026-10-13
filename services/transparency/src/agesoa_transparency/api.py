@@ -3,7 +3,8 @@
 from datetime import datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Path, Query, Request
+from agesoa_platform.oidc import require_internal_caller
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -100,3 +101,36 @@ async def get_entry(seq: Annotated[int, Path(ge=1, le=MAX_SEQ)], request: Reques
     if row is None:
         raise HTTPException(404, "log entry not found")
     return LogEntry(**row)
+
+
+# Called by Cloud Scheduler (sync, safety net for projections that did not run after a commit) and by an
+# operator (rebuild). Same OIDC allow-list as /internal/outbox/sweep.
+internal_router = APIRouter(
+    prefix="/internal/read-model", tags=["internal"], dependencies=[Depends(require_internal_caller)]
+)
+
+
+class ReadModelSync(BaseModel):
+    documents: int
+    log_entries: int
+
+
+class ReadModelRebuild(ReadModelSync):
+    cleared: int
+
+
+def _projector(request: Request):
+    projector = request.app.state.read_model
+    if projector is None:
+        raise HTTPException(503, "read model is disabled")
+    return projector
+
+
+@internal_router.post("/sync", summary="Project pending events to the Firestore read model")
+async def sync_read_model(request: Request) -> ReadModelSync:
+    return ReadModelSync(**await _projector(request).sync())
+
+
+@internal_router.post("/rebuild", summary="Drop the Firestore read model and project it again from Postgres")
+async def rebuild_read_model(request: Request) -> ReadModelRebuild:
+    return ReadModelRebuild(**await _projector(request).rebuild())

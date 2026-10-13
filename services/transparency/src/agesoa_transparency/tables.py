@@ -1,7 +1,7 @@
 """Tables owned by transparency (database `transparency`). Every change ships with an Alembic migration.
 No other service reads these tables: other domains learn about changes through events."""
 
-from sqlalchemy import BigInteger, Column, DateTime, MetaData, String, Table, func
+from sqlalchemy import BigInteger, Column, DateTime, Identity, MetaData, String, Table, func
 from sqlalchemy.dialects.postgresql import JSONB
 
 metadata = MetaData()
@@ -31,4 +31,28 @@ chain_head = Table(
     Column("seq", BigInteger, nullable=False),
     Column("hash", String(64), nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+)
+
+# Private copy of every public-facing event this service consumes: the source the Firestore read model is
+# projected from, so the read model can always be rebuilt (it is never the source of truth).
+read_model_events = Table(
+    "read_model_events",
+    metadata,
+    Column("id", BigInteger, Identity(), primary_key=True),
+    Column("event_id", String(64), nullable=False, unique=True),
+    Column("event_type", String(64), nullable=False),
+    Column("doc_kind", String(16), nullable=False),  # case | finding | signal | report
+    Column("doc_id", String(64), nullable=False),
+    Column("data", JSONB, nullable=False),
+    Column("occurred_at", DateTime(timezone=True), nullable=False),
+    Column("received_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("projected_at", DateTime(timezone=True)),
+)
+
+# Projection progress that has no row of its own (e.g. the last decision_log seq copied to the read model).
+read_model_state = Table(
+    "read_model_state",
+    metadata,
+    Column("key", String(32), primary_key=True),
+    Column("value", BigInteger, nullable=False),
 )

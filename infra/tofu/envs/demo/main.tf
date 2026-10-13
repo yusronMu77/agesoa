@@ -44,6 +44,7 @@ resource "google_project_service" "apis" {
     "cloudtasks.googleapis.com",
     "cloudtrace.googleapis.com",
     "firebase.googleapis.com",
+    "firebaserules.googleapis.com",
     "firestore.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",

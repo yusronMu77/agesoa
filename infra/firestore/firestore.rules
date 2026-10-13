@@ -1,0 +1,26 @@
+rules_version = '2';
+
+// Public read models (written only by the transparency service through the server SDK, which bypasses
+// these rules). Clients may read the public collections and nothing else; no client may write anywhere.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /public_cases/{caseId} {
+      allow read: if true;
+    }
+    match /public_findings/{findingId} {
+      allow read: if true;
+    }
+    match /public_signals/{signalId} {
+      allow read: if true;
+    }
+    match /public_log/{seq} {
+      allow read: if true;
+    }
+    match /public_stats/{docId} {
+      allow read: if true;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

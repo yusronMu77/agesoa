@@ -1,0 +1,52 @@
+{
+  "issue": 42,
+  "date": "2026-10-13 09:58 +07:00",
+  "product_commit": "ef4d5bad16c4",
+  "e2e_commit": "2099b51f6953",
+  "cases": [
+    {
+      "tc": "TC-024",
+      "tests": [
+        {
+          "title": "every entry hashes to the next and the chain verifies @smoke @p0 @TC-024 SCR-042",
+          "project": "api-transparency",
+          "result": "passed",
+          "ms": 222
+        },
+        {
+          "title": "a changed entry no longer matches its hash @p0 @TC-024",
+          "project": "api-transparency",
+          "result": "passed",
+          "ms": 62
+        },
+        {
+          "title": "editing an entry in the database is detected at that entry @p0 @TC-024",
+          "project": "api-transparency",
+          "result": "passed",
+          "ms": 406
+        }
+      ],
+      "manual": false,
+      "files": []
+    },
+    {
+      "tc": "TC-025",
+      "tests": [
+        {
+          "title": "a decision from another service reaches the hash-chained log @p0 @TC-025",
+          "project": "api-transparency",
+          "result": "passed",
+          "ms": 1069
+        },
+        {
+          "title": "a redelivered event is logged once (idempotent inbox) @p0 @TC-025",
+          "project": "api-transparency",
+          "result": "passed",
+          "ms": 197
+        }
+      ],
+      "manual": false,
+      "files": []
+    }
+  ]
+}

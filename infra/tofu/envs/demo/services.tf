@@ -124,3 +124,41 @@ resource "google_firestore_database" "default" {
   deletion_policy         = var.deletion_protection ? "ABANDON" : "DELETE"
   depends_on              = [google_project_service.apis]
 }
+
+# Clients only read the public read-model collections; writes come from transparency (server SDK).
+resource "google_firebaserules_ruleset" "firestore" {
+  source {
+    files {
+      name    = "firestore.rules"
+      content = file("${path.module}/../../../firestore/firestore.rules")
+    }
+  }
+  depends_on = [google_firestore_database.default]
+}
+
+resource "google_firebaserules_release" "firestore" {
+  name         = "cloud.firestore"
+  ruleset_name = google_firebaserules_ruleset.firestore.name
+}
+
+# Safety net for the read model: projects events whose after-commit projection did not run.
+resource "google_cloud_scheduler_job" "read_model_sync" {
+  name             = "agesoa-${var.environment}-transparency-read-model-sync"
+  region           = var.region
+  schedule         = "*/5 * * * *"
+  time_zone        = "Etc/UTC"
+  attempt_deadline = "120s"
+
+  retry_config {
+    retry_count = 0
+  }
+
+  http_target {
+    http_method = "POST"
+    uri         = "${module.service["transparency"].uri}/internal/read-model/sync"
+    oidc_token {
+      service_account_email = google_service_account.scheduler.email
+      audience              = module.service["transparency"].audience
+    }
+  }
+}

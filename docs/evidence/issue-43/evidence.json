@@ -1,0 +1,34 @@
+{
+  "issue": 43,
+  "date": "2026-10-13 09:58 +07:00",
+  "product_commit": "ef4d5bad16c4",
+  "e2e_commit": "2099b51f6953",
+  "cases": [
+    {
+      "tc": "TC-028",
+      "tests": [
+        {
+          "title": "public API and read model contain no person name @p0 @TC-028 SCR-040 SCR-042",
+          "project": "api-transparency",
+          "result": "passed",
+          "ms": 180
+        }
+      ],
+      "manual": false,
+      "files": []
+    },
+    {
+      "tc": "TC-036",
+      "tests": [
+        {
+          "title": "events are projected to the public case and finding documents @p0 @TC-036 SCR-040",
+          "project": "api-transparency",
+          "result": "passed",
+          "ms": 270
+        }
+      ],
+      "manual": false,
+      "files": []
+    }
+  ]
+}

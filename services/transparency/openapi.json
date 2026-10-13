@@ -279,6 +279,48 @@
           }
         }
       }
+    },
+    "/internal/read-model/sync": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Project pending events to the Firestore read model",
+        "operationId": "sync_read_model_internal_read_model_sync_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadModelSync"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/read-model/rebuild": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Drop the Firestore read model and project it again from Postgres",
+        "operationId": "rebuild_read_model_internal_read_model_rebuild_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadModelRebuild"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -560,6 +602,47 @@
           "published"
         ],
         "title": "ProbeResult"
+      },
+      "ReadModelRebuild": {
+        "properties": {
+          "documents": {
+            "type": "integer",
+            "title": "Documents"
+          },
+          "log_entries": {
+            "type": "integer",
+            "title": "Log Entries"
+          },
+          "cleared": {
+            "type": "integer",
+            "title": "Cleared"
+          }
+        },
+        "type": "object",
+        "required": [
+          "documents",
+          "log_entries",
+          "cleared"
+        ],
+        "title": "ReadModelRebuild"
+      },
+      "ReadModelSync": {
+        "properties": {
+          "documents": {
+            "type": "integer",
+            "title": "Documents"
+          },
+          "log_entries": {
+            "type": "integer",
+            "title": "Log Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "documents",
+          "log_entries"
+        ],
+        "title": "ReadModelSync"
       },
       "Readiness": {
         "properties": {
