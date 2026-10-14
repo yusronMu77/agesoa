@@ -83,3 +83,13 @@ describe("map projection", () => {
     expect(shade(1, 5)).toBe(1);
   });
 });
+
+describe("validator labels", () => {
+  test("role + tier + regency, never a name; older documents fall back to the tier", async () => {
+    const { validatorLabel } = await import("../components/ValidatedBy");
+    expect(validatorLabel({ tier: "high", decision: "approve", role_label: "Journalist", regency_name: "Kabupaten X" })).toBe(
+      "Journalist (high tier), Kabupaten X",
+    );
+    expect(validatorLabel({ tier: "medium", decision: "approve" })).toBe("medium tier validator");
+  });
+});

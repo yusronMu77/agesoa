@@ -104,3 +104,33 @@ async def test_failed_handler_does_not_mark_event_processed(db):
         return None
 
     assert await process_once(db, event, ok) is True
+
+
+async def test_operator_event_stats_count_types_without_payloads(db):
+    from agesoa_platform.ops import event_stats
+
+    dispatcher = OutboxDispatcher(db, FakePublisher(fail_first=1))
+    async with db.transaction() as session:
+        await add_event(session, decision())
+        await add_event(session, decision())
+    await dispatcher.dispatch()  # first publish fails, second succeeds
+    received = decision()
+    assert await process_once(db, received, _handler)
+
+    stats = await event_stats(db, "trust")
+    assert (stats.outbox_published, stats.outbox_pending, stats.outbox_failing, stats.inbox_processed) == (
+        1,
+        1,
+        1,
+        1,
+    )
+    assert {(t.direction, t.event_type, t.count) for t in stats.by_type} == {
+        ("out", "agesoa.keputusan.dicatat", 2),
+        ("in", "agesoa.keputusan.dicatat", 1),
+    }
+    assert sorted(r.status for r in stats.recent) == ["failing", "processed", "published"]
+    assert "payload" not in stats.model_dump_json() and "decision_id" not in stats.model_dump_json()
+
+
+async def _handler(session, event):
+    return None

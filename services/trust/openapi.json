@@ -100,6 +100,27 @@
         }
       }
     },
+    "/v1/ops/events": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Event traffic of this service (operator; counts and types, no payloads)",
+        "operationId": "events_v1_ops_events_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsEvents"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/validators/me": {
       "get": {
         "tags": [
@@ -130,7 +151,7 @@
         "tags": [
           "validation"
         ],
-        "summary": "Findings waiting for validation",
+        "summary": "Findings waiting for validation that are routed to me (role, regency, no conflict)",
         "operationId": "list_requests_v1_validation_requests_get",
         "responses": {
           "200": {
@@ -146,6 +167,9 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Not an active validator"
           }
         }
       }
@@ -255,6 +279,166 @@
           },
           "400": {
             "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    },
+    "/v1/organizations": {
+      "get": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "My organizations",
+        "operationId": "mine_v1_organizations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Organization"
+                  },
+                  "type": "array",
+                  "title": "Response Mine V1 Organizations Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Register an organization; returns the TXT record to publish",
+        "operationId": "register_v1_organizations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Organization"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Domain already registered"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    },
+    "/v1/organizations/{organization_id}": {
+      "get": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "One of my organizations",
+        "operationId": "one_v1_organizations__organization_id__get",
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Organization Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Organization"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such organization of yours"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/organizations/{organization_id}/dns-check": {
+      "post": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Look up the TXT record and verify the organization",
+        "operationId": "dns_check_v1_organizations__organization_id__dns_check_post",
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Organization Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DnsCheck"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such organization of yours"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
@@ -402,6 +586,75 @@
         ],
         "title": "DecisionOut"
       },
+      "DnsCheck": {
+        "properties": {
+          "result": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "already_verified",
+              "no_record",
+              "token_mismatch",
+              "dns_error"
+            ],
+            "title": "Result"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "organization": {
+            "$ref": "#/components/schemas/Organization"
+          }
+        },
+        "type": "object",
+        "required": [
+          "result",
+          "detail",
+          "organization"
+        ],
+        "title": "DnsCheck"
+      },
+      "EventTypeCount": {
+        "properties": {
+          "direction": {
+            "type": "string",
+            "enum": [
+              "out",
+              "in"
+            ],
+            "title": "Direction"
+          },
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "last_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "direction",
+          "event_type",
+          "count",
+          "last_at"
+        ],
+        "title": "EventTypeCount"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -448,6 +701,174 @@
           "demo_mode"
         ],
         "title": "Health"
+      },
+      "OpsEvents": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "outbox_pending": {
+            "type": "integer",
+            "title": "Outbox Pending"
+          },
+          "outbox_published": {
+            "type": "integer",
+            "title": "Outbox Published"
+          },
+          "outbox_failing": {
+            "type": "integer",
+            "title": "Outbox Failing"
+          },
+          "inbox_processed": {
+            "type": "integer",
+            "title": "Inbox Processed"
+          },
+          "by_type": {
+            "items": {
+              "$ref": "#/components/schemas/EventTypeCount"
+            },
+            "type": "array",
+            "title": "By Type"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/RecentEvent"
+            },
+            "type": "array",
+            "title": "Recent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "outbox_pending",
+          "outbox_published",
+          "outbox_failing",
+          "inbox_processed",
+          "by_type",
+          "recent"
+        ],
+        "title": "OpsEvents"
+      },
+      "Organization": {
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "newsroom",
+              "agency"
+            ],
+            "title": "Kind"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_dns",
+              "verified",
+              "rejected"
+            ],
+            "title": "Status"
+          },
+          "txt_record": {
+            "type": "string",
+            "title": "Txt Record",
+            "description": "The TXT value to publish on the domain"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "name",
+          "kind",
+          "domain",
+          "region",
+          "status",
+          "txt_record",
+          "verified_at",
+          "synthetic",
+          "created_at"
+        ],
+        "title": "Organization"
+      },
+      "OrganizationIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "newsroom",
+              "agency"
+            ],
+            "title": "Kind"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain",
+            "description": "The organization's own domain, e.g. redaksi.example.org"
+          },
+          "region": {
+            "$ref": "#/components/schemas/Region"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "kind",
+          "domain",
+          "region"
+        ],
+        "title": "OrganizationIn"
       },
       "ProbeResult": {
         "properties": {
@@ -563,6 +984,71 @@
         ],
         "title": "Readiness"
       },
+      "RecentEvent": {
+        "properties": {
+          "direction": {
+            "type": "string",
+            "enum": [
+              "out",
+              "in"
+            ],
+            "title": "Direction"
+          },
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "pending",
+              "failing",
+              "processed"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "direction",
+          "event_type",
+          "at",
+          "status"
+        ],
+        "title": "RecentEvent"
+      },
+      "Region": {
+        "properties": {
+          "regency_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regency Code"
+          },
+          "regency_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Regency Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "regency_name"
+        ],
+        "title": "Region"
+      },
       "SweepResult": {
         "properties": {
           "published": {
@@ -621,6 +1107,18 @@
             },
             "type": "array",
             "title": "Evidence Refs"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
           },
           "outcome": {
             "anyOf": [
@@ -774,6 +1272,18 @@
             },
             "type": "array",
             "title": "Evidence Refs"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
           },
           "outcome": {
             "anyOf": [

@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from agesoa_trust import SERVICE
 from agesoa_trust.quorum import Vote, evaluate
+from agesoa_trust.routing import routed
 from agesoa_trust.tables import organizations, validation_decisions, validation_requests, validators
 
 router = APIRouter(prefix="/v1", tags=["validation"])
@@ -38,6 +39,7 @@ class ValidationRequest(BaseModel):
     status_label: Literal["alleged", "supported", "proven"]
     required_roles: list[str]
     evidence_refs: list[str]
+    region: dict[str, Any] | None = None
     outcome: Literal["approved", "rejected"] | None
     synthetic: bool
     received_at: datetime
@@ -119,7 +121,11 @@ async def my_profile(request: Request, validator: Validator) -> ValidatorProfile
     )
 
 
-@router.get("/validation-requests", summary="Findings waiting for validation")
+@router.get(
+    "/validation-requests",
+    summary="Findings waiting for validation that are routed to me (role, regency, no conflict)",
+    responses={403: {"description": "Not an active validator"}},
+)
 async def list_requests(request: Request, validator: Validator) -> list[ValidationRequest]:
     query = (
         select(validation_requests)
@@ -127,8 +133,9 @@ async def list_requests(request: Request, validator: Validator) -> list[Validati
         .order_by(validation_requests.c.received_at)
     )
     async with request.app.state.db.sessions() as session:
+        me = await _validator(session, validator.uid)
         rows = (await session.execute(query)).mappings().all()
-    return [ValidationRequest(**_request_fields(row)) for row in rows]
+    return [ValidationRequest(**_request_fields(row)) for row in rows if routed(me, row)]
 
 
 @router.get(
@@ -188,7 +195,7 @@ async def decide(
                     .where(validation_requests.c.finding_id == finding_id)
                     .values(outcome=outcome, completed_at=now)
                 )
-                decisions = await _decision_rows(session, finding_id)
+                decisions = await _decision_rows(request, session, row)
                 await add_event(session, _completed(row, outcome, decisions, now))
                 await add_event(session, _quorum_decision(row, outcome, result.reason, now))
     except IntegrityError as exc:
@@ -270,7 +277,9 @@ def _status(votes: list[Vote]) -> QuorumStatus:
     )
 
 
-async def _decision_rows(session: AsyncSession, finding_id: str) -> list[dict[str, Any]]:
+async def _decision_rows(request: Request, session: AsyncSession, row: Any) -> list[dict[str, Any]]:
+    """Counted decisions for validasi.selesai: references + tier, and the role label and regency that the
+    public dashboard shows ("<role label>, <regency>"); never a name."""
     rows = (
         await session.execute(
             select(
@@ -280,11 +289,13 @@ async def _decision_rows(session: AsyncSession, finding_id: str) -> list[dict[st
                 validation_decisions.c.conflict,
                 validators.c.organization_id,
                 validators.c.tier,
+                validators.c.role,
+                validators.c.region,
             )
             .select_from(
                 validation_decisions.join(validators, validation_decisions.c.validator_id == validators.c.id)
             )
-            .where(validation_decisions.c.finding_id == finding_id)
+            .where(validation_decisions.c.finding_id == row["finding_id"])
             .order_by(validation_decisions.c.decided_at)
         )
     ).all()
@@ -295,6 +306,9 @@ async def _decision_rows(session: AsyncSession, finding_id: str) -> list[dict[st
             "tier": r.tier,
             "decision": r.decision,
             "note": r.note or "",
+            "role": r.role,
+            "role_label": _role_label(request, row["domain"], r.role),
+            "regency_name": (r.region or {}).get("regency_name"),
         }
         for r in rows
         if not r.conflict

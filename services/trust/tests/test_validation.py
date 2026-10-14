@@ -172,3 +172,41 @@ def test_my_profile_shows_role_label_and_tier(client):
     }
     assert client.get("/v1/validators/me", headers=UNREGISTERED).status_code == 403
     assert client.get("/v1/validators/me", headers=REPORTER).status_code == 403
+
+
+AGENCY_STAFF = {
+    "Authorization": "Bearer dev:demo-validator-3:validator"
+}  # high tier, agency named in the example
+
+
+def queue(client, headers):
+    response = client.get("/v1/validation-requests", headers=headers)
+    assert response.status_code == 200, response.text
+    return [r["finding_id"] for r in response.json()]
+
+
+def test_findings_are_routed_by_role_regency_and_conflict(client):
+    open_finding(client, "F-NAMED")  # names the agency; asks nutritionist + journalist
+    open_finding(client, "F-ANY", required_roles=[], parties_mentioned=[])
+    other = {"regency_code": None, "regency_name": "Kabupaten Lain (fictional)", "district_code": None}
+    open_finding(
+        client, "F-OTHER", required_roles=[], parties_mentioned=[], region={**other, "district_name": None}
+    )
+    assert queue(client, JOURNALIST) == ["F-NAMED", "F-ANY"]
+    assert queue(client, NUTRITIONIST) == ["F-NAMED", "F-ANY"]
+    # TC-110: the audited agency's staff is never routed to a finding that names the agency
+    assert queue(client, AGENCY_STAFF) == ["F-ANY"]
+    assert decide(client, AGENCY_STAFF, finding_id="F-NAMED").status_code == 409
+    assert client.get("/v1/validation-requests", headers=UNREGISTERED).status_code == 403
+
+
+def test_completed_validation_names_roles_and_regency_not_people(client):
+    open_finding(client)
+    decide(client, JOURNALIST)
+    decide(client, NUTRITIONIST)
+    (done,) = sent(client, "validasi.selesai")
+    validate_event(done)
+    assert [(d["role_label"], d["regency_name"]) for d in done["data"]["decisions"]] == [
+        ("Journalist", "Kabupaten Sukamaju (fictional)"),
+        ("Nutritionist", "Kabupaten Sukamaju (fictional)"),
+    ]

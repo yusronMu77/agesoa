@@ -75,6 +75,18 @@
               },
               "note": {
                 "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "description": "Validator role id from the domain pack's validator_roles."
+              },
+              "role_label": {
+                "type": "string",
+                "description": "English label of the role, shown publicly instead of any name."
+              },
+              "regency_name": {
+                "type": ["string", "null"],
+                "description": "Regency the validator works in (public label next to the role)."
               }
             },
             "additionalProperties": false

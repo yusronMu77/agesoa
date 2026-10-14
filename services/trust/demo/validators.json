@@ -1,11 +1,26 @@
 {
-  "$comment": "Demo fallback (demo_mode only): fictional organizations + validators so a finding can reach quorum without the registration flow. Role ids come from the domain pack's validator_roles. Local sign-in: Bearer dev:<auth_uid>:validator. Accounts (Firebase Auth emulator, local only): email below + the password from DEMO_VALIDATOR_PASSWORD; never committed.",
+  "$comment": "Demo fallback (demo_mode only): fictional organizations + validators so a finding can reach quorum without the registration flow. Role ids come from the domain pack's validator_roles. Local sign-in: Bearer dev:<auth_uid>:validator. Accounts (Firebase Auth emulator, local only; validator accounts by validator_id, others by auth_uid + roles): email below + the password from DEMO_VALIDATOR_PASSWORD; never committed.",
   "organizations": [
     {
       "id": "ORG-DEMO-NEWS",
       "name": "Redaksi Sukamaju (fictional)",
       "kind": "newsroom",
       "domain": "redaksi-sukamaju.example",
+      "status": "verified",
+      "verification_token": "demo",
+      "region": {
+        "regency_code": null,
+        "regency_name": "Kabupaten Sukamaju (fictional)",
+        "district_code": null,
+        "district_name": null
+      },
+      "synthetic": true
+    },
+    {
+      "id": "ORG-DEMO-AGENCY",
+      "name": "Badan Gizi Kabupaten Sukamaju (fictional)",
+      "kind": "agency",
+      "domain": "badangizi-sukamaju.example",
       "status": "verified",
       "verification_token": "demo",
       "region": {
@@ -57,12 +72,37 @@
         "demo": true
       },
       "synthetic": true
+    },
+    {
+      "id": "VAL-DEMO-3",
+      "auth_uid": "demo-validator-3",
+      "role": "health_worker",
+      "field": "Regency health office",
+      "region": {
+        "regency_code": null,
+        "regency_name": "Kabupaten Sukamaju (fictional)",
+        "district_code": null,
+        "district_name": null
+      },
+      "organization_id": "ORG-DEMO-AGENCY",
+      "path": "org_confirmed",
+      "tier": "high",
+      "status": "active",
+      "extracted": {
+        "demo": true
+      },
+      "synthetic": true
     }
   ],
   "staff_confirmations": [
     {
       "validator_id": "VAL-DEMO-1",
       "organization_id": "ORG-DEMO-NEWS",
+      "status": "confirmed"
+    },
+    {
+      "validator_id": "VAL-DEMO-3",
+      "organization_id": "ORG-DEMO-AGENCY",
       "status": "confirmed"
     }
   ],
@@ -74,6 +114,24 @@
     {
       "validator_id": "VAL-DEMO-2",
       "email": "validator-2@demo.agesoa.local"
+    },
+    {
+      "validator_id": "VAL-DEMO-3",
+      "email": "validator-3@demo.agesoa.local"
+    },
+    {
+      "auth_uid": "demo-org-admin-1",
+      "email": "org-admin@demo.agesoa.local",
+      "roles": [
+        "org_admin"
+      ]
+    },
+    {
+      "auth_uid": "demo-operator-1",
+      "email": "operator@demo.agesoa.local",
+      "roles": [
+        "operator"
+      ]
     }
   ]
 }

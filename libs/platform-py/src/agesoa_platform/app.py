@@ -1,4 +1,5 @@
-"""Service app factory: health/readiness, Pub/Sub push endpoint, outbox sweep, probe event, CORS, logging, tracing."""
+"""Service app factory: health/readiness, Pub/Sub push endpoint, outbox sweep, probe event, operator event
+stats, CORS, logging, tracing."""
 
 from __future__ import annotations
 
@@ -25,6 +26,7 @@ from agesoa_platform.observability import (
     shutdown_tracing,
 )
 from agesoa_platform.oidc import require_internal_caller
+from agesoa_platform.ops import ops_router
 from agesoa_platform.outbox import OutboxDispatcher, Publisher, add_event
 from agesoa_platform.pubsub import PubSubPublisher
 from agesoa_platform.push import event_router
@@ -202,6 +204,7 @@ def create_app(
         return ProbeResult(event_id=event["id"], decision_id=decision_id, published=result["published"])
 
     app.include_router(internal)
+    app.include_router(ops_router(service))
     if event_handlers is not None:
         app.include_router(event_router(service, event_handlers))
     for router in routers:

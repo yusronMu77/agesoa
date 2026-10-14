@@ -100,6 +100,27 @@
         }
       }
     },
+    "/v1/ops/events": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Event traffic of this service (operator; counts and types, no payloads)",
+        "operationId": "events_v1_ops_events_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsEvents"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/cases": {
       "get": {
         "tags": [
@@ -646,6 +667,46 @@
         ],
         "title": "DatabaseStatus"
       },
+      "EventTypeCount": {
+        "properties": {
+          "direction": {
+            "type": "string",
+            "enum": [
+              "out",
+              "in"
+            ],
+            "title": "Direction"
+          },
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "last_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "direction",
+          "event_type",
+          "count",
+          "last_at"
+        ],
+        "title": "EventTypeCount"
+      },
       "Finding": {
         "properties": {
           "id": {
@@ -758,6 +819,55 @@
         ],
         "title": "Health"
       },
+      "OpsEvents": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "outbox_pending": {
+            "type": "integer",
+            "title": "Outbox Pending"
+          },
+          "outbox_published": {
+            "type": "integer",
+            "title": "Outbox Published"
+          },
+          "outbox_failing": {
+            "type": "integer",
+            "title": "Outbox Failing"
+          },
+          "inbox_processed": {
+            "type": "integer",
+            "title": "Inbox Processed"
+          },
+          "by_type": {
+            "items": {
+              "$ref": "#/components/schemas/EventTypeCount"
+            },
+            "type": "array",
+            "title": "By Type"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/RecentEvent"
+            },
+            "type": "array",
+            "title": "Recent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "outbox_pending",
+          "outbox_published",
+          "outbox_failing",
+          "inbox_processed",
+          "by_type",
+          "recent"
+        ],
+        "title": "OpsEvents"
+      },
       "ProbeResult": {
         "properties": {
           "event_id": {
@@ -838,6 +948,45 @@
           "database"
         ],
         "title": "Readiness"
+      },
+      "RecentEvent": {
+        "properties": {
+          "direction": {
+            "type": "string",
+            "enum": [
+              "out",
+              "in"
+            ],
+            "title": "Direction"
+          },
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "pending",
+              "failing",
+              "processed"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "direction",
+          "event_type",
+          "at",
+          "status"
+        ],
+        "title": "RecentEvent"
       },
       "SweepResult": {
         "properties": {

@@ -32,6 +32,7 @@ async def open_validation(session: AsyncSession, event: dict[str, Any]) -> None:
             required_roles=d["required_roles"],
             parties_mentioned=d["parties_mentioned"],
             evidence_refs=d["evidence_refs"],
+            region=d["region"],
             synthetic=d["synthetic"],
         )
         .on_conflict_do_nothing(index_elements=[validation_requests.c.finding_id])

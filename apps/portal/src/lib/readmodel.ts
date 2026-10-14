@@ -73,7 +73,11 @@ export interface PublicFinding {
   status: EvidenceStatus | null;
   evidence_count: number;
   region: PublicRegion | null;
-  validation: { outcome: "approved" | "rejected"; completed_at: string; decisions: { tier: string; decision: string }[] } | null;
+  validation: {
+    outcome: "approved" | "rejected";
+    completed_at: string;
+    decisions: { tier: string; decision: string; role_label?: string | null; regency_name?: string | null }[];
+  } | null;
 }
 
 export interface PublicDistrict {

@@ -14,6 +14,11 @@ class Settings(ServiceSettings):
     service_name: str = SERVICE
     domain_packs_dir: Path = REPO_DOMAIN_PACKS
     gemini_model: str = "gemini-3.8-flash"
+    dns_resolver: str | None = Field(
+        None,
+        description="host:port of the DNS server for organization domain checks; unset = system resolver. "
+        "Locally the devenv test resolver (agesoa-dev-dns) answers for the fictional demo domains.",
+    )
     demo_validator_password: SecretStr | None = Field(
         None,
         description="demo_mode + Firebase Auth emulator only: password of the seeded demo validator accounts.",

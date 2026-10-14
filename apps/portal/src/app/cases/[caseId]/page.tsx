@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/Badge";
 import { EvidenceBadge } from "@/components/EvidenceBadge";
+import { ValidatedBy } from "@/components/ValidatedBy";
 import { loadConfig } from "@/lib/config";
 import { formatTime, shortHash } from "@/lib/format";
 import { getDocument, listCollection, type PublicCase, type PublicFinding } from "@/lib/readmodel";
@@ -98,12 +99,13 @@ export default async function CasePage({ params, searchParams }: { params: Param
                   <span className="badge badge--neutral">
                     {f.validation
                       ? f.validation.outcome === "approved"
-                        ? `Validated (${f.validation.decisions.map((d) => `${d.tier} tier: ${d.decision}`).join(", ")})`
+                        ? `Validated by ${f.validation.decisions.length} people`
                         : "Returned to the audit"
                       : "Waiting for validation"}
                   </span>
                 </div>
                 <p className="finding-statement">{f.statement}</p>
+                <ValidatedBy validation={f.validation} />
               </li>
             ))}
           </ul>

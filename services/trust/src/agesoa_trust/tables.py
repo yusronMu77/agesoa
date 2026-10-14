@@ -32,6 +32,9 @@ organizations = Table(
     Column("synthetic", Boolean, nullable=False, server_default="false"),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("verified_at", DateTime(timezone=True)),
+    Column(
+        "admin_uid", String(128), index=True
+    ),  # account that registered it (role org_admin); null for seeds
 )
 
 # Validators: extracted document fields only; document images are deleted after the Role agent reads them.
@@ -76,6 +79,7 @@ validation_requests = Table(
     Column("required_roles", JSONB, nullable=False, server_default="[]"),
     Column("parties_mentioned", JSONB, nullable=False, server_default="[]"),
     Column("evidence_refs", JSONB, nullable=False, server_default="[]"),
+    Column("region", JSONB),  # finding region (regency + district names/codes); used for routing
     Column("outcome", String(16)),  # null while open | approved | rejected
     Column("synthetic", Boolean, nullable=False, server_default="false"),
     Column("received_at", DateTime(timezone=True), nullable=False, server_default=func.now()),

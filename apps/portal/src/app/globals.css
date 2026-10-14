@@ -580,3 +580,33 @@ pre.json {
   font-weight: var(--ag-font-weight-bold);
   color: #7c2d12;
 }
+
+/* TXT-SIM-001 band on simulation screens (organizations): not dismissible. */
+.sim-org-band {
+  padding: var(--ag-space-2) var(--ag-space-3);
+  margin-bottom: var(--ag-space-4);
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  border-radius: var(--ag-radius-md, 8px);
+}
+.txt-record {
+  overflow-x: auto;
+  padding: var(--ag-space-2) var(--ag-space-3);
+  background: var(--ag-color-surface-muted, #f1f5f9);
+  border-radius: var(--ag-radius-md, 8px);
+  user-select: all;
+}
+
+.tabs {
+  display: flex;
+  gap: var(--ag-space-2);
+  margin-bottom: var(--ag-space-3);
+  border-bottom: 1px solid var(--ag-color-border, #cbd5e1);
+}
+.tab {
+  padding: var(--ag-space-2) var(--ag-space-3);
+}
+.tab--active {
+  border-bottom: 3px solid currentColor;
+  font-weight: var(--ag-font-weight-bold);
+}

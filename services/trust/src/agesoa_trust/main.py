@@ -4,7 +4,7 @@ from agesoa_packs import load_packs
 from agesoa_platform.app import create_app
 from fastapi import FastAPI
 
-from agesoa_trust import __version__
+from agesoa_trust import __version__, organizations
 from agesoa_trust.api import router
 from agesoa_trust.demo import seed_demo_accounts, seed_demo_validators
 from agesoa_trust.events import HANDLERS
@@ -35,7 +35,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         title="AGESOA trust",
         description=DESCRIPTION,
         version=__version__,
-        routers=[router],
+        routers=[router, organizations.router],
         event_handlers=HANDLERS,
         on_startup=start,
     )

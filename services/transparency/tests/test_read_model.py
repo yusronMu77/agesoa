@@ -88,7 +88,7 @@ def test_case_keeps_the_latest_follow_up_per_organization_and_every_reply():
     assert doc["status"] is None  # no kasus.diperbarui yet: case fields stay empty, not invented
 
 
-def test_finding_shows_validators_only_as_tier_and_decision():
+def test_finding_shows_validators_only_as_role_label_regency_tier_and_decision():
     ready = row(
         "temuan.siap_validasi", example_data("temuan.siap_validasi", parties_mentioned=[PERSON]), 0, 1
     )
@@ -99,11 +99,21 @@ def test_finding_shows_validators_only_as_tier_and_decision():
             "tier": "high",
             "decision": "approve",
             "note": PERSON,
+            "role": "journalist",
+            "role_label": "Journalist",
+            "regency_name": "Kabupaten Sukamaju (fictional)",
         },
     ]
     done = row("validasi.selesai", example_data("validasi.selesai", decisions=decisions), 5, 2)
     doc = build_finding("F-2026-0011", [ready, done])
-    assert doc["validation"]["decisions"] == [{"tier": "high", "decision": "approve"}]
+    assert doc["validation"]["decisions"] == [
+        {
+            "tier": "high",
+            "decision": "approve",
+            "role_label": "Journalist",
+            "regency_name": "Kabupaten Sukamaju (fictional)",
+        }
+    ]
     assert doc["evidence_count"] == 2
     text = json.dumps(doc)
     for private in (PERSON, "V-0001", "O-0001", "parties_mentioned", "required_roles"):

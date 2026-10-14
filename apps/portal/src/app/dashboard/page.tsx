@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EvidenceBadge } from "@/components/EvidenceBadge";
+import { ValidatedBy } from "@/components/ValidatedBy";
 import { loadConfig } from "@/lib/config";
 import { formatTime } from "@/lib/format";
 import { type Geometry, projectShapes, shade } from "@/lib/geo";
@@ -212,6 +213,7 @@ export default async function DashboardPage() {
                   {f.synthetic ? <span className="badge badge--neutral">Synthetic</span> : null}
                 </div>
                 <p className="finding-statement">{f.statement ?? "—"}</p>
+                <ValidatedBy validation={f.validation} />
                 <p className="muted">
                   {f.region?.district_name ?? "Unknown district"}
                   {f.region?.regency_name ? `, ${f.region.regency_name}` : ""} · {f.evidence_count} evidence item(s)

@@ -102,6 +102,7 @@ class EvidenceOut(BaseModel):
     sha256: str = Field(description="SHA-256 of the stored file (after metadata removal)")
     size_bytes: int
     metadata_removed: bool
+    faces_blurred: int = Field(0, description="Faces found in the image and blurred before storage")
 
 
 class SharedPostOut(BaseModel):
@@ -430,6 +431,7 @@ async def upload_evidence(
         sha256=clean.sha256,
         size_bytes=len(clean.data),
         metadata_removed=clean.removed_metadata,
+        faces_blurred=clean.faces_blurred,
     )
 
 

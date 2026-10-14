@@ -3,7 +3,7 @@
 import { getApps, initializeApp } from "firebase/app";
 import { connectAuthEmulator, getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import type { AuthConfig } from "@/lib/config";
 
 /** Email + password sign-in (Identity Platform; the Firebase Auth emulator locally). */
@@ -11,6 +11,9 @@ export function LoginForm({ auth: config, next }: { auth: AuthConfig; next: stri
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Until React is attached the form must not submit natively (that would put the password in a URL).
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -40,7 +43,7 @@ export function LoginForm({ auth: config, next }: { auth: AuthConfig; next: stri
   }
 
   return (
-    <form className="card form" onSubmit={onSubmit} data-testid="login-form">
+    <form className="card form" method="post" onSubmit={onSubmit} data-testid="login-form">
       <label>
         Email
         <input name="email" type="email" autoComplete="username" required />
@@ -54,7 +57,7 @@ export function LoginForm({ auth: config, next }: { auth: AuthConfig; next: stri
           {error}
         </p>
       ) : null}
-      <button type="submit" className="button" disabled={busy}>
+      <button type="submit" className="button" disabled={busy || !ready}>
         {busy ? "Signing in…" : "Sign in"}
       </button>
     </form>

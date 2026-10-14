@@ -46,7 +46,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   <NavLink href="/validate">Validation</NavLink>
                 </li>
                 <li>
+                  <NavLink href="/organizations">Organizations</NavLink>
+                </li>
+                <li>
                   <NavLink href="/status">Service status</NavLink>
+                </li>
+                <li>
+                  <NavLink href="/ops">Operations</NavLink>
                 </li>
               </ul>
             </nav>

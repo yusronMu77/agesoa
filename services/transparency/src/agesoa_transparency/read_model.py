@@ -191,12 +191,21 @@ def build_finding(finding_id: str, rows: list[Row]) -> dict[str, Any]:
             "evidence_count": len(d["evidence_refs"]),
             "region": public_region(d["region"]),
         }
-    # Validators appear only as tier + decision: no validator or organization reference, no notes.
+    # Validators appear only as role label, regency, tier + decision: no validator or organization reference,
+    # no name, no notes.
     doc["validation"] = (
         {
             "outcome": done.data["outcome"],
             "completed_at": done.data["completed_at"],
-            "decisions": [{"tier": x["tier"], "decision": x["decision"]} for x in done.data["decisions"]],
+            "decisions": [
+                {
+                    "tier": x["tier"],
+                    "decision": x["decision"],
+                    "role_label": x.get("role_label"),
+                    "regency_name": x.get("regency_name"),
+                }
+                for x in done.data["decisions"]
+            ],
         }
         if done
         else None
