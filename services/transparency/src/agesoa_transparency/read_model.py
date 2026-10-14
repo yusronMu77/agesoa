@@ -9,12 +9,13 @@ validator or organization references, notes or attachments. Clients only read th
 infra/firestore/firestore.rules); only this service writes them.
 
 Collections: public_cases/{case_id}, public_findings/{finding_id}, public_signals/{signal_id},
-public_log/{seq}, public_stats/summary.
+public_regions/{district_code}, public_log/{seq}, public_stats/summary.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -36,6 +37,7 @@ COLLECTIONS = {
     "case": "public_cases",
     "finding": "public_findings",
     "signal": "public_signals",
+    "region": "public_regions",
     "log": "public_log",
     "stats": "public_stats",
 }
@@ -57,6 +59,7 @@ SOURCES: dict[str, Source] = {
     "validasi.selesai": Source("finding", "finding_id", "completed_at"),
     "sinyal.diterima": Source("signal", "signal_id", None),
     "laporan.diterima": Source("report", "report_id", "received_at"),
+    "wilayah.diperbarui": Source("region", "district_code", "updated_at"),
 }
 
 
@@ -223,6 +226,20 @@ def build_signal(signal_id: str, rows: list[Row]) -> dict[str, Any]:
     }
 
 
+def build_region(district_code: str, rows: list[Row]) -> dict[str, Any]:
+    """District boundary for the public map. Firestore has no nested arrays, so the GeoJSON geometry is a string."""
+    d = max(rows, key=lambda r: (r.occurred_at, r.id)).data
+    return {
+        "district_code": district_code,
+        "district_name": d["district_name"],
+        "regency_code": d["regency_code"],
+        "regency_name": d["regency_name"],
+        "geometry": json.dumps(d["geometry"], separators=(",", ":")),
+        "synthetic": bool(d["synthetic"]),
+        "updated_at": d["updated_at"],
+    }
+
+
 def build_log_entry(row: Any) -> dict[str, Any]:
     decision = row.entry["decision"]
     actor = decision["actor"]
@@ -243,7 +260,7 @@ def build_log_entry(row: Any) -> dict[str, Any]:
     }
 
 
-BUILDERS = {"case": build_case, "finding": build_finding, "signal": build_signal}
+BUILDERS = {"case": build_case, "finding": build_finding, "signal": build_signal, "region": build_region}
 
 
 # --- Storage -------------------------------------------------------------------------------------------

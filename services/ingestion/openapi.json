@@ -714,6 +714,27 @@
           }
         }
       }
+    },
+    "/internal/regions/publish": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Publish every district boundary again (wilayah.diperbarui)",
+        "operationId": "publish_districts_internal_regions_publish_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Published"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1180,6 +1201,19 @@
           "published"
         ],
         "title": "ProbeResult"
+      },
+      "Published": {
+        "properties": {
+          "published": {
+            "type": "integer",
+            "title": "Published"
+          }
+        },
+        "type": "object",
+        "required": [
+          "published"
+        ],
+        "title": "Published"
       },
       "Readiness": {
         "properties": {

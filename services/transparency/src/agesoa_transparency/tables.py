@@ -41,7 +41,7 @@ read_model_events = Table(
     Column("id", BigInteger, Identity(), primary_key=True),
     Column("event_id", String(64), nullable=False, unique=True),
     Column("event_type", String(64), nullable=False),
-    Column("doc_kind", String(16), nullable=False),  # case | finding | signal | report
+    Column("doc_kind", String(16), nullable=False),  # case | finding | signal | region | report
     Column("doc_id", String(64), nullable=False),
     Column("data", JSONB, nullable=False),
     Column("occurred_at", DateTime(timezone=True), nullable=False),

@@ -85,6 +85,13 @@
       "producer": "*",
       "consumers": ["transparency"],
       "description": "A decision (agent step, rule result or human action) to append to the public hash-chained log. Any service may publish it; only transparency writes the log."
+    },
+    {
+      "type": "wilayah.diperbarui",
+      "schema": "wilayah.diperbarui.v1.schema.json",
+      "producer": "ingestion",
+      "consumers": ["transparency"],
+      "description": "District boundaries (public reference data) were loaded or changed; transparency projects them for the public map."
     }
   ]
 }

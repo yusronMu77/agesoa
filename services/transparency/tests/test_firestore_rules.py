@@ -10,7 +10,7 @@ import pytest
 
 HOST = os.environ.get("FIRESTORE_RULES_EMULATOR_HOST")
 pytestmark = pytest.mark.skipif(not HOST, reason="FIRESTORE_RULES_EMULATOR_HOST not set")
-PUBLIC = ["public_cases", "public_findings", "public_signals", "public_log", "public_stats"]
+PUBLIC = ["public_cases", "public_findings", "public_signals", "public_regions", "public_log", "public_stats"]
 
 
 @pytest.fixture

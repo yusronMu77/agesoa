@@ -13,6 +13,9 @@ service cloud.firestore {
     match /public_signals/{signalId} {
       allow read: if true;
     }
+    match /public_regions/{districtCode} {
+      allow read: if true;
+    }
     match /public_log/{seq} {
       allow read: if true;
     }

@@ -1,0 +1,45 @@
+{
+  "specversion": "1.0",
+  "id": "00000000-0000-0000-0000-000000000013",
+  "source": "//agesoa/ingestion",
+  "type": "agesoa.wilayah.diperbarui",
+  "subject": "99.01.01",
+  "time": "2026-10-14T03:15:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "urn:agesoa:schema:event:wilayah.diperbarui:v1",
+  "data": {
+    "district_code": "99.01.01",
+    "district_name": "Kecamatan Cibening (fictional)",
+    "regency_code": "99.01",
+    "regency_name": "Kabupaten Sukamaju (fictional)",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            106.8,
+            -6.95
+          ],
+          [
+            106.95,
+            -6.95
+          ],
+          [
+            106.95,
+            -6.85
+          ],
+          [
+            106.8,
+            -6.85
+          ],
+          [
+            106.8,
+            -6.95
+          ]
+        ]
+      ]
+    },
+    "updated_at": "2026-10-14T03:15:00Z",
+    "synthetic": true
+  }
+}

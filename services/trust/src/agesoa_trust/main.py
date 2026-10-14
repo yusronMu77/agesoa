@@ -6,8 +6,9 @@ from fastapi import FastAPI
 
 from agesoa_trust import __version__
 from agesoa_trust.api import router
-from agesoa_trust.demo import seed_demo_validators
+from agesoa_trust.demo import seed_demo_accounts, seed_demo_validators
 from agesoa_trust.events import HANDLERS
+from agesoa_trust.identity import IdentityAdmin
 from agesoa_trust.settings import Settings, get_settings
 
 DESCRIPTION = "Organizations, validators, staff confirmation, validation routing and quorum; agent Role."
@@ -21,6 +22,13 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         if settings.demo_mode:
             count = await seed_demo_validators(app.state.db)
             log.info("demo validators seeded", extra={"detail": {"validators": count}})
+            password = settings.demo_validator_password
+            if settings.firebase_auth_emulator_host and password:
+                try:
+                    accounts = await seed_demo_accounts(IdentityAdmin(settings), password.get_secret_value())
+                    log.info("demo validator accounts ready", extra={"detail": {"accounts": accounts}})
+                except Exception:  # the emulator may start after trust; sign-in waits for the next restart
+                    log.exception("demo validator accounts not created")
 
     app = create_app(
         settings=settings,

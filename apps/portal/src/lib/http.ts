@@ -19,6 +19,11 @@ export type FetchResult<T> =
 export interface FetchOptions {
   fetchImpl?: FetchLike;
   timeoutMs?: number;
+  /** Extra request headers (e.g. Authorization for signed-in pages). */
+  headers?: Record<string, string>;
+  method?: "GET" | "POST";
+  /** JSON request body (POST). */
+  body?: unknown;
 }
 
 function describeError(error: unknown, timeoutMs: number): string {
@@ -30,7 +35,7 @@ function describeError(error: unknown, timeoutMs: number): string {
 }
 
 /**
- * GETs a URL and parses the JSON body. Never throws: network errors, timeouts,
+ * Requests a URL (GET by default) and parses the JSON body. Never throws: network errors, timeouts,
  * non-2xx answers and invalid JSON are returned as { ok: false }.
  */
 export async function fetchJson<T>(url: string, options: FetchOptions = {}): Promise<FetchResult<T>> {
@@ -42,7 +47,13 @@ export async function fetchJson<T>(url: string, options: FetchOptions = {}): Pro
   let response: Response;
   try {
     response = await fetchImpl(url, {
-      headers: { accept: "application/json" },
+      method: options.method ?? "GET",
+      headers: {
+        accept: "application/json",
+        ...(options.body !== undefined ? { "content-type": "application/json" } : {}),
+        ...options.headers,
+      },
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
       cache: "no-store",
       signal: AbortSignal.timeout(timeoutMs),
     });

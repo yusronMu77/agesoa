@@ -99,7 +99,12 @@ def test_a_rejection_returns_the_finding_to_the_audit(client):
     assert body["outcome"] == "rejected"
     (done,) = sent(client, "validasi.selesai")
     assert done["data"]["outcome"] == "rejected"
-    quorum = sent(client, "keputusan.dicatat")[-1]["data"]
+    vote, quorum = (d["data"] for d in sent(client, "keputusan.dicatat"))
+    assert vote["action"] == "finding.rejected"
+    assert (
+        vote["reason"].startswith("Validator rejected the finding.")
+        and "Timestamps do not match." in vote["reason"]
+    )
     assert quorum["action"] == "finding.returned_to_audit" and quorum["status_label"] == "alleged"
     assert client.get("/v1/validation-requests", headers=JOURNALIST).json() == []
 
@@ -151,3 +156,19 @@ async def test_demo_validators_only_with_demo_mode():
         with TestClient(app) as client:
             client.post("/events/temuan.siap_validasi", json=push_envelope(finding()))
             assert decide(client, JOURNALIST).status_code == 403
+
+
+def test_my_profile_shows_role_label_and_tier(client):
+    me = client.get("/v1/validators/me", headers=JOURNALIST).json()
+    assert me == {
+        "validator_id": "VAL-DEMO-1",
+        "role": "journalist",
+        "role_label": "Journalist",
+        "tier": "high",
+        "status": "active",
+        "organization": "Redaksi Sukamaju (fictional)",
+        "region": me["region"],
+        "synthetic": True,
+    }
+    assert client.get("/v1/validators/me", headers=UNREGISTERED).status_code == 403
+    assert client.get("/v1/validators/me", headers=REPORTER).status_code == 403

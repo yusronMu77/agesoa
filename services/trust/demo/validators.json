@@ -1,5 +1,5 @@
 {
-  "$comment": "Demo fallback (demo_mode only): fictional organizations + validators so a finding can reach quorum without the registration flow. Role ids come from the domain pack's validator_roles. Local sign-in: Bearer dev:<auth_uid>:validator.",
+  "$comment": "Demo fallback (demo_mode only): fictional organizations + validators so a finding can reach quorum without the registration flow. Role ids come from the domain pack's validator_roles. Local sign-in: Bearer dev:<auth_uid>:validator. Accounts (Firebase Auth emulator, local only): email below + the password from DEMO_VALIDATOR_PASSWORD; never committed.",
   "organizations": [
     {
       "id": "ORG-DEMO-NEWS",
@@ -64,6 +64,16 @@
       "validator_id": "VAL-DEMO-1",
       "organization_id": "ORG-DEMO-NEWS",
       "status": "confirmed"
+    }
+  ],
+  "accounts": [
+    {
+      "validator_id": "VAL-DEMO-1",
+      "email": "validator-1@demo.agesoa.local"
+    },
+    {
+      "validator_id": "VAL-DEMO-2",
+      "email": "validator-2@demo.agesoa.local"
     }
   ]
 }

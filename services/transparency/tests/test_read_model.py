@@ -19,6 +19,7 @@ from agesoa_transparency.read_model import (
     build_case,
     build_finding,
     build_log_entry,
+    build_region,
 )
 from agesoa_transparency.settings import Settings
 from fastapi.testclient import TestClient
@@ -34,6 +35,7 @@ PRODUCERS = {
     "hak_jawab.diterima": "delivery",
     "sinyal.diterima": "ingestion",
     "laporan.diterima": "ingestion",
+    "wilayah.diperbarui": "ingestion",
     "keputusan.dicatat": "trust",
 }
 # A fictional person's name placed only in fields that must never reach the public side.
@@ -237,3 +239,22 @@ async def test_firestore_store_round_trip():
     snapshot = await firestore.AsyncClient(project=project).collection("public_cases").document("K-1").get()
     assert snapshot.to_dict() == {"case_id": "K-1", "status": "open"}
     assert await store.clear("public_cases") == 1
+
+
+def test_region_boundary_is_projected_with_geometry_as_json_text():
+    data = example_data("wilayah.diperbarui")
+    doc = build_region(data["district_code"], [row("wilayah.diperbarui", data)])
+    assert doc["district_name"] == data["district_name"]
+    assert json.loads(doc["geometry"]) == data["geometry"]  # Firestore has no nested arrays
+
+
+@db
+def test_region_event_reaches_public_regions(app_store):
+    client, store = app_store
+    event = new_event(
+        "wilayah.diperbarui", source="ingestion", subject="99.01.01", data=example_data("wilayah.diperbarui")
+    )
+    assert push(client, event).status_code == 204
+    sync(client)
+    region = store.docs["public_regions"]["99.01.01"]
+    assert region["regency_name"].endswith("(fictional)") and region["synthetic"] is True

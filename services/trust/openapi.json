@@ -100,6 +100,31 @@
         }
       }
     },
+    "/v1/validators/me": {
+      "get": {
+        "tags": [
+          "validation",
+          "validators"
+        ],
+        "summary": "The signed-in validator's own profile (role label, tier, status; no personal data)",
+        "operationId": "my_profile_v1_validators_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidatorProfile"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a registered validator"
+          }
+        }
+      }
+    },
     "/v1/validation-requests": {
       "get": {
         "tags": [
@@ -801,6 +826,80 @@
           "received_at"
         ],
         "title": "ValidationRequest"
+      },
+      "ValidatorProfile": {
+        "properties": {
+          "validator_id": {
+            "type": "string",
+            "title": "Validator Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "role_label": {
+            "type": "string",
+            "title": "Role Label"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "organization": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "validator_id",
+          "role",
+          "role_label",
+          "tier",
+          "status",
+          "organization",
+          "region",
+          "synthetic"
+        ],
+        "title": "ValidatorProfile"
       }
     }
   }

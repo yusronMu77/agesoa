@@ -48,6 +48,11 @@ async def client(tmp_path):
             yield c
 
 
+def report_events(client):
+    """Events of the report flow (demo_mode startup also publishes the district boundaries)."""
+    return [e for e in client.app.state.test_publisher.sent if e["type"] != "agesoa.wilayah.diperbarui"]
+
+
 def create(client, headers=ME, **body):
     response = client.post(
         "/v1/reports", json={"narrative": NARRATIVE, "location": CIBENING, **body}, headers=headers
@@ -132,7 +137,7 @@ def test_full_flow_draft_correct_submit(client):
     assert body["status"] == "submitted"
     assert body["evidence"][0]["sha256"]
 
-    sent = client.app.state.test_publisher.sent
+    sent = report_events(client)
     received, decision = sent
     for event in sent:
         validate_event(event)
@@ -160,7 +165,7 @@ def test_submit_needs_a_category(client):
     drafted = client.post(f"/v1/reports/{report['id']}/intake", headers=ME).json()
     assert drafted["category"] is None
     assert client.post(f"/v1/reports/{report['id']}/submit", headers=ME).status_code == 422
-    assert client.app.state.test_publisher.sent == []
+    assert report_events(client) == []
 
 
 def test_prompt_injection_does_not_change_the_rules(client):
@@ -168,7 +173,7 @@ def test_prompt_injection_does_not_change_the_rules(client):
     report = create(client, narrative=text)
     client.post(f"/v1/reports/{report['id']}/intake", headers=ME)
     client.post(f"/v1/reports/{report['id']}/submit", headers=ME)
-    received, decision = client.app.state.test_publisher.sent
+    received, decision = report_events(client)
     assert received["data"]["rule_results"][0]["violated"] is True
     assert decision["data"]["status_label"] == "alleged"
 

@@ -27,11 +27,26 @@ export const DEFAULT_SERVICE_URLS: Record<ServiceName, string> = {
   transparency: "http://localhost:8005",
 };
 
+/** Local Firestore emulator (agesoa-devenv); in GCP the public Firestore REST endpoint of the project. */
+export const DEFAULT_READ_MODEL_URL = "http://localhost:8080/v1/projects/agesoa-local/databases/(default)/documents";
+
+/** Browser-side Firebase Auth settings (Identity Platform; the emulator only locally). */
+export interface AuthConfig {
+  apiKey: string;
+  projectId: string;
+  authDomain: string;
+  /** http://host:port of the Firebase Auth emulator, as the browser reaches it; null outside local. */
+  emulatorUrl: string | null;
+}
+
 export interface PortalConfig {
   appEnv: AppEnv;
   demoMode: boolean;
   release: string;
   serviceUrls: Record<ServiceName, string>;
+  /** Base URL of the Firestore documents of the public read model (read-only for clients). */
+  readModelUrl: string;
+  auth: AuthConfig;
 }
 
 export class ConfigError extends Error {
@@ -97,5 +112,18 @@ export function loadConfig(env: Env = process.env): PortalConfig {
     serviceUrls[service] = parseServiceUrl(variable, read(env, variable) ?? DEFAULT_SERVICE_URLS[service]);
   }
 
-  return { appEnv, demoMode, release, serviceUrls };
+  const readModelUrl = parseServiceUrl("READ_MODEL_URL", read(env, "READ_MODEL_URL") ?? DEFAULT_READ_MODEL_URL);
+  const projectId = read(env, "FIREBASE_PROJECT_ID") ?? "agesoa-local";
+  const emulatorRaw = read(env, "FIREBASE_AUTH_EMULATOR_URL");
+  if (emulatorRaw && appEnv !== "local") {
+    throw new ConfigError("FIREBASE_AUTH_EMULATOR_URL is only allowed when APP_ENV=local");
+  }
+  const auth: AuthConfig = {
+    apiKey: read(env, "FIREBASE_API_KEY") ?? "demo-api-key",
+    projectId,
+    authDomain: read(env, "FIREBASE_AUTH_DOMAIN") ?? `${projectId}.firebaseapp.com`,
+    emulatorUrl: emulatorRaw ? parseServiceUrl("FIREBASE_AUTH_EMULATOR_URL", emulatorRaw) : null,
+  };
+
+  return { appEnv, demoMode, release, serviceUrls, readModelUrl, auth };
 }

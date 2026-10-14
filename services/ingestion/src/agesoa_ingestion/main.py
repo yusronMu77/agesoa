@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from agesoa_packs import load_packs, load_scenarios
@@ -20,8 +21,18 @@ async def _load_demo_regions(app: FastAPI) -> None:
     if not app.state.settings.demo_mode:
         return
     async with app.state.db.transaction() as session:
-        count = await regions.load(session, regions.load_file(regions.DEMO_REGIONS), synthetic=True)
-    log.info("demo districts loaded", extra={"detail": {"districts": count}})
+        changed = await regions.load(session, regions.load_file(regions.DEMO_REGIONS), synthetic=True)
+    if changed:
+        # Publish in the background: startup never waits for Pub/Sub; the outbox sweep retries what fails.
+        app.state.region_publish = asyncio.get_running_loop().create_task(_publish_quietly(app))
+    log.info("demo districts loaded", extra={"detail": {"new_or_changed": changed}})
+
+
+async def _publish_quietly(app: FastAPI) -> None:
+    try:
+        await asyncio.wait_for(app.state.outbox.dispatch(), timeout=30)
+    except Exception:
+        log.warning("publishing district boundaries deferred to the outbox sweep", exc_info=True)
 
 
 def build_app(settings: Settings | None = None) -> FastAPI:
@@ -31,7 +42,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         title="AGESOA ingestion",
         description=DESCRIPTION,
         version=__version__,
-        routers=[router, reports.router, demo.router],
+        routers=[router, reports.router, demo.router, regions.internal_router],
         event_handlers=HANDLERS,
         on_startup=_load_demo_regions,
         readiness_details=lambda a: {

@@ -17,6 +17,12 @@ export default function HomePage() {
       <ul className="card-grid" aria-label="Explore">
         <li className="card">
           <h2>
+            <Link href="/dashboard">Public dashboard</Link>
+          </h2>
+          <p>Cases by district on a map and every audit finding with its evidence status and validation.</p>
+        </li>
+        <li className="card">
+          <h2>
             <Link href="/log">Decision log</Link>
           </h2>
           <p>Every recorded decision in order, with its hash and the hash of the entry before it.</p>

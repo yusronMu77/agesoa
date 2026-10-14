@@ -134,3 +134,61 @@ def test_push_envelope_decoding():
     assert decode_push(body) == event
     with pytest.raises(Exception, match="push envelope"):
         decode_push({"message": {"data": "%%%"}})
+
+
+def emulator_token(project="agesoa-local", **claims):
+    """Unsigned ID token as the Firebase Auth emulator issues it (alg "none")."""
+    import base64
+    import json
+    import time
+
+    def b64(value: dict) -> str:
+        return base64.urlsafe_b64encode(json.dumps(value).encode()).decode().rstrip("=")
+
+    payload = {
+        "iss": f"https://securetoken.google.com/{project}",
+        "aud": project,
+        "sub": "uid-1",
+        "exp": int(time.time()) + 3600,
+        "firebase": {"sign_in_provider": "password"},
+        **claims,
+    }
+    return f"{b64({'alg': 'none', 'typ': 'JWT'})}.{b64(payload)}."
+
+
+def test_auth_emulator_tokens_are_accepted_only_with_the_emulator_locally(monkeypatch):
+    emu = {"firebase_auth_emulator_host": "localhost:9099", "google_cloud_project": "agesoa-local"}
+    good = {"Authorization": "Bearer " + emulator_token(operator=True)}
+    with TestClient(make_app(**emu)) as client:
+        assert client.get("/v1/ops-only", headers=good).json() == {"uid": "uid-1"}
+        no_role = {"Authorization": "Bearer " + emulator_token()}
+        assert client.get("/v1/ops-only", headers=no_role).status_code == 403
+        other = {"Authorization": "Bearer " + emulator_token(project="someone-else", operator=True)}
+        assert client.get("/v1/ops-only", headers=other).status_code == 401
+        expired = {"Authorization": "Bearer " + emulator_token(operator=True, exp=1)}
+        assert client.get("/v1/ops-only", headers=expired).status_code == 401
+    # Without the emulator setting the real signature check runs (stubbed: no network in tests) and rejects it.
+    calls = []
+
+    def real_check(token, request, audience):
+        calls.append(audience)
+        raise ValueError("signature")
+
+    monkeypatch.setattr("agesoa_platform.auth.id_token.verify_firebase_token", real_check)
+    with TestClient(make_app(google_cloud_project="agesoa-local")) as client:
+        assert client.get("/v1/ops-only", headers=good).status_code == 401
+    assert calls == ["agesoa-local"]
+
+
+def test_auth_emulator_is_refused_outside_local():
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="FIREBASE_AUTH_EMULATOR_HOST"):
+        ServiceSettings(
+            service_name="x",
+            database_url="postgresql+asyncpg://u:p@localhost:1/x",
+            environment="demo",
+            oidc_audience="a",
+            firebase_auth_emulator_host="localhost:9099",
+        )

@@ -49,4 +49,25 @@ describe("loadConfig", () => {
     expect(() => loadConfig({ SERVICE_URL_INGESTION: "not a url" })).toThrow(ConfigError);
     expect(() => loadConfig({ SERVICE_URL_DELIVERY: "ftp://example.com" })).toThrow(ConfigError);
   });
+
+  test("reads the read model URL and Firebase Auth settings", () => {
+    const config = loadConfig({
+      READ_MODEL_URL: "http://10.0.0.1:8080/v1/projects/p/databases/(default)/documents/",
+      FIREBASE_PROJECT_ID: "p",
+      FIREBASE_AUTH_EMULATOR_URL: "http://localhost:9099",
+    });
+    expect(config.readModelUrl).toBe("http://10.0.0.1:8080/v1/projects/p/databases/(default)/documents");
+    expect(config.auth).toEqual({
+      apiKey: "demo-api-key",
+      projectId: "p",
+      authDomain: "p.firebaseapp.com",
+      emulatorUrl: "http://localhost:9099",
+    });
+  });
+
+  test("refuses the auth emulator outside local", () => {
+    expect(() => loadConfig({ APP_ENV: "demo", FIREBASE_AUTH_EMULATOR_URL: "http://localhost:9099" })).toThrow(
+      /only allowed when APP_ENV=local/,
+    );
+  });
 });

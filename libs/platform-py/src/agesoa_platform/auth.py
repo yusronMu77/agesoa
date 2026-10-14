@@ -2,15 +2,18 @@
 
 Roles are custom claims set by `trust` (validator, org_admin, operator). Anonymous reporters have a uid and no
 role. In `local`/`test` only, `Bearer dev:<uid>:<role,role>` is accepted so services run without an auth
-emulator; any other environment rejects it.
+emulator, and with FIREBASE_AUTH_EMULATOR_HOST set the emulator's unsigned ID tokens are accepted (audience,
+issuer and expiry still checked); any other environment rejects both.
 """
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from fastapi import HTTPException, Request, status
+from google.auth import jwt as google_jwt
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 
@@ -46,7 +49,10 @@ def authenticate(request: Request) -> Principal:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid token")
         return _from_dev_token(token)
     try:
-        claims = id_token.verify_firebase_token(token, _transport, audience=settings.google_cloud_project)
+        if settings.is_local and settings.firebase_auth_emulator_host:
+            claims = _emulator_claims(token, settings.google_cloud_project)
+        else:
+            claims = id_token.verify_firebase_token(token, _transport, audience=settings.google_cloud_project)
     except ValueError as exc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid token") from exc
     if not claims:
@@ -54,6 +60,18 @@ def authenticate(request: Request) -> Principal:
     roles = frozenset(r for r in ROLE_CLAIMS if claims.get(r))
     provider = claims.get("firebase", {}).get("sign_in_provider")
     return Principal(uid=claims["sub"], roles=roles, anonymous=provider == "anonymous", claims=claims)
+
+
+def _emulator_claims(token: str, project: str) -> dict:
+    """Firebase Auth emulator tokens are unsigned (alg "none"): check what can be checked (local/test only)."""
+    claims = google_jwt.decode(token, verify=False)
+    if claims.get("aud") != project or claims.get("iss") != f"https://securetoken.google.com/{project}":
+        raise ValueError("token is not for this project")
+    if float(claims.get("exp", 0)) < time.time():
+        raise ValueError("token expired")
+    if not claims.get("sub"):
+        raise ValueError("token without subject")
+    return claims
 
 
 def require_role(*roles: str) -> Callable[[Request], Principal]:

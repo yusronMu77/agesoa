@@ -44,6 +44,11 @@ class ServiceSettings(BaseSettings):
         "", description="Comma-separated service accounts allowed on /internal/*."
     )
 
+    firebase_auth_emulator_host: str | None = Field(
+        None,
+        description="host:port of the Firebase Auth emulator (local only): its unsigned ID tokens are accepted.",
+    )
+
     cors_origins: str = ""
     log_level: str = "INFO"
     trace_sample_ratio: float = 1.0
@@ -56,6 +61,10 @@ class ServiceSettings(BaseSettings):
             raise ValueError(f"OIDC_AUDIENCE is required in the {self.environment} environment")
         if self.environment not in LOCAL_ENVIRONMENTS and self.pubsub_emulator_host:
             raise ValueError(f"PUBSUB_EMULATOR_HOST must not be set in the {self.environment} environment")
+        if self.environment not in LOCAL_ENVIRONMENTS and self.firebase_auth_emulator_host:
+            raise ValueError(
+                f"FIREBASE_AUTH_EMULATOR_HOST must not be set in the {self.environment} environment"
+            )
         return self
 
     @property

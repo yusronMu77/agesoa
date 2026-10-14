@@ -69,3 +69,26 @@ export function parseSeq(raw: string | string[] | undefined): number | undefined
   if (value === undefined || !/^\d{1,15}$/.test(value)) return undefined;
   return Number(value);
 }
+
+/** Every log entry about one subject (e.g. a case or a finding), oldest first. */
+export async function getLogForSubject(
+  config: PortalConfig,
+  subjectKind: string,
+  subjectId: string,
+  options?: FetchOptions,
+): Promise<FetchResult<LogEntry[]>> {
+  const items: LogEntry[] = [];
+  let after = 0;
+  let latency = 0;
+  for (let page = 0; page < 20; page++) {
+    const query = new URLSearchParams({ subject_kind: subjectKind, subject_id: subjectId, limit: "200" });
+    if (after > 0) query.set("after", String(after));
+    const result = await fetchJson<LogPage>(`${base(config)}?${query}`, options);
+    if (!result.ok) return result;
+    latency += result.latencyMs;
+    items.push(...result.data.items);
+    if (result.data.next_after === null) break;
+    after = result.data.next_after;
+  }
+  return { ok: true, status: 200, data: items, latencyMs: latency };
+}

@@ -71,6 +71,54 @@ def _request_fields(row: Any) -> dict[str, Any]:
     return {k: row[k] for k in ValidationRequest.model_fields if k in row}
 
 
+class ValidatorProfile(BaseModel):
+    validator_id: str
+    role: str
+    role_label: str
+    tier: Literal["high", "medium"] | None
+    status: str
+    organization: str | None
+    region: dict[str, Any] | None
+    synthetic: bool
+
+
+@router.get(
+    "/validators/me",
+    tags=["validators"],
+    summary="The signed-in validator's own profile (role label, tier, status; no personal data)",
+    responses={403: {"description": "Not a registered validator"}},
+)
+async def my_profile(request: Request, validator: Validator) -> ValidatorProfile:
+    async with request.app.state.db.sessions() as session:
+        row = (
+            (
+                await session.execute(
+                    select(validators, organizations.c.name.label("organization_name"))
+                    .select_from(
+                        validators.outerjoin(
+                            organizations, validators.c.organization_id == organizations.c.id
+                        )
+                    )
+                    .where(validators.c.auth_uid == validator.uid)
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+    if row is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "not a registered validator")
+    return ValidatorProfile(
+        validator_id=row["id"],
+        role=row["role"],
+        role_label=_any_role_label(request, row["role"]),
+        tier=row["tier"],
+        status=row["status"],
+        organization=row["organization_name"],
+        region=row["region"],
+        synthetic=row["synthetic"],
+    )
+
+
 @router.get("/validation-requests", summary="Findings waiting for validation")
 async def list_requests(request: Request, validator: Validator) -> list[ValidationRequest]:
     query = (
@@ -263,12 +311,24 @@ def _role_label(request: Request, domain: str, role: str) -> str:
     return labels.get(role, role)
 
 
+def _any_role_label(request: Request, role: str) -> str:
+    """Label of a validator role from whichever loaded domain pack defines it."""
+    for pack in getattr(request.app.state, "packs", {}).values():
+        for r in pack.document["validator_roles"]:
+            if r["id"] == role:
+                return r["label"]["en"]
+    return role
+
+
+PAST_TENSE = {"approve": "approved", "reject": "rejected"}
+
+
 def _vote_decision(request, row, me, body: DecisionIn, counted: bool, now: datetime) -> dict[str, Any]:
     # The actor is a role label, never the validator's name.
     label = f"{_role_label(request, row['domain'], me['role'])} ({me['tier']} tier validator)"
     note = f" Note: {body.note}" if body.note else ""
     reason = (
-        f"Validator {body.decision}d the finding"
+        f"Validator {PAST_TENSE[body.decision]} the finding"
         + ("" if counted else " (declared conflict of interest: recorded, not counted)")
         + f".{note}"
     )
@@ -280,7 +340,7 @@ def _vote_decision(request, row, me, body: DecisionIn, counted: bool, now: datet
         data={
             "decision_id": decision_id,
             "actor": {"kind": "human", "name": label, "service": SERVICE},
-            "action": f"finding.{body.decision}d",
+            "action": f"finding.{PAST_TENSE[body.decision]}",
             "subject": {"kind": "finding", "id": row["finding_id"]},
             "reason": reason[:2000],
             "evidence_refs": list(row["evidence_refs"]),
