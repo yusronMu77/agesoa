@@ -4,13 +4,14 @@ locals {
   catalog = jsondecode(file("${path.module}/../../../../packages/contracts/events/catalog.json"))
   events  = { for e in local.catalog.events : e.type => e }
 
-  # Domain services. agent = calls Gemini through Vertex AI; firestore = writes read models.
+  # Domain services. agent = calls Gemini through Vertex AI; firestore = writes read models; identity = sets role
+  # claims on Identity Platform accounts (only trust).
   services = {
-    ingestion    = { database = "ingestion", agent = true, firestore = false }
-    case-audit   = { database = "case_audit", agent = true, firestore = true }
-    trust        = { database = "trust", agent = true, firestore = false }
-    delivery     = { database = "delivery", agent = true, firestore = false }
-    transparency = { database = "transparency", agent = false, firestore = true }
+    ingestion    = { database = "ingestion", agent = true, firestore = false, identity = false }
+    case-audit   = { database = "case_audit", agent = true, firestore = true, identity = false }
+    trust        = { database = "trust", agent = true, firestore = false, identity = true }
+    delivery     = { database = "delivery", agent = true, firestore = false, identity = false }
+    transparency = { database = "transparency", agent = false, firestore = true, identity = false }
   }
 
   # "<consumer>--<type>" => push subscription

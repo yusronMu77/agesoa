@@ -19,8 +19,8 @@ DEMO_FILE = Path(__file__).resolve().parents[2] / "demo" / "validators.json"
 
 
 async def seed_demo_accounts(admin: IdentityAdmin, password: str, path: Path = DEMO_FILE) -> int:
-    """Sign-in accounts in the Firebase Auth emulator: demo validators (uid = validator auth_uid) and the
-    demo organization admin."""
+    """Sign-in accounts (Firebase Auth emulator or Identity Platform): demo validators (uid = validator auth_uid),
+    the demo organization admin and the demo operator."""
     data = json.loads(await asyncio.to_thread(path.read_text, encoding="utf-8"))
     uids = {v["id"]: v["auth_uid"] for v in data["validators"]}
     for account in data["accounts"]:

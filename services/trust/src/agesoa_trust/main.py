@@ -24,9 +24,9 @@ def build_app(settings: Settings | None = None) -> FastAPI:
             count = await seed_demo_validators(app.state.db)
             log.info("demo validators seeded", extra={"detail": {"validators": count}})
             password = settings.demo_validator_password
-            if settings.firebase_auth_emulator_host and password:
+            if app.state.identity and password:
                 try:
-                    accounts = await seed_demo_accounts(IdentityAdmin(settings), password.get_secret_value())
+                    accounts = await seed_demo_accounts(app.state.identity, password.get_secret_value())
                     log.info("demo validator accounts ready", extra={"detail": {"accounts": accounts}})
                 except Exception:  # the emulator may start after trust; sign-in waits for the next restart
                     log.exception("demo validator accounts not created")

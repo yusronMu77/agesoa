@@ -36,7 +36,8 @@ class Settings(ServiceSettings):
     )
     demo_validator_password: SecretStr | None = Field(
         None,
-        description="demo_mode + Firebase Auth emulator only: password of the seeded demo validator accounts.",
+        description="demo_mode only: password of the seeded demo accounts (validators, organization admin, "
+        "operator), in the Firebase Auth emulator locally and in Identity Platform elsewhere.",
     )
 
     @property

@@ -45,6 +45,12 @@ variable "env" {
   description = "Plain environment variables (no secrets)."
 }
 
+variable "secret_env" {
+  type        = map(string)
+  default     = {}
+  description = "Environment variables read from Secret Manager: name => secret id (latest version, readable only by this service)."
+}
+
 variable "project_roles" {
   type        = list(string)
   default     = []

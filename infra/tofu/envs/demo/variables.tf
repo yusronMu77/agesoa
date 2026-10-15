@@ -84,6 +84,12 @@ variable "db_tier" {
   default = "db-g1-small"
 }
 
+variable "demo_account_password_version" {
+  type        = number
+  default     = 1
+  description = "Bump to rotate the password of the demo sign-in accounts (then redeploy trust)."
+}
+
 variable "db_password_version" {
   type        = number
   default     = 1

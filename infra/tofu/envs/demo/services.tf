@@ -63,7 +63,13 @@ module "service" {
   project_roles = concat(
     each.value.agent ? ["roles/aiplatform.user"] : [],
     each.value.firestore ? ["roles/datastore.user"] : [],
+    each.value.identity ? ["roles/firebaseauth.admin"] : [],
   )
+
+  secret_env = each.value.identity && var.demo_mode ? {
+    # From the version, so the service only references the secret once a version exists.
+    DEMO_VALIDATOR_PASSWORD = google_secret_manager_secret_version.demo_account_password[0].secret
+  } : {}
 
   env = merge(
     {

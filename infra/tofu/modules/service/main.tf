@@ -81,6 +81,13 @@ resource "google_secret_manager_secret_iam_member" "database_url" {
   member    = google_service_account.runtime.member
 }
 
+resource "google_secret_manager_secret_iam_member" "secret_env" {
+  for_each  = var.secret_env
+  secret_id = each.value
+  role      = "roles/secretmanager.secretAccessor"
+  member    = google_service_account.runtime.member
+}
+
 # --- Cloud Run ---
 
 resource "google_cloud_run_v2_service" "this" {
@@ -148,6 +155,19 @@ resource "google_cloud_run_v2_service" "this" {
         }
       }
 
+      dynamic "env" {
+        for_each = var.secret_env
+        content {
+          name = env.key
+          value_source {
+            secret_key_ref {
+              secret  = env.value
+              version = "latest"
+            }
+          }
+        }
+      }
+
       volume_mounts {
         name       = "cloudsql"
         mount_path = "/cloudsql"
@@ -170,6 +190,7 @@ resource "google_cloud_run_v2_service" "this" {
   depends_on = [
     google_secret_manager_secret_iam_member.database_url,
     google_secret_manager_secret_version.database_url,
+    google_secret_manager_secret_iam_member.secret_env,
     google_project_iam_member.runtime,
   ]
 }

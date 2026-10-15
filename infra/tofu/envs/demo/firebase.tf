@@ -43,3 +43,31 @@ resource "google_identity_platform_config" "auth" {
 
   depends_on = [google_firebase_project.this]
 }
+
+# Demo sign-in accounts (demo_mode only): trust creates the demo validators, organization admin and operator in
+# Identity Platform with their role claims at startup. Their shared password is write-only (never in state) and
+# only in Secret Manager: `gcloud secrets versions access latest --secret agesoa-demo-account-password`.
+ephemeral "random_password" "demo_accounts" {
+  length  = 24
+  special = false
+}
+
+resource "google_secret_manager_secret" "demo_account_password" {
+  count     = var.demo_mode ? 1 : 0
+  secret_id = "agesoa-${var.environment}-account-password"
+  replication {
+    user_managed {
+      replicas {
+        location = var.region
+      }
+    }
+  }
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_secret_manager_secret_version" "demo_account_password" {
+  count                  = var.demo_mode ? 1 : 0
+  secret                 = google_secret_manager_secret.demo_account_password[0].id
+  secret_data_wo         = ephemeral.random_password.demo_accounts.result
+  secret_data_wo_version = var.demo_account_password_version
+}

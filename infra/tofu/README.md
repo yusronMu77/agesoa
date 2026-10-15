@@ -17,14 +17,14 @@ envs/demo/         the demo environment (everything below)
 |---|---|
 | APIs | Cloud Run, Cloud SQL Admin, Pub/Sub, BigQuery, Secret Manager, Artifact Registry, Cloud Scheduler, Firebase, Identity Platform, Firestore, Vertex AI, Cloud Trace, Logging, Monitoring, Billing Budgets, IAM, STS |
 | Database | Cloud SQL `agesoa-demo-pg` (PostgreSQL 17, Enterprise, `db-g1-small`), one database + user per service; passwords are ephemeral (write-only), so they never land in state |
-| Secrets | `agesoa-<service>-database-url` per service, readable only by that service |
+| Secrets | `agesoa-<service>-database-url` per service, readable only by that service; with `demo_mode`, `agesoa-demo-account-password` (shared password of the demo sign-in accounts, write-only, readable only by trust) |
 | Services | Cloud Run `agesoa-<service>` × 5 with their own service account (Cloud SQL client, trace, logs, metrics; Vertex AI for agent services; Firestore for read-model writers) |
 | Events | from `packages/contracts/events/catalog.json`: one topic per event type, publisher IAM per producer, one push subscription per consumer (`POST /events/{type}`, Google-signed OIDC token, audience `agesoa-demo-<service>`), dead letters after 5 attempts to `agesoa-dead-letter` |
 | Analytics | BigQuery `agesoa_events.events` (partitioned by publish time) fed by one BigQuery subscription per topic |
 | Jobs | Cloud Scheduler: `/internal/outbox/sweep` per service every 5 minutes (OIDC, scheduler SA) |
 | Storage | private media bucket `<project>-agesoa-media` (written only by ingestion after EXIF removal; no browser access) |
 | Read models | Firestore `(default)` in `asia-southeast2` |
-| Identity | Firebase project, web apps (portal, Witness), Identity Platform (anonymous + e-mail link) |
+| Identity | Firebase project, web apps (portal, Witness), Identity Platform (anonymous + e-mail). Role claims (`validator`, `org_admin`, `operator`) are set only by trust (`roles/firebaseauth.admin`); with `demo_mode` trust creates the demo validator, organization admin and operator accounts at startup |
 | Portal | Cloud Run `agesoa-portal` (Next.js standalone, server-side calls to the five services). Not on Firebase App Hosting: its buildpacks support npm/yarn/pnpm only (this repository uses bun) and it is not offered in `asia-southeast2` |
 | Deploy | Artifact Registry `agesoa`, deployer SA reachable only from GitHub Actions on `main` of this repository (Workload Identity Federation, no keys) |
 | Ops | `agesoa-ops` SA that operators impersonate to call `/internal/*`; monthly budget with alerts at 50/90/100 % |
@@ -57,6 +57,8 @@ tofu output -json github_variables | jq -r 'to_entries[] | "\(.key) \(.value)"' 
 ```
 
 Rotate every database password: bump `db_password_version` and apply (new secret version, then redeploy).
+Rotate the demo account password: bump `demo_account_password_version`, apply, then redeploy trust (it updates the
+accounts at startup). Read it with `gcloud secrets versions access latest --secret agesoa-demo-account-password`.
 
 ## Checks after apply
 
