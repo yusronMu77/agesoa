@@ -5,19 +5,33 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from agesoa_packs import Scenario, load_packs, load_scenarios
+
+from eval.evaluator import evaluate_hypotheses
 from eval.runner import run_eval
 
 
-def test_eval_harness_runs_and_passes_tc017(tmp_path: Path):
+def test_eval_harness_scores_every_scenario(tmp_path: Path):
+    """The harness measures the keyword baseline; reaching TC-017 (planted cause in the top 3 on 5-8
+    scenarios) is the job of the Audit agent, so this test checks the numbers, not that the baseline passes."""
     out_file = tmp_path / "results.json"
     report = run_eval(packs_dir="domain-packs", output_file=out_file)
 
     metrics = report["metrics"]
     assert metrics["total_scenarios"] >= 5
-    assert metrics["top_3_count"] >= 5
-    assert metrics["passed_tc017"] is True
+    assert 0 <= metrics["top_1_count"] <= metrics["top_3_count"] <= metrics["total_scenarios"]
     assert metrics["deterministic"] is True
     assert 0.0 <= metrics["mrr"] <= 1.0
+
+
+def test_answer_key_is_not_an_input_of_the_ranking():
+    """Regression: the answer key is the ground truth the ranking is compared with, never evidence for it."""
+    packs = load_packs("domain-packs")
+    pack = next(iter(packs.values()))
+    for scenario in load_scenarios(pack).values():
+        stripped = {k: v for k, v in scenario.document.items() if k != "answer_key"}
+        without_key = Scenario(id=scenario.id, pack=scenario.pack, document=stripped)
+        assert evaluate_hypotheses(scenario, pack) == evaluate_hypotheses(without_key, pack)
 
 
 def test_eval_harness_writes_valid_json_report(tmp_path: Path):

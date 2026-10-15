@@ -57,3 +57,6 @@ desktop.ini
 
 # Local evidence media (ingestion, local/test only)
 services/ingestion/.media/
+
+# --- eval run output ---
+eval/results/

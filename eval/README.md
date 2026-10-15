@@ -4,7 +4,7 @@ Evaluation harness for synthetic scenarios across domain packs.
 
 ## Overview
 
-The evaluation harness loads synthetic scenarios defined in domain packs (e.g. `domain-packs/mbg/scenarios/*.json`), evaluates cause framework branches against evidence (report narratives, report fields, signals, witness testimony, and rule violations), computes accuracy metrics, and writes results to `eval/results.json`.
+The evaluation harness loads synthetic scenarios defined in domain packs (e.g. `domain-packs/mbg/scenarios/*.json`), evaluates cause framework branches against evidence (report narratives, report fields, signals, and witness testimony), computes accuracy metrics, and writes results to `eval/results/results.json`.
 
 ## Quick Start
 
@@ -37,7 +37,7 @@ The harness evaluates acceptance test **TC-017**:
 
 ## Output Format
 
-Results are saved to `eval/results.json`. The output JSON contains aggregate metrics and per-scenario breakdowns:
+Results are saved to `eval/results/results.json`. The output JSON contains aggregate metrics and per-scenario breakdowns:
 
 ```json
 {

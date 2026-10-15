@@ -1,7 +1,7 @@
 """Evaluation runner for synthetic scenarios across domain packs.
 
 Loads scenarios, evaluates cause framework hypotheses, computes per-scenario
-and aggregate metrics, and outputs structured results to eval/results.json.
+and aggregate metrics, and outputs structured results to eval/results/results.json.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from eval.evaluator import evaluate_hypotheses
 
 
 def run_eval(
-    packs_dir: str | Path = "domain-packs", output_file: str | Path = "eval/results.json"
+    packs_dir: str | Path = "domain-packs", output_file: str | Path = "eval/results/results.json"
 ) -> dict[str, Any]:
     """Run evaluation on all synthetic scenarios in domain packs and save metrics."""
     root = Path(packs_dir)

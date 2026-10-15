@@ -1,7 +1,7 @@
 """Root cause hypothesis evaluator for synthetic scenarios.
 
 Evaluates and ranks cause framework branches deterministically based on report fields,
-narratives, signals, witness answers, and rule violations.
+narratives, signals and witness answers.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from agesoa_packs import DomainPack, Scenario, evaluate_rules
+from agesoa_packs import DomainPack, Scenario
 
 STOP_WORDS = {
     "a",
@@ -95,13 +95,6 @@ def evaluate_hypotheses(scenario: Scenario, pack: DomainPack) -> list[Hypothesis
     signals = doc.get("signals", [])
     witness_script = doc.get("witness_script", [])
 
-    # Evaluate rules on all reports in scenario
-    rule_violations: set[str] = set()
-    for report in reports:
-        fields = report.get("fields", {})
-        results = evaluate_rules(pack, fields)
-        rule_violations.update(r.rule_id for r in results if r.violated)
-
     # Compile scenario text blocks
     text_blocks: list[str] = []
     for r in reports:
@@ -127,14 +120,8 @@ def evaluate_hypotheses(scenario: Scenario, pack: DomainPack) -> list[Hypothesis
     full_text_lower = full_text.lower()
     scenario_tokens = _tokenize(full_text)
 
-    # Keywords from answer_key root cause if available
-    answer_root_cause = doc.get("answer_key", {}).get("root_cause", {})
-    root_keywords = [k.lower() for k in answer_root_cause.get("keywords", [])]
-
+    # The answer key is never an input: it is the ground truth the ranking is compared with (runner.py).
     ranks: list[HypothesisRank] = []
-
-    # Rule violation mapping hints
-    rule_branch_weights: dict[str, list[str]] = {"consume_within_4h": ["distribution", "process"]}
 
     for b in pack.cause_branches:
         branch_id = b["id"]
@@ -146,29 +133,14 @@ def evaluate_hypotheses(scenario: Scenario, pack: DomainPack) -> list[Hypothesis
         # Base score from matched tokens
         score = float(len(matched_tokens)) * 2.0
 
-        # Check keyword matches from scenario root cause keywords
-        matched_kw: list[str] = []
-        for kw in root_keywords:
-            if kw in full_text_lower:
-                if answer_root_cause.get("branch") == branch_id:
-                    score += 5.0
-                    matched_kw.append(kw)
-
         # Check token occurrences in full text
         for token in branch_tokens:
             if token in full_text_lower:
                 score += 1.0
 
-        # Rule violation bonus
-        for r_id in rule_violations:
-            if branch_id in rule_branch_weights.get(r_id, []):
-                score += 3.0
+        rationale = f"Matched {len(matched_tokens)} tokens for branch '{branch_id}'."
 
-        rationale = (
-            f"Matched {len(matched_tokens)} tokens and {len(matched_kw)} keywords for branch '{branch_id}'."
-        )
-
-        all_matched = sorted(list(matched_tokens.union(set(matched_kw))))
+        all_matched = sorted(matched_tokens)
         ranks.append(
             HypothesisRank(
                 branch=branch_id,

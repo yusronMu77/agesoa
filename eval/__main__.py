@@ -29,7 +29,7 @@ def main() -> None:
     )
     print(f"  MRR: {m['mrr']:.4f}")
     print(f"  TC-017 Passed: {'YES' if m['passed_tc017'] else 'NO'}")
-    print("Results saved to eval/results.json")
+    print("Results saved to eval/results/results.json")
 
     if not m["passed_tc017"]:
         sys.exit(1)
