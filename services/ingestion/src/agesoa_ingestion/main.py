@@ -45,6 +45,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         routers=[router, reports.router, demo.router, regions.internal_router],
         event_handlers=HANDLERS,
         on_startup=_load_demo_regions,
+        on_demo_reset=_load_demo_regions,
         readiness_details=lambda a: {
             "domain_packs": {p.id: p.version for p in a.state.packs.values()},
             "intake_model": settings.intake_model,

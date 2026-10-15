@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from agesoa_platform.db import Database
+from agesoa_platform.demo import require_demo_mode, reset_tables
 from agesoa_platform.events import isoformat, new_event, utc_now
 from agesoa_platform.inbox import EventHandler
 from agesoa_platform.observability import (
@@ -67,6 +68,10 @@ class SweepResult(BaseModel):
     failed: int
 
 
+class ResetResult(BaseModel):
+    tables: list[str]
+
+
 class ProbeResult(BaseModel):
     event_id: str
     decision_id: str
@@ -82,6 +87,7 @@ def create_app(
     routers: Sequence[APIRouter] = (),
     event_handlers: dict[str, EventHandler] | None = None,
     on_startup: Hook | None = None,
+    on_demo_reset: Hook | None = None,
     readiness_details: Callable[[FastAPI], dict[str, Any]] | None = None,
     publisher: Publisher | None = None,
 ) -> FastAPI:
@@ -174,6 +180,19 @@ def create_app(
     )
     async def sweep(request: Request) -> SweepResult:
         return SweepResult(**await request.app.state.outbox.dispatch())
+
+    @internal.post(
+        "/demo/reset",
+        summary="Empty this service's database and seed its demo data again (demo_mode only)",
+        dependencies=[Depends(require_demo_mode)],
+        responses={404: {"description": "Not found (also returned when demo_mode is off)"}},
+    )
+    async def demo_reset(request: Request) -> ResetResult:
+        tables = await reset_tables(request.app.state.db)
+        if on_demo_reset:
+            await on_demo_reset(request.app)
+        log.warning("demo reset", extra={"detail": {"tables": len(tables)}})
+        return ResetResult(tables=tables)
 
     @internal.post(
         "/probe",

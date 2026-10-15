@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 def build_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
 
-    async def start(app: FastAPI) -> None:
+    async def seed_demo(app: FastAPI) -> None:
         if settings.demo_mode:
             count = await seed_demo_validators(app.state.db)
             log.info("demo validators seeded", extra={"detail": {"validators": count}})
@@ -37,7 +37,8 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         version=__version__,
         routers=[router, organizations.router],
         event_handlers=HANDLERS,
-        on_startup=start,
+        on_startup=seed_demo,
+        on_demo_reset=seed_demo,
     )
     # Validator role labels for the decision log come from the domain packs (fail fast on a broken pack).
     app.state.packs = load_packs(settings.domain_packs_dir)

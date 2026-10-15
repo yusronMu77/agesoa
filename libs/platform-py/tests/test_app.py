@@ -81,6 +81,12 @@ def test_demo_route_is_404_when_flag_off_and_200_when_on():
         assert client.get("/v1/demo-only").json() == {"ok": True}
 
 
+def test_demo_reset_does_not_exist_unless_demo_mode_is_on():
+    """The reset empties the service's database: with the flag off the route is a plain 404."""
+    with TestClient(make_app()) as client:
+        assert client.post("/internal/demo/reset").status_code == 404
+
+
 def test_dev_tokens_work_only_locally():
     with TestClient(make_app()) as client:
         assert client.get("/v1/ops-only").status_code == 401
