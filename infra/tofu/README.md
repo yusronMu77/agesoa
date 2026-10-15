@@ -49,6 +49,7 @@ cp demo.tfvars.example demo.tfvars   # fill in project_id, operators, billing_ac
 tofu init -backend-config=bucket=<project>-tofu-state
 tofu plan -var-file=demo.tfvars -out=demo.plan
 tofu apply demo.plan
+# demo.plan is git-ignored: a saved plan can hold sensitive values, so never commit it
 
 # 3. deploy workflow variables
 tofu output -json github_variables | jq -r 'to_entries[] | "\(.key) \(.value)"' |
