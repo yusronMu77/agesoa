@@ -30,7 +30,8 @@
         "district_code": null,
         "district_name": null
       },
-      "synthetic": true
+      "synthetic": true,
+      "admin_uid": "demo-agency-admin-1"
     }
   ],
   "validators": [
@@ -123,6 +124,13 @@
     {
       "auth_uid": "demo-org-admin-1",
       "email": "org-admin@demo.agesoa.local",
+      "roles": [
+        "org_admin"
+      ]
+    },
+    {
+      "auth_uid": "demo-agency-admin-1",
+      "email": "agency-admin@demo.agesoa.local",
       "roles": [
         "org_admin"
       ]

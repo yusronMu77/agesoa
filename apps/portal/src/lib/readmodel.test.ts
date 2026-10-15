@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { loadConfig } from "./config";
 import { projectShapes, shade } from "./geo";
-import { decodeFields, districtKey, getDocument, listCollection } from "./readmodel";
+import { decodeFields, districtKey, FOLLOW_UP_STATUS_LABEL, getDocument, listCollection, safeLink } from "./readmodel";
 
 const config = loadConfig({ READ_MODEL_URL: "http://fs.test/v1/projects/p/databases/(default)/documents" });
 
@@ -91,5 +91,20 @@ describe("validator labels", () => {
       "Journalist (high tier), Kabupaten X",
     );
     expect(validatorLabel({ tier: "medium", decision: "approve" })).toBe("medium tier validator");
+  });
+});
+
+describe("follow-up and right of reply (SCR-043)", () => {
+  test("labels follow-up statuses", () => {
+    expect(FOLLOW_UP_STATUS_LABEL).toEqual({ received: "Received", in_progress: "In progress", done: "Done" });
+  });
+
+  test("only http(s) attachment links are rendered", () => {
+    expect(safeLink("https://agency.test/doc.pdf")).toBe("https://agency.test/doc.pdf");
+    expect(safeLink("http://agency.test/a b")).toBe("http://agency.test/a%20b");
+    expect(safeLink("javascript:alert(1)")).toBeNull();
+    expect(safeLink("data:text/html,x")).toBeNull();
+    expect(safeLink("/relative")).toBeNull();
+    expect(safeLink(null)).toBeNull();
   });
 });

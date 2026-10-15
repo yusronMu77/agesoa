@@ -214,6 +214,269 @@
         }
       }
     },
+    "/v1/institutions/mine": {
+      "get": {
+        "tags": [
+          "institutions"
+        ],
+        "summary": "Verified organizations administered by the caller",
+        "operationId": "my_institutions_v1_institutions_mine_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Institution"
+                  },
+                  "type": "array",
+                  "title": "Response My Institutions V1 Institutions Mine Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/institutions/{organization_id}": {
+      "get": {
+        "tags": [
+          "institutions"
+        ],
+        "summary": "Agency dashboard (SCR-062)",
+        "operationId": "get_institution_v1_institutions__organization_id__get",
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Organization Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Institution"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No verified agency with this id administered by the caller"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/institutions/{organization_id}/subscription": {
+      "put": {
+        "tags": [
+          "institutions"
+        ],
+        "summary": "Subscribe a webhook (replaces the current one); the HMAC secret is returned only here",
+        "operationId": "subscribe_v1_institutions__organization_id__subscription_put",
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Organization Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionCreated"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No verified agency with this id administered by the caller"
+          },
+          "422": {
+            "description": "Invalid URL (https required outside local)"
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    },
+    "/v1/institutions/{organization_id}/api-key": {
+      "post": {
+        "tags": [
+          "institutions"
+        ],
+        "summary": "Create the institution API key (replaces the previous one); returned only here",
+        "operationId": "create_api_key_v1_institutions__organization_id__api_key_post",
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Organization Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyCreated"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No verified agency with this id administered by the caller"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/institutions/{organization_id}/test-event": {
+      "post": {
+        "tags": [
+          "institutions"
+        ],
+        "summary": "Send a test_event to the subscribed webhook",
+        "operationId": "send_test_event_v1_institutions__organization_id__test_event_post",
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Organization Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestEventQueued"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No verified agency with this id administered by the caller"
+          },
+          "409": {
+            "description": "No active webhook subscription"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/institutions/{organization_id}/deliveries": {
+      "get": {
+        "tags": [
+          "institutions"
+        ],
+        "summary": "Webhook delivery history, newest first, with every attempt",
+        "operationId": "delivery_history_v1_institutions__organization_id__deliveries_get",
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Organization Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Delivery"
+                  },
+                  "title": "Response Delivery History V1 Institutions  Organization Id  Deliveries Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No verified agency with this id administered by the caller"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/cases/{case_id}/status": {
       "post": {
         "tags": [
@@ -258,11 +521,11 @@
               }
             }
           },
-          "501": {
-            "description": "Not implemented yet (planned for CP4)"
-          },
           "401": {
             "description": "Missing or invalid institution API key"
+          },
+          "404": {
+            "description": "No audit report of this case was delivered to this institution"
           },
           "422": {
             "description": "Validation Error",
@@ -285,7 +548,7 @@
         "tags": [
           "institution API"
         ],
-        "summary": "Institution submits a right of reply",
+        "summary": "Institution submits a right of reply (shown labelled next to the finding)",
         "operationId": "submit_reply_api_v1_cases__case_id__reply_post",
         "security": [
           {
@@ -324,11 +587,112 @@
               }
             }
           },
-          "501": {
-            "description": "Not implemented yet (planned for CP4)"
-          },
           "401": {
             "description": "Missing or invalid institution API key"
+          },
+          "404": {
+            "description": "No audit report of this case was delivered to this institution"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    },
+    "/internal/webhooks/{delivery_id}/attempts/{number}": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Run one webhook attempt (called by Cloud Tasks)",
+        "operationId": "run_attempt_internal_webhooks__delivery_id__attempts__number__post",
+        "parameters": [
+          {
+            "name": "delivery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Delivery Id"
+            }
+          },
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttemptResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/demo/audit-reports": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Create a fictional audit report and deliver it (demo_mode only, until the Report agent exists)",
+        "operationId": "demo_audit_report_internal_demo_audit_reports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoAuditReport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoReportCreated"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (also when demo_mode is off)"
+          },
+          "409": {
+            "description": "Exists"
           },
           "422": {
             "description": "Validation Error",
@@ -368,14 +732,61 @@
         ],
         "title": "Accepted"
       },
+      "ApiKeyCreated": {
+        "properties": {
+          "api_key": {
+            "type": "string",
+            "title": "Api Key",
+            "description": "Shown only once; only its hash is stored"
+          },
+          "prefix": {
+            "type": "string",
+            "title": "Prefix"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "api_key",
+          "prefix",
+          "created_at"
+        ],
+        "title": "ApiKeyCreated"
+      },
+      "ApiKeyView": {
+        "properties": {
+          "prefix": {
+            "type": "string",
+            "title": "Prefix"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prefix",
+          "created_at"
+        ],
+        "title": "ApiKeyView"
+      },
       "Attachment": {
         "properties": {
           "name": {
             "type": "string",
+            "maxLength": 200,
             "title": "Name"
           },
           "url": {
             "type": "string",
+            "minLength": 1,
+            "format": "uri",
             "title": "Url"
           }
         },
@@ -385,6 +796,19 @@
           "url"
         ],
         "title": "Attachment"
+      },
+      "AttemptResult": {
+        "properties": {
+          "result": {
+            "type": "string",
+            "title": "Result"
+          }
+        },
+        "type": "object",
+        "required": [
+          "result"
+        ],
+        "title": "AttemptResult"
       },
       "AuditReport": {
         "properties": {
@@ -430,6 +854,17 @@
             ],
             "title": "Region"
           },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
           "synthetic": {
             "type": "boolean",
             "title": "Synthetic"
@@ -449,6 +884,7 @@
           "root_causes",
           "recommendations",
           "region",
+          "category",
           "synthetic",
           "created_at"
         ],
@@ -499,6 +935,239 @@
           "ok"
         ],
         "title": "DatabaseStatus"
+      },
+      "Delivery": {
+        "properties": {
+          "delivery_id": {
+            "type": "string",
+            "title": "Delivery Id"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "event": {
+            "type": "string",
+            "enum": [
+              "audit_report.final",
+              "test_event"
+            ],
+            "title": "Event"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "delivered",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "internal_ticket": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Ticket"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/DeliveryAttempt"
+            },
+            "type": "array",
+            "title": "Attempts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "delivery_id",
+          "event_id",
+          "event",
+          "case_id",
+          "status",
+          "internal_ticket",
+          "created_at",
+          "attempts"
+        ],
+        "title": "Delivery"
+      },
+      "DeliveryAttempt": {
+        "properties": {
+          "attempt": {
+            "type": "integer",
+            "title": "Attempt"
+          },
+          "http_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Http Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "attempted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Attempted At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attempt",
+          "http_status",
+          "error",
+          "attempted_at"
+        ],
+        "title": "DeliveryAttempt"
+      },
+      "DemoAuditReport": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Case Id"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain",
+            "default": "mbg"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 48
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Summary"
+          },
+          "root_causes": {
+            "items": {
+              "$ref": "#/components/schemas/DemoRootCause"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Root Causes"
+          },
+          "recommendations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recommendations",
+            "default": []
+          },
+          "region": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "summary",
+          "root_causes"
+        ],
+        "title": "DemoAuditReport"
+      },
+      "DemoReportCreated": {
+        "properties": {
+          "audit_report_id": {
+            "type": "string",
+            "title": "Audit Report Id"
+          },
+          "deliveries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Deliveries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audit_report_id",
+          "deliveries"
+        ],
+        "title": "DemoReportCreated"
+      },
+      "DemoRootCause": {
+        "properties": {
+          "statement": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Statement"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "alleged",
+              "supported",
+              "proven"
+            ],
+            "title": "Status"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Refs",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "statement",
+          "status"
+        ],
+        "title": "DemoRootCause"
       },
       "EventTypeCount": {
         "properties": {
@@ -586,6 +1255,60 @@
           "demo_mode"
         ],
         "title": "Health"
+      },
+      "Institution": {
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "newsroom",
+              "agency"
+            ],
+            "title": "Kind"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic"
+          },
+          "subscription": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubscriptionView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "api_key": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiKeyView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "name",
+          "kind",
+          "synthetic",
+          "subscription",
+          "api_key"
+        ],
+        "title": "Institution"
       },
       "OpsEvents": {
         "properties": {
@@ -769,6 +1492,7 @@
               "$ref": "#/components/schemas/Attachment"
             },
             "type": "array",
+            "maxItems": 10,
             "title": "Attachments",
             "default": []
           }
@@ -862,6 +1586,118 @@
         ],
         "title": "StatusUpdate"
       },
+      "SubscriptionCreated": {
+        "properties": {
+          "subscription": {
+            "$ref": "#/components/schemas/SubscriptionView"
+          },
+          "secret": {
+            "type": "string",
+            "title": "Secret",
+            "description": "HMAC secret, shown only once"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subscription",
+          "secret"
+        ],
+        "title": "SubscriptionCreated"
+      },
+      "SubscriptionRequest": {
+        "properties": {
+          "webhook_url": {
+            "type": "string",
+            "minLength": 1,
+            "format": "uri",
+            "title": "Webhook Url"
+          },
+          "region_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region Code",
+            "description": "Only reports of this regency; null = all"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 48
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category",
+            "description": "Only reports of this category; null = all"
+          }
+        },
+        "type": "object",
+        "required": [
+          "webhook_url"
+        ],
+        "title": "SubscriptionRequest"
+      },
+      "SubscriptionView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "webhook_url": {
+            "type": "string",
+            "title": "Webhook Url"
+          },
+          "region_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region Code"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "webhook_url",
+          "region_code",
+          "category",
+          "active",
+          "created_at"
+        ],
+        "title": "SubscriptionView"
+      },
       "SweepResult": {
         "properties": {
           "published": {
@@ -879,6 +1715,24 @@
           "failed"
         ],
         "title": "SweepResult"
+      },
+      "TestEventQueued": {
+        "properties": {
+          "delivery_id": {
+            "type": "string",
+            "title": "Delivery Id"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "delivery_id",
+          "event_id"
+        ],
+        "title": "TestEventQueued"
       },
       "ValidationError": {
         "properties": {

@@ -56,6 +56,11 @@ def sent(client, event_type):
     return [e for e in client.app.state.test_publisher.sent if e["type"] == f"agesoa.{event_type}"]
 
 
+def verified_by_dns(client):
+    """Verification events of this flow (demo_mode also announces the seeded demo organizations, method seed)."""
+    return [e for e in sent(client, "organisasi.terverifikasi") if e["data"]["method"] == "dns_txt"]
+
+
 def register(client, headers=ADMIN, **changes):
     return client.post("/v1/organizations", json={**NEWSROOM, **changes}, headers=headers)
 
@@ -81,14 +86,14 @@ async def test_txt_record_verifies_the_domain_only_with_the_right_token(client, 
     zone.txt["warta.example.org"] = ["v=spf1 -all", "agesoa-verify=not-the-token"]
     second = await check(client, org["organization_id"])
     assert second["result"] == "token_mismatch" and second["organization"]["status"] == "awaiting_dns"
-    assert sent(client, "organisasi.terverifikasi") == []
+    assert verified_by_dns(client) == []
 
     # 3. the right token: verified, announced, logged
     zone.txt["warta.example.org"] = ["v=spf1 -all", org["txt_record"]]
     third = await check(client, org["organization_id"])
     assert third["result"] == "verified" and third["organization"]["status"] == "verified"
     assert third["organization"]["verified_at"]
-    (verified,) = sent(client, "organisasi.terverifikasi")
+    (verified,) = verified_by_dns(client)
     validate_event(verified)
     assert verified["data"]["method"] == "dns_txt" and verified["data"]["domain"] == "warta.example.org"
     decisions = sent(client, "keputusan.dicatat")
@@ -101,7 +106,7 @@ async def test_txt_record_verifies_the_domain_only_with_the_right_token(client, 
         "organization.verified",
     ]
     assert (await check(client, org["organization_id"]))["result"] == "already_verified"
-    assert len(sent(client, "organisasi.terverifikasi")) == 1
+    assert len(verified_by_dns(client)) == 1
 
 
 def test_only_organization_admins_see_their_own_organizations(client):
@@ -128,3 +133,24 @@ def test_demo_org_admin_account_is_seeded_with_its_role():
         "email": "org-admin@demo.agesoa.local",
         "roles": ["org_admin"],
     } in accounts
+
+
+def test_seeded_demo_organizations_are_announced_once(client):
+    """delivery learns the demo agency (and its admin) like a verified organization; a restart sends nothing."""
+    from agesoa_trust.demo import seed_demo_validators
+
+    def seeded():
+        return [e for e in sent(client, "organisasi.terverifikasi") if e["data"]["method"] == "seed"]
+
+    client.app.state.test_publisher.sent.clear()
+    assert client.post("/internal/demo/reset").status_code == 200  # empties trust and seeds again
+    client.portal.call(client.app.state.outbox.dispatch)
+    for event in seeded():
+        validate_event(event)
+    assert {(e["data"]["organization_id"], e["data"]["admin_ref"]) for e in seeded()} == {
+        ("ORG-DEMO-NEWS", "demo-org-admin-1"),
+        ("ORG-DEMO-AGENCY", "demo-agency-admin-1"),
+    }
+    client.portal.call(seed_demo_validators, client.app.state.db)
+    client.portal.call(client.app.state.outbox.dispatch)
+    assert len(seeded()) == 2

@@ -21,7 +21,10 @@ def test_institution_api_requires_a_key():
     body = {"status": "in_progress", "note": "qa"}
     with TestClient(offline_app()) as client:
         missing = client.post("/api/v1/cases/C-1/status", json=body)
-        planned = client.post("/api/v1/cases/C-1/status", json=body, headers={"Authorization": "Bearer k"})
     assert missing.status_code == 401
     assert missing.headers["www-authenticate"] == "Bearer"
-    assert planned.status_code == 501  # planned for CP4; the key is checked first
+
+
+def test_demo_audit_reports_need_demo_mode():
+    with TestClient(offline_app()) as client:
+        assert client.post("/internal/demo/audit-reports", json={}).status_code == 404

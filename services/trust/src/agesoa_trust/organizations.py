@@ -225,6 +225,7 @@ def _verified(row: Any, now: datetime) -> dict[str, Any]:
             "method": "dns_txt",
             "verified_at": isoformat(now),
             "synthetic": row["synthetic"],
+            "admin_ref": row["admin_uid"],
         },
     )
 

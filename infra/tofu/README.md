@@ -22,6 +22,7 @@ envs/demo/         the demo environment (everything below)
 | Events | from `packages/contracts/events/catalog.json`: one topic per event type, publisher IAM per producer, one push subscription per consumer (`POST /events/{type}`, Google-signed OIDC token, audience `agesoa-demo-<service>`), dead letters after 5 attempts to `agesoa-dead-letter` |
 | Analytics | BigQuery `agesoa_events.events` (partitioned by publish time) fed by one BigQuery subscription per topic |
 | Jobs | Cloud Scheduler: `/internal/outbox/sweep` per service every 5 minutes (OIDC, scheduler SA) |
+| Webhooks | Cloud Tasks queue `agesoa-webhooks`: each institution webhook attempt calls delivery back (`/internal/webhooks/<id>/attempts/<n>`, OIDC of the scheduler SA; delivery schedules the 30 s / 2 min / 10 min retries); delivery may create and read only `agesoa-webhook-*` secrets (one per subscription) |
 | Storage | private media bucket `<project>-agesoa-media` (written only by ingestion after EXIF removal; no browser access) |
 | Read models | Firestore `(default)` in `asia-southeast2` |
 | Identity | Firebase project, web apps (portal, Witness), Identity Platform (anonymous + e-mail). Role claims (`validator`, `org_admin`, `operator`) are set only by trust (`roles/firebaseauth.admin`); with `demo_mode` trust creates the demo validator, organization admin and operator accounts at startup |

@@ -1,0 +1,40 @@
+# Standalone example (NOT a member of the root uv workspace): an institution would not have AGESOA packages.
+[project]
+name = "agesoa-sim-instansi"
+version = "0.1.0"
+description = "Reference institution system (fictional agency): signed webhook receiver plus status and right-of-reply client."
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "fastapi~=0.141",
+  "uvicorn~=0.54",
+  "httpx~=0.28",
+  "python-multipart~=0.0.32",
+]
+
+[dependency-groups]
+dev = [
+  "pytest~=9.1",
+  "ruff~=0.17",
+]
+
+[build-system]
+requires = ["hatchling~=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sim_instansi"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "S", "RUF"]
+ignore = ["S101", "RUF001", "RUF002", "RUF003", "E501"]  # line length: ruff format
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106"]
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib"
+testpaths = ["tests"]

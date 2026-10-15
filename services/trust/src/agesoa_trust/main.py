@@ -23,6 +23,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         if settings.demo_mode:
             count = await seed_demo_validators(app.state.db)
             log.info("demo validators seeded", extra={"detail": {"validators": count}})
+            await app.state.outbox.dispatch()  # seeded organizations (the sweep retries a failure)
             password = settings.demo_validator_password
             if app.state.identity and password:
                 try:

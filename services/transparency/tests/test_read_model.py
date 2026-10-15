@@ -85,6 +85,7 @@ def test_case_keeps_the_latest_follow_up_per_organization_and_every_reply():
         ("O-2", "in_progress"),
     ]
     assert [r["reply_id"] for r in doc["replies"]] == ["H-1", "H-2"]
+    assert all(isinstance(r["attachments"], list) for r in doc["replies"])  # links shown next to the reply
     assert doc["status"] is None  # no kasus.diperbarui yet: case fields stay empty, not invented
 
 

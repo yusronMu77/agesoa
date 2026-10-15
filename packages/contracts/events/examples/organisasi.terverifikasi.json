@@ -14,6 +14,7 @@
     "domain": "warta.example.org",
     "method": "dns_txt",
     "verified_at": "2026-10-14T03:15:00Z",
-    "synthetic": true
+    "synthetic": true,
+    "admin_ref": "demo-org-admin-1"
   }
 }

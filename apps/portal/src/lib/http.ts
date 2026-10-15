@@ -21,8 +21,8 @@ export interface FetchOptions {
   timeoutMs?: number;
   /** Extra request headers (e.g. Authorization for signed-in pages). */
   headers?: Record<string, string>;
-  method?: "GET" | "POST";
-  /** JSON request body (POST). */
+  method?: "GET" | "POST" | "PUT";
+  /** JSON request body (POST/PUT). */
   body?: unknown;
   /** Multipart request body (POST with a file); exclusive with `body`. */
   form?: FormData;

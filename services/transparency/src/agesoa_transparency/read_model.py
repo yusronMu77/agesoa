@@ -160,6 +160,7 @@ def build_case(case_id: str, rows: list[Row]) -> dict[str, Any]:
             "reply_id": r.data["reply_id"],
             "organization_id": r.data["organization_id"],
             "body": r.data["body"],
+            "attachments": r.data.get("attachments", []),
             "received_at": r.data["received_at"],
         }
         for r in sorted(

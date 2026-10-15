@@ -85,6 +85,12 @@ module "service" {
       GOOGLE_CLOUD_LOCATION     = var.vertex_location
     } : {},
     each.key == "ingestion" ? { MEDIA_BUCKET = google_storage_bucket.media.name } : {},
+    each.key == "delivery" ? {
+      WEBHOOK_QUEUE       = google_cloud_tasks_queue.webhooks.id
+      SELF_URL            = local.delivery_url
+      TASKS_INVOKER_EMAIL = google_service_account.scheduler.email
+      PORTAL_URL          = "https://${local.portal_host}"
+    } : {},
   )
 
   depends_on = [google_project_service.apis]

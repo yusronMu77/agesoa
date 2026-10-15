@@ -6,11 +6,16 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from agesoa_platform.db import Database
+from agesoa_platform.events import isoformat, new_event, utc_now
+from agesoa_platform.outbox import add_event
 from sqlalchemy.dialects.postgresql import insert
 
+from agesoa_trust import SERVICE
 from agesoa_trust.identity import IdentityAdmin
 from agesoa_trust.tables import organizations, staff_confirmations, validators
 
@@ -51,5 +56,32 @@ async def seed_demo_validators(db: Database, path: Path = DEMO_FILE) -> int:
                     )
                 else:
                     stmt = stmt.on_conflict_do_nothing()
-                await session.execute(stmt)
+                if table is organizations:
+                    changed = (
+                        (await session.execute(stmt.returning(*organizations.c))).mappings().one_or_none()
+                    )
+                    if changed is not None and changed["status"] == "verified":
+                        # Other domains (delivery: institution webhooks) learn the seeded organizations like
+                        # verified ones; only when inserted or given its admin, so a restart sends nothing.
+                        await add_event(session, seeded_organization(changed, utc_now()))
+                else:
+                    await session.execute(stmt)
     return len(data["validators"])
+
+
+def seeded_organization(row: Any, now: datetime) -> dict[str, Any]:
+    return new_event(
+        "organisasi.terverifikasi",
+        source=SERVICE,
+        subject=row["id"],
+        data={
+            "organization_id": row["id"],
+            "name": row["name"],
+            "kind": row["kind"],
+            "domain": row["domain"],
+            "method": "seed",
+            "verified_at": isoformat(now),
+            "synthetic": row["synthetic"],
+            "admin_ref": row["admin_uid"],
+        },
+    )

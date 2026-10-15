@@ -558,6 +558,8 @@ pre.json {
 }
 .form input[type="email"],
 .form input[type="password"],
+.form input[type="url"],
+.form input[type="text"],
 .form textarea {
   font: inherit;
   padding: var(--ag-space-2);
@@ -613,4 +615,18 @@ pre.json {
 .button--danger {
   background: #b91c1c;
   border-color: #b91c1c;
+}
+
+/* SCR-062: one-time secret / API key and the institution's own statements on the case page (SCR-043). */
+.one-time pre {
+  margin: var(--ag-space-2) 0 0;
+}
+.right-of-reply {
+  border-left: 4px solid var(--ag-color-neutral-border-strong);
+}
+.right-of-reply__label {
+  font-weight: var(--ag-font-weight-bold);
+}
+.right-of-reply__body {
+  white-space: pre-wrap;
 }

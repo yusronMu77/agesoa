@@ -1,9 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ApiKeyForm, TestEventForm, WebhookForm } from "@/components/InstitutionForms";
 import { SimOrgBand } from "@/components/SimOrgBand";
 import { loadConfig } from "@/lib/config";
 import { formatTime } from "@/lib/format";
+import {
+  attemptsSummary,
+  DELIVERY_EVENT_LABEL,
+  DELIVERY_STATUS_LABEL,
+  type Delivery,
+  getInstitution,
+  listDeliveries,
+} from "@/lib/institutions";
 import { checkDns, type DnsResult, getOrganization, KIND_LABEL, STATUS_LABEL } from "@/lib/organizations";
 import { sessionToken } from "@/lib/session";
 import { decideStaff, listStaff } from "@/lib/trust";
@@ -51,6 +60,14 @@ export default async function OrganizationPage({ params, searchParams }: { param
   const o = org.data;
   const { check, staff: staffDone } = await searchParams;
   const staff = o.status === "verified" && o.kind === "newsroom" ? await listStaff(loadConfig(), token, o.organization_id) : null;
+  // SCR-062: only the admin of a verified agency gets the dashboard (delivery answers 404 otherwise).
+  const [institution, deliveries] =
+    o.status === "verified" && o.kind === "agency"
+      ? await Promise.all([
+          getInstitution(loadConfig(), token, o.organization_id),
+          listDeliveries(loadConfig(), token, o.organization_id),
+        ])
+      : [null, null];
 
   return (
     <>
@@ -125,6 +142,60 @@ export default async function OrganizationPage({ params, searchParams }: { param
             </p>
           )}
         </section>
+      ) : institution?.ok ? (
+        <section aria-labelledby="integration-heading" className="card" data-testid="institution-integration">
+          <h2 id="integration-heading">Institution integration</h2>
+          <p className="muted">
+            Receive final audit reports in your own system: AGESOA sends a signed webhook (HMAC with your secret) for
+            each final report that matches your filters; your system can also call the institution API with an API
+            key to report follow-up and send a right of reply.
+          </p>
+
+          <h3>Webhook</h3>
+          {institution.data.subscription ? (
+            <p data-testid="webhook-subscription">
+              Current webhook: <code>{institution.data.subscription.webhook_url}</code> · region{" "}
+              {institution.data.subscription.region_code ?? "all"} · category{" "}
+              {institution.data.subscription.category ?? "all"} · since{" "}
+              {formatTime(institution.data.subscription.created_at)}
+            </p>
+          ) : (
+            <p className="muted" data-testid="webhook-subscription">
+              No webhook yet.
+            </p>
+          )}
+          <WebhookForm organizationId={o.organization_id} subscription={institution.data.subscription} />
+          <TestEventForm organizationId={o.organization_id} />
+
+          <h3>API key</h3>
+          {institution.data.api_key ? (
+            <p>
+              Current key: <code data-testid="api-key-prefix">{institution.data.api_key.prefix}</code>… · created{" "}
+              {formatTime(institution.data.api_key.created_at)}
+            </p>
+          ) : (
+            <p className="muted">No API key yet.</p>
+          )}
+          <ApiKeyForm organizationId={o.organization_id} hasKey={institution.data.api_key !== null} />
+
+          <div className="page-header">
+            <h3 id="deliveries-heading">Delivery history</h3>
+            <a href={`/organizations/${encodeURIComponent(o.organization_id)}`} className="button button--secondary" data-testid="refresh-deliveries">
+              Refresh
+            </a>
+          </div>
+          {deliveries?.ok ? (
+            deliveries.data.length > 0 ? (
+              <DeliveryTable deliveries={deliveries.data} />
+            ) : (
+              <p className="muted" data-testid="deliveries-empty">
+                No deliveries yet.
+              </p>
+            )
+          ) : (
+            <p className="callout callout--error">The delivery history could not be loaded ({deliveries?.error}).</p>
+          )}
+        </section>
       ) : o.status === "verified" ? (
         <section aria-labelledby="next-heading" className="card">
           <h2 id="next-heading">Verified</h2>
@@ -152,5 +223,44 @@ export default async function OrganizationPage({ params, searchParams }: { param
         </section>
       )}
     </>
+  );
+}
+
+function DeliveryTable({ deliveries }: { deliveries: Delivery[] }) {
+  return (
+    <div className="table-wrap" role="region" aria-labelledby="deliveries-heading" tabIndex={0}>
+      <table data-testid="delivery-history">
+        <thead>
+          <tr>
+            <th scope="col">Time</th>
+            <th scope="col">Event</th>
+            <th scope="col">Case</th>
+            <th scope="col">Status</th>
+            <th scope="col">Internal ticket</th>
+            <th scope="col">Attempts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {deliveries.map((d) => (
+            <tr key={d.delivery_id} data-testid="delivery-row" data-status={d.status} data-delivery-id={d.delivery_id}>
+              <td>
+                <time dateTime={d.created_at}>{formatTime(d.created_at)}</time>
+              </td>
+              <td>{DELIVERY_EVENT_LABEL[d.event] ?? d.event}</td>
+              <td>{d.event === "test_event" ? <code>{d.case_id}</code> : <Link href={`/cases/${encodeURIComponent(d.case_id)}`}>{d.case_id}</Link>}</td>
+              <td>
+                <span
+                  className={`badge ${d.status === "delivered" ? "badge--ok" : d.status === "failed" ? "badge--error" : "badge--warn"}`}
+                >
+                  {DELIVERY_STATUS_LABEL[d.status] ?? d.status}
+                </span>
+              </td>
+              <td>{d.internal_ticket ?? "—"}</td>
+              <td>{attemptsSummary(d.attempts)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

@@ -55,6 +55,14 @@
         },
         "synthetic": {
           "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/synthetic"
+        },
+        "admin_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128,
+          "description": "Auth uid of the organization's admin account (manages webhooks and API keys in delivery); never a name."
         }
       },
       "additionalProperties": false

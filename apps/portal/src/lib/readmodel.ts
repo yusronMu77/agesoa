@@ -62,6 +62,45 @@ export interface PublicCase {
   report_count: number;
   signal_count: number;
   updated_at: string | null;
+  /** Latest follow-up per institution (absent in documents projected before SCR-043). */
+  follow_ups?: PublicFollowUp[];
+  /** Right of reply statements, oldest first. */
+  replies?: PublicReply[];
+}
+
+export type FollowUpStatus = "received" | "in_progress" | "done";
+
+export interface PublicFollowUp {
+  organization_id: string;
+  status: FollowUpStatus;
+  note: string | null;
+  internal_ticket?: string | null;
+  updated_at: string;
+}
+
+export interface PublicReply {
+  reply_id: string;
+  organization_id: string;
+  body: string;
+  attachments?: { name: string; url: string }[];
+  received_at: string;
+}
+
+export const FOLLOW_UP_STATUS_LABEL: Record<FollowUpStatus, string> = {
+  received: "Received",
+  in_progress: "In progress",
+  done: "Done",
+};
+
+/** The URL when it is an absolute http(s) link, otherwise null (institution-supplied: no javascript:, data:, …). */
+export function safeLink(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface PublicFinding {
