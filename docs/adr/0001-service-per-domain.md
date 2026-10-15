@@ -16,13 +16,18 @@ Assigning a separate service per AI agent creates several problems:
 ## Decision
 
 1. **Service per domain context.** Microservices are structured around core business bounded contexts (domains), not per individual AI agent. The initial microservices are:
-   - `ingestion`: Ingests and processes incoming evidence, media, and reports (e.g., face blurring, OCR, content moderation).
-   - `case-audit`: Manages social audit cases, orchestrates audit rules, and executes AI audit agents.
-   - `trust`: Calculates citizen/institution trust metrics, reputation scores, and verification status.
-   - `delivery`: Coordinates institution notifications, workflow follow-ups, and escalation tracking.
-   - `transparency`: Manages the public decision log, hash chain verification, and public read models.
+   - `ingestion`: citizen reports (drafts, corrections, media), the privacy guard (metadata removal, face blur, evidence hash) and public signals; agents Intake and Signal.
+   - `case-audit`: cases, evidence deadlines, witness interviews, the audit trail and findings; agent Audit.
+   - `trust`: organizations, validators, staff confirmation, validation routing and quorum; agent Role. AI never gives a verdict: a finding becomes final only after human validation here.
+   - `delivery`: audit reports, institution subscriptions with signed webhooks, status updates and the right of reply; agent Report.
+   - `transparency`: the hash-chained public decision log (its only writer) and the public read models.
 2. **Agents as internal domain workers/components.** AI agents exist as execution components, tasks, or workers contained within their respective domain services (e.g., audit agents run within or are orchestrated by `case-audit`).
 3. **Domain packs for extensibility.** Domain-specific audit rules, prompt templates, and evaluation criteria are packaged into domain packs (`domain-packs/`), which are loaded into domain services without requiring new microservices.
+
+## Alternatives considered
+
+- **One service per agent** (rejected, see Context): five agents would become five deployables that share cases and evidence.
+- **One monolith**: simplest to run, but it gives up independent scaling and the rule that only `transparency` writes the decision log.
 
 ## Consequences
 

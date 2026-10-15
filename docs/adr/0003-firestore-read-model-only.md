@@ -21,6 +21,11 @@ However, allowing frontend applications or client SDKs to write directly to Fire
 4. **Backend sync.** Backend services handle incoming API writes, execute domain logic within database transactions, emit outbox events, and sync updated read models to Firestore.
 5. **Firestore Security Rules enforcement.** Security rules on Firestore collections disallow all client write/create/update/delete operations while permitting authorized read queries.
 
+## Alternatives considered
+
+- **Clients write Firestore directly, backend reacts**: rejected for the reasons above (validation, privacy pipeline and decision log are bypassed).
+- **Poll the REST API only**: works, but gives up live updates on the public dashboard.
+
 ## Consequences
 
 - Business logic, validation rules, privacy protections (e.g., face blurring), and authorization checks are strictly centralized in backend services.
