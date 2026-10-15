@@ -73,3 +73,31 @@ async def test_reset_is_404_and_changes_nothing_without_demo_mode():
             assert client.post("/events/keputusan.dicatat", json=body).status_code == 204
             assert client.post("/internal/demo/reset").status_code == 404
             assert client.get("/v1/log/head").json()["seq"] == 1
+
+
+OPERATOR = {"Authorization": "Bearer dev:qa-operator:operator"}
+VALIDATOR = {"Authorization": "Bearer dev:qa-validator:validator"}
+
+
+async def test_an_operator_resets_from_the_portal_and_rebuilds_the_read_model():
+    async with isolated_schema(alembic_ini=ALEMBIC_INI) as schema:
+        with make_client(schema, demo_mode=True) as client:
+            body = push_envelope(decision("DEC-OP"))
+            assert client.post("/events/keputusan.dicatat", json=body).status_code == 204
+            assert client.post("/v1/ops/demo-reset").status_code == 401
+            assert client.post("/v1/ops/demo-reset", headers=VALIDATOR).status_code == 403
+            reset = client.post("/v1/ops/demo-reset", headers=OPERATOR)
+            assert reset.status_code == 200, reset.text
+            assert "decision_log" in reset.json()["tables"]
+            items = client.get("/v1/log").json()["items"]
+            assert [e["action"] for e in items] == ["demo.reset"]
+            assert client.get("/v1/log/verify").json()["ok"] is True
+            assert client.post("/v1/ops/read-model/rebuild", headers=VALIDATOR).status_code == 403
+            rebuilt = client.post("/v1/ops/read-model/rebuild", headers=OPERATOR)
+            assert rebuilt.status_code == 200, rebuilt.text
+
+
+async def test_operator_reset_does_not_exist_without_demo_mode():
+    async with isolated_schema(alembic_ini=ALEMBIC_INI) as schema:
+        with make_client(schema, demo_mode=False) as client:
+            assert client.post("/v1/ops/demo-reset", headers=OPERATOR).status_code == 404

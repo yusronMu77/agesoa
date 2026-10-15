@@ -610,3 +610,7 @@ pre.json {
   border-bottom: 3px solid currentColor;
   font-weight: var(--ag-font-weight-bold);
 }
+.button--danger {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}

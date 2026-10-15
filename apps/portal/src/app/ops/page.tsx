@@ -2,21 +2,37 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { loadConfig } from "@/lib/config";
 import { formatTime } from "@/lib/format";
-import { AGENTS, serviceEvents } from "@/lib/ops";
+import { AGENTS, resetDemo, serviceEvents } from "@/lib/ops";
 import { sessionToken } from "@/lib/session";
 import { getStatusReport } from "@/lib/status";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Operations" };
 
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+async function runReset(formData: FormData) {
+  "use server";
+  const token = await sessionToken();
+  if (!token) redirect("/login?next=/ops");
+  if (formData.get("confirm") !== "on") redirect("/ops?reset=unconfirmed");
+  const report = await resetDemo(loadConfig(), token);
+  const failed = report.steps.filter((s) => !s.ok).map((s) => `${s.service}: ${s.detail}`);
+  redirect(
+    `/ops?reset=${report.ok ? "ok" : "failed"}&seconds=${report.seconds}` +
+      (failed.length ? `&error=${encodeURIComponent(failed.join("; "))}` : ""),
+  );
+}
+
 /** SCR-090, tab "Machine": what the agents and services are doing. Read-only: no write to any case content. */
-export default async function OpsPage() {
+export default async function OpsPage({ searchParams }: { searchParams: SearchParams }) {
   const token = await sessionToken();
   if (!token) redirect("/login?next=/ops");
   const config = loadConfig();
   const [status, events] = await Promise.all([getStatusReport(config), serviceEvents(config, token)]);
   const denied = events.every((e) => !e.result.ok && (e.result.status === 401 || e.result.status === 403));
   if (events.every((e) => !e.result.ok && e.result.status === 401)) redirect("/login?next=/ops");
+  const { reset, seconds, error } = await searchParams;
 
   return (
     <>
@@ -115,11 +131,39 @@ export default async function OpsPage() {
         </div>
       </section>
 
-      <section aria-labelledby="demo-heading" className="card">
+      <section aria-labelledby="demo-heading" className="card" data-testid="demo-reset">
         <h2 id="demo-heading">Demo data</h2>
-        <p className="muted">
-          Resetting the demo data comes with the demo seed script (issue #68); this tab never changes case content.
-        </p>
+        {reset === "ok" ? (
+          <p className="callout" role="status" data-testid="reset-result">
+            Demo reset done in {seconds} s: every service emptied its data and seeded its demo data again; the decision
+            log restarted with a <code>demo.reset</code> entry and the public read model was rebuilt.
+          </p>
+        ) : reset === "failed" ? (
+          <p className="callout callout--error" role="alert" data-testid="reset-result">
+            Demo reset failed after {seconds} s: {typeof error === "string" ? error : "unknown error"}
+          </p>
+        ) : reset === "unconfirmed" ? (
+          <p className="callout callout--error" role="alert" data-testid="reset-result">
+            Tick the confirmation first.
+          </p>
+        ) : null}
+        {config.demoMode ? (
+          <form action={runReset} className="form">
+            <p className="muted">
+              Puts the demo environment back to its starting state: removes all demo cases, reports, findings and
+              decisions, then seeds the fictional organizations, validators and districts again. Demo only; the
+              synthetic scenarios are sent afterwards with <code>scripts/demo/reset_demo.py</code>.
+            </p>
+            <label>
+              <input type="checkbox" name="confirm" /> I understand that all demo data is removed
+            </label>
+            <button type="submit" className="button button--danger" data-testid="reset-button">
+              Reset demo data
+            </button>
+          </form>
+        ) : (
+          <p className="muted">Demo reset is only available in a demo environment.</p>
+        )}
       </section>
     </>
   );

@@ -27,6 +27,7 @@ from agesoa_platform.observability import (
     shutdown_tracing,
 )
 from agesoa_platform.oidc import require_internal_caller
+from agesoa_platform.ops import Operator as OperatorDep
 from agesoa_platform.ops import ops_router
 from agesoa_platform.outbox import OutboxDispatcher, Publisher, add_event
 from agesoa_platform.pubsub import PubSubPublisher
@@ -174,6 +175,7 @@ def create_app(
     internal = APIRouter(
         prefix="/internal", tags=["internal"], dependencies=[Depends(require_internal_caller)]
     )
+    ops = ops_router(service)
 
     @internal.post(
         "/outbox/sweep", summary="Publish outbox events left behind (Cloud Scheduler, every minute)"
@@ -188,11 +190,24 @@ def create_app(
         responses={404: {"description": "Not found (also returned when demo_mode is off)"}},
     )
     async def demo_reset(request: Request) -> ResetResult:
-        tables = await reset_tables(request.app.state.db)
+        return await _reset(request.app, by="internal")
+
+    async def _reset(app: FastAPI, by: str) -> ResetResult:
+        tables = await reset_tables(app.state.db)
         if on_demo_reset:
-            await on_demo_reset(request.app)
-        log.warning("demo reset", extra={"detail": {"tables": len(tables)}})
+            await on_demo_reset(app)
+        log.warning("demo reset", extra={"detail": {"tables": len(tables), "by": by}})
         return ResetResult(tables=tables)
+
+    # The same reset for an operator signed in to the portal (SCR-090), not only for the ops service account.
+    @ops.post(
+        "/demo-reset",
+        summary="Operator: empty this service's database and seed its demo data again (demo_mode only)",
+        dependencies=[Depends(require_demo_mode)],
+        responses={404: {"description": "Not found (also returned when demo_mode is off)"}},
+    )
+    async def operator_demo_reset(request: Request, _: OperatorDep) -> ResetResult:
+        return await _reset(request.app, by="operator")
 
     @internal.post(
         "/probe",
@@ -223,7 +238,7 @@ def create_app(
         return ProbeResult(event_id=event["id"], decision_id=decision_id, published=result["published"])
 
     app.include_router(internal)
-    app.include_router(ops_router(service))
+    app.include_router(ops)
     if event_handlers is not None:
         app.include_router(event_router(service, event_handlers))
     for router in routers:

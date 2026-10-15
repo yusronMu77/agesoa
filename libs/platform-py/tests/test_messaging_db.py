@@ -134,3 +134,33 @@ async def test_operator_event_stats_count_types_without_payloads(db):
 
 async def _handler(session, event):
     return None
+
+
+async def test_demo_reset_runs_again_after_a_deadlock(db, monkeypatch):
+    from agesoa_platform import demo
+    from sqlalchemy.exc import DBAPIError
+
+    real = db.transaction
+    calls = {"n": 0}
+
+    def flaky_transaction():
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise DBAPIError("truncate", {}, Exception("deadlock detected"))
+        return real()
+
+    monkeypatch.setattr(db, "transaction", flaky_transaction)
+    names = await demo.reset_tables(db)
+    assert calls["n"] == 2 and "outbox" in names and "inbox" in names
+
+
+async def test_demo_reset_does_not_hide_other_database_errors(db, monkeypatch):
+    from agesoa_platform import demo
+    from sqlalchemy.exc import DBAPIError
+
+    def broken():
+        raise DBAPIError("truncate", {}, Exception("permission denied"))
+
+    monkeypatch.setattr(db, "transaction", broken)
+    with pytest.raises(DBAPIError, match="permission denied"):
+        await demo.reset_tables(db)

@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Annotated, Any
 
 from agesoa_platform.oidc import require_internal_caller
+from agesoa_platform.ops import Operator
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -133,4 +134,16 @@ async def sync_read_model(request: Request) -> ReadModelSync:
 
 @internal_router.post("/rebuild", summary="Drop the Firestore read model and project it again from Postgres")
 async def rebuild_read_model(request: Request) -> ReadModelRebuild:
+    return ReadModelRebuild(**await _projector(request).rebuild())
+
+
+# Operator in the portal (SCR-090): after a demo reset the public read model is rebuilt from the restarted log.
+operator_router = APIRouter(prefix="/v1/ops", tags=["ops"])
+
+
+@operator_router.post(
+    "/read-model/rebuild",
+    summary="Operator: drop the Firestore read model and project it again from Postgres",
+)
+async def operator_rebuild_read_model(request: Request, _: Operator) -> ReadModelRebuild:
     return ReadModelRebuild(**await _projector(request).rebuild())

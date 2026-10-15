@@ -145,6 +145,30 @@
         }
       }
     },
+    "/v1/ops/demo-reset": {
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Operator: empty this service's database and seed its demo data again (demo_mode only)",
+        "operationId": "operator_demo_reset_v1_ops_demo_reset_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (also returned when demo_mode is off)"
+          }
+        }
+      }
+    },
     "/v1/log": {
       "get": {
         "tags": [
@@ -353,6 +377,27 @@
         ],
         "summary": "Drop the Firestore read model and project it again from Postgres",
         "operationId": "rebuild_read_model_internal_read_model_rebuild_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadModelRebuild"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ops/read-model/rebuild": {
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Operator: drop the Firestore read model and project it again from Postgres",
+        "operationId": "operator_rebuild_read_model_v1_ops_read_model_rebuild_post",
         "responses": {
           "200": {
             "description": "Successful Response",

@@ -4,7 +4,7 @@ from agesoa_platform.app import create_app
 from fastapi import FastAPI
 
 from agesoa_transparency import __version__
-from agesoa_transparency.api import internal_router, router
+from agesoa_transparency.api import internal_router, operator_router, router
 from agesoa_transparency.demo import restart_log
 from agesoa_transparency.events import HANDLERS
 from agesoa_transparency.read_model import DocumentStore, FirestoreStore, Projector
@@ -31,7 +31,7 @@ def build_app(settings: Settings | None = None, store: DocumentStore | None = No
         title="AGESOA transparency",
         description=DESCRIPTION,
         version=__version__,
-        routers=[router, internal_router],
+        routers=[router, internal_router, operator_router],
         event_handlers=HANDLERS,
         on_startup=start_read_model,
         on_demo_reset=restart_log,

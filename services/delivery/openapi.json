@@ -145,6 +145,30 @@
         }
       }
     },
+    "/v1/ops/demo-reset": {
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Operator: empty this service's database and seed its demo data again (demo_mode only)",
+        "operationId": "operator_demo_reset_v1_ops_demo_reset_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (also returned when demo_mode is off)"
+          }
+        }
+      }
+    },
     "/v1/cases/{case_id}/audit-report": {
       "get": {
         "tags": [
