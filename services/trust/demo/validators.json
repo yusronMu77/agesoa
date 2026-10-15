@@ -14,7 +14,8 @@
         "district_code": null,
         "district_name": null
       },
-      "synthetic": true
+      "synthetic": true,
+      "admin_uid": "demo-org-admin-1"
     },
     {
       "id": "ORG-DEMO-AGENCY",

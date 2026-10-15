@@ -11,7 +11,8 @@ What it does, in order:
 3. Rebuilds the public read model from the log.
 4. Sends the synthetic scenarios through the same public API as AGESOA Witness (anonymous reporter: draft,
    correction, evidence, submit), so cases and log entries come from the real event path.
-5. Waits until every submitted report reached the decision log and verifies the chain.
+5. Registers three validator candidates with the fictional role documents (one waits for the demo newsroom).
+6. Waits until every submitted report and registration reached the decision log and verifies the chain.
 
 Signals ("kejadian berita") are not seeded yet: the Signal agent (#32) will write them through its own path.
 Service URLs come from the same variables as the QA suite: API_URL_INGESTION, API_URL_CASE_AUDIT, API_URL_TRUST,
@@ -32,6 +33,7 @@ import time
 import wave
 import zlib
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import httpx
 
@@ -230,6 +232,58 @@ def seed_scenario(ingestion: str, local: bool, scenario_id: str) -> int:
     return submitted
 
 
+# Validator candidates (issue #59): the fictional role documents of services/trust/demo/documents go through the
+# public registration API, so the demo starts with a newsroom confirmation waiting and the three outcomes visible.
+CANDIDATES = (
+    ("demo-candidate-1", "journalist", "press-id-card.png", "ORG-DEMO-NEWS"),  # waits for the newsroom
+    ("demo-candidate-2", "nutritionist", "nutritionist-certificate.png", None),  # accepted, tier medium
+    ("demo-candidate-3", "health_worker", "unregistered-university-certificate.png", None),  # low confidence
+)
+DOCUMENTS = Path(__file__).resolve().parents[2] / "services" / "trust" / "demo" / "documents"
+
+
+def candidate_headers(local: bool, uid: str) -> dict[str, str]:
+    """A signed-in (email) account: anonymous reporters cannot register as validators."""
+    if local:
+        return {"Authorization": f"Bearer dev:{uid}"}
+    key = os.environ.get("FIREBASE_WEB_API_KEY")
+    if not key:
+        sys.exit("FIREBASE_WEB_API_KEY is not set (candidate accounts)")
+    reply = httpx.post(
+        f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={key}",
+        json={
+            "email": f"{uid}-{int(time.time())}@demo.agesoa.invalid",
+            "password": os.urandom(12).hex(),
+            "returnSecureToken": True,
+        },
+        timeout=TIMEOUT,
+    )
+    reply.raise_for_status()
+    return {"Authorization": f"Bearer {reply.json()['idToken']}"}
+
+
+def seed_candidates(trust: str, local: bool) -> int:
+    for uid, role, document, organization in CANDIDATES:
+        form = {"role": role, "field": "Demo", "regency_name": "Kabupaten Sukamaju (fictional)"}
+        if organization:
+            form["organization_id"] = organization
+        reply = ok(
+            httpx.post(
+                f"{trust}/v1/validators/registrations",
+                data=form,
+                files={"document": (document, (DOCUMENTS / document).read_bytes(), "image/png")},
+                headers=candidate_headers(local, uid),
+                timeout=httpx.Timeout(120.0, connect=10.0),  # Agen Peran reads the document
+            )
+        )
+        body = reply.json()
+        step(
+            f"validator candidate {role}: {body['status']}"
+            + (f" ({body['reason']})" if body["reason"] else "")
+        )
+    return len(CANDIDATES)
+
+
 def wait_for_log(transparency: str, expected: int, wait_seconds: int) -> None:
     deadline = time.monotonic() + wait_seconds
     seq = 0
@@ -254,6 +308,9 @@ def main() -> None:
     parser.add_argument("--scenarios", help="comma-separated scenario ids (default: all)")
     parser.add_argument("--no-seed", action="store_true", help="reset only, do not send the scenarios")
     parser.add_argument(
+        "--no-candidates", action="store_true", help="do not register the demo validator candidates"
+    )
+    parser.add_argument(
         "--wait", type=int, default=60, help="seconds to wait for the decision log (default 60)"
     )
     args = parser.parse_args()
@@ -274,7 +331,8 @@ def main() -> None:
             ids = [i for i in ids if i in args.scenarios.split(",")]
         with ThreadPoolExecutor(max_workers=max(1, len(ids))) as pool:  # scenarios are independent
             submitted = sum(pool.map(lambda i: seed_scenario(urls["ingestion"], local, i), ids))
-        wait_for_log(urls["transparency"], 1 + submitted, args.wait)
+        candidates = 0 if args.no_candidates else seed_candidates(urls["trust"], local)
+        wait_for_log(urls["transparency"], 1 + submitted + candidates, args.wait)
     step(f"done in {time.monotonic() - started:.0f} s")
 
 

@@ -331,6 +331,221 @@
         }
       }
     },
+    "/v1/validators/roles": {
+      "get": {
+        "tags": [
+          "validators"
+        ],
+        "summary": "Validator roles a candidate can register for (from the domain packs)",
+        "operationId": "roles_v1_validators_roles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RoleOption"
+                  },
+                  "type": "array",
+                  "title": "Response Roles V1 Validators Roles Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/organizations/newsrooms": {
+      "get": {
+        "tags": [
+          "validators",
+          "organizations"
+        ],
+        "summary": "Verified newsrooms a candidate can name (they confirm their staff)",
+        "operationId": "newsrooms_v1_organizations_newsrooms_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NewsroomOption"
+                  },
+                  "type": "array",
+                  "title": "Response Newsrooms V1 Organizations Newsrooms Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/validators/registrations": {
+      "post": {
+        "tags": [
+          "validators"
+        ],
+        "summary": "Register as a validator with one role document (read by Agen Peran, never stored)",
+        "operationId": "register_v1_validators_registrations_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_register_v1_validators_registrations_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already registered (and not rejected)"
+          },
+          "413": {
+            "description": "Document larger than 10 MB"
+          },
+          "415": {
+            "description": "Not a JPEG, PNG or WebP image"
+          },
+          "422": {
+            "description": "Unknown role or organization"
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    },
+    "/v1/organizations/{organization_id}/staff": {
+      "get": {
+        "tags": [
+          "validators",
+          "organizations"
+        ],
+        "summary": "Candidates waiting for this newsroom to confirm them as staff (name + position read, no image)",
+        "operationId": "pending_staff_v1_organizations__organization_id__staff_get",
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Organization Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StaffCandidate"
+                  },
+                  "title": "Response Pending Staff V1 Organizations  Organization Id  Staff Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such organization of yours"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/organizations/{organization_id}/staff/{validator_id}": {
+      "post": {
+        "tags": [
+          "validators",
+          "organizations"
+        ],
+        "summary": "Confirm (tier high) or refuse a candidate as this newsroom's staff",
+        "operationId": "decide_staff_v1_organizations__organization_id__staff__validator_id__post",
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Organization Id"
+            }
+          },
+          {
+            "name": "validator_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Validator Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffDecisionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffDecisionOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such pending candidate of your organization"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    },
     "/v1/organizations": {
       "get": {
         "tags": [
@@ -494,6 +709,52 @@
   },
   "components": {
     "schemas": {
+      "Body_register_v1_validators_registrations_post": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "Validator role id from a domain pack"
+          },
+          "field": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Field"
+          },
+          "regency_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Regency Name"
+          },
+          "document": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Document",
+            "description": "Press card, assignment letter or certificate (image)"
+          },
+          "organization_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "field",
+          "regency_name",
+          "document"
+        ],
+        "title": "Body_register_v1_validators_registrations_post"
+      },
       "DatabaseStatus": {
         "properties": {
           "ok": {
@@ -663,6 +924,93 @@
         ],
         "title": "DnsCheck"
       },
+      "DocumentReading": {
+        "properties": {
+          "document_type": {
+            "type": "string",
+            "title": "Document Type"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "anomalies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Anomalies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_type",
+          "name",
+          "position",
+          "issuer",
+          "number",
+          "valid_until",
+          "confidence",
+          "anomalies"
+        ],
+        "title": "DocumentReading"
+      },
       "EventTypeCount": {
         "properties": {
           "direction": {
@@ -749,6 +1097,36 @@
           "demo_mode"
         ],
         "title": "Health"
+      },
+      "NewsroomOption": {
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "regency_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regency Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "name",
+          "regency_name"
+        ],
+        "title": "NewsroomOption"
       },
       "OpsEvents": {
         "properties": {
@@ -1097,6 +1475,70 @@
         ],
         "title": "Region"
       },
+      "RegistrationOut": {
+        "properties": {
+          "validator_id": {
+            "type": "string",
+            "title": "Validator Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_confirmation",
+              "probation",
+              "rejected"
+            ],
+            "title": "Status"
+          },
+          "path": {
+            "type": "string",
+            "enum": [
+              "self_declared",
+              "org_confirmed"
+            ],
+            "title": "Path"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reading": {
+            "$ref": "#/components/schemas/DocumentReading"
+          }
+        },
+        "type": "object",
+        "required": [
+          "validator_id",
+          "status",
+          "path",
+          "tier",
+          "reason",
+          "reading"
+        ],
+        "title": "RegistrationOut"
+      },
       "ResetResult": {
         "properties": {
           "tables": {
@@ -1112,6 +1554,148 @@
           "tables"
         ],
         "title": "ResetResult"
+      },
+      "RoleOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "RoleOption"
+      },
+      "StaffCandidate": {
+        "properties": {
+          "validator_id": {
+            "type": "string",
+            "title": "Validator Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "role_label": {
+            "type": "string",
+            "title": "Role Label"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "document_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Type"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Requested At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "validator_id",
+          "role",
+          "role_label",
+          "name",
+          "position",
+          "document_type",
+          "confidence",
+          "requested_at"
+        ],
+        "title": "StaffCandidate"
+      },
+      "StaffDecisionIn": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "confirm",
+              "reject"
+            ],
+            "title": "Decision"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision"
+        ],
+        "title": "StaffDecisionIn"
+      },
+      "StaffDecisionOut": {
+        "properties": {
+          "validator_id": {
+            "type": "string",
+            "title": "Validator Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
+          }
+        },
+        "type": "object",
+        "required": [
+          "validator_id",
+          "status",
+          "tier"
+        ],
+        "title": "StaffDecisionOut"
       },
       "SweepResult": {
         "properties": {
@@ -1460,6 +2044,45 @@
           "synthetic": {
             "type": "boolean",
             "title": "Synthetic"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "probation": {
+            "type": "boolean",
+            "title": "Probation",
+            "description": "New validator: counted in quorum, labelled as new (TC-123)",
+            "default": false
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "rejection_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection Reason"
           }
         },
         "type": "object",

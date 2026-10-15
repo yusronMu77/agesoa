@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EvidenceBadge } from "@/components/EvidenceBadge";
+import { SimOrgBand } from "@/components/SimOrgBand";
 import { ValidatorHeader } from "@/components/ValidatorHeader";
 import { loadConfig } from "@/lib/config";
 import { formatTime } from "@/lib/format";
@@ -24,19 +25,26 @@ export default async function ValidatePage({ searchParams }: { searchParams: Sea
   return (
     <>
       <h1>Findings waiting for validation</h1>
+      {config.demoMode ? <SimOrgBand /> : null}
       {profile.ok ? (
         <ValidatorHeader profile={profile.data} />
       ) : (
         <p className="callout callout--error" data-testid="not-validator">
-          This account is not an active validator.
+          This account is not an active validator. <Link href="/validators/register">Become a validator</Link>.
         </p>
       )}
+      {profile.ok && !["active", "probation"].includes(profile.data.status) ? (
+        <p className="callout" data-testid="registration-pending">
+          Your registration is {profile.data.status.replace("_", " ")}: see{" "}
+          <Link href="/validators/register">your registration</Link>.
+        </p>
+      ) : null}
       {typeof done === "string" ? (
         <p className="callout" role="status" data-testid="decision-done">
           Decision recorded for finding <code>{done}</code>. It is in the public decision log.
         </p>
       ) : null}
-      {!requests.ok ? (
+      {profile.ok && !["active", "probation"].includes(profile.data.status) ? null : !requests.ok ? (
         <p className="callout callout--error">The validation service did not answer ({requests.error}).</p>
       ) : requests.data.length === 0 ? (
         <p className="callout" data-testid="queue-empty">

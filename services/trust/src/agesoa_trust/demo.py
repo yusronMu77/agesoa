@@ -41,5 +41,15 @@ async def seed_demo_validators(db: Database, path: Path = DEMO_FILE) -> int:
             (staff_confirmations, "staff_confirmations"),
         ):
             for row in data[key]:
-                await session.execute(insert(table).values(row).on_conflict_do_nothing())
+                stmt = insert(table).values(row)
+                if table is organizations and row.get("admin_uid"):
+                    # Seeds added later (the demo newsroom's admin) reach databases seeded before them.
+                    stmt = stmt.on_conflict_do_update(
+                        index_elements=[organizations.c.id],
+                        set_={"admin_uid": row["admin_uid"]},
+                        where=organizations.c.admin_uid.is_(None),
+                    )
+                else:
+                    stmt = stmt.on_conflict_do_nothing()
+                await session.execute(stmt)
     return len(data["validators"])

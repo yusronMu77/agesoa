@@ -4,11 +4,12 @@ from agesoa_packs import load_packs
 from agesoa_platform.app import create_app
 from fastapi import FastAPI
 
-from agesoa_trust import __version__, organizations
+from agesoa_trust import __version__, organizations, validators
 from agesoa_trust.api import router
 from agesoa_trust.demo import seed_demo_accounts, seed_demo_validators
 from agesoa_trust.events import HANDLERS
 from agesoa_trust.identity import IdentityAdmin
+from agesoa_trust.role_agent import RoleAgent
 from agesoa_trust.settings import Settings, get_settings
 
 DESCRIPTION = "Organizations, validators, staff confirmation, validation routing and quorum; agent Role."
@@ -35,13 +36,21 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         title="AGESOA trust",
         description=DESCRIPTION,
         version=__version__,
-        routers=[router, organizations.router],
+        routers=[router, validators.router, organizations.router],
         event_handlers=HANDLERS,
         on_startup=seed_demo,
         on_demo_reset=seed_demo,
     )
     # Validator role labels for the decision log come from the domain packs (fail fast on a broken pack).
     app.state.packs = load_packs(settings.domain_packs_dir)
+    model = settings.effective_role_model
+    app.state.role_agent = (
+        RoleAgent.rules() if model == "rules" else RoleAgent([model, *settings.role_fallback_models])
+    )
+    # Role claims: the Auth emulator locally, Identity Platform (service account) elsewhere.
+    app.state.identity = (
+        IdentityAdmin(settings) if settings.firebase_auth_emulator_host or not settings.is_local else None
+    )
     return app
 
 

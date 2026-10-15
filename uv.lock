@@ -178,6 +178,8 @@ dependencies = [
     { name = "agesoa-platform" },
     { name = "dnspython" },
     { name = "google-adk" },
+    { name = "pillow" },
+    { name = "python-multipart" },
 ]
 
 [package.metadata]
@@ -187,6 +189,8 @@ requires-dist = [
     { name = "agesoa-platform", editable = "libs/platform-py" },
     { name = "dnspython", specifier = "~=2.8" },
     { name = "google-adk", specifier = "~=2.11.0" },
+    { name = "pillow", specifier = "~=12.3" },
+    { name = "python-multipart", specifier = "~=0.0.32" },
 ]
 
 [[package]]

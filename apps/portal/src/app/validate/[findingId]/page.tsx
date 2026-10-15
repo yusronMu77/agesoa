@@ -24,6 +24,7 @@ async function submitDecision(formData: FormData) {
     decision,
     note: String(formData.get("note") ?? "").slice(0, 4000),
     conflict: formData.get("conflict") === "on",
+    confidence: formData.get("confidence") ? Number(formData.get("confidence")) : null,
   });
   if (!result.ok) {
     const detail = (result.body as { detail?: unknown } | null)?.detail;
@@ -126,6 +127,15 @@ export default async function ValidateFindingPage({ params, searchParams }: { pa
             <label>
               Note (public in the decision log; no personal names)
               <textarea name="note" rows={3} maxLength={4000} />
+            </label>
+            <label>
+              How sure are you?
+              <select name="confidence" defaultValue="">
+                <option value="">Not stated</option>
+                <option value="0.9">Very sure</option>
+                <option value="0.7">Fairly sure</option>
+                <option value="0.5">Unsure</option>
+              </select>
             </label>
             <label>
               <input type="checkbox" name="conflict" /> I have a conflict of interest (recorded, not counted)

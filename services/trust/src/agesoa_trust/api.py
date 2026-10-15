@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from agesoa_platform.app import flush_outbox
-from agesoa_platform.auth import Principal, require_role
+from agesoa_platform.auth import Principal, authenticate, require_role
 from agesoa_platform.events import isoformat, new_event, utc_now
 from agesoa_platform.outbox import add_event
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
@@ -21,6 +21,8 @@ from agesoa_trust.tables import organizations, validation_decisions, validation_
 
 router = APIRouter(prefix="/v1", tags=["validation"])
 Validator = Annotated[Principal, Depends(require_role("validator"))]
+# Any signed-in account: a candidate sees their own registration before they hold the validator claim.
+Signed = Annotated[Principal, Depends(authenticate)]
 NOT_FOUND = {404: {"description": "No such finding"}}
 
 
@@ -82,6 +84,10 @@ class ValidatorProfile(BaseModel):
     organization: str | None
     region: dict[str, Any] | None
     synthetic: bool
+    path: str | None = None
+    probation: bool = Field(False, description="New validator: counted in quorum, labelled as new (TC-123)")
+    confidence: float | None = None
+    rejection_reason: str | None = None
 
 
 @router.get(
@@ -90,7 +96,7 @@ class ValidatorProfile(BaseModel):
     summary="The signed-in validator's own profile (role label, tier, status; no personal data)",
     responses={403: {"description": "Not a registered validator"}},
 )
-async def my_profile(request: Request, validator: Validator) -> ValidatorProfile:
+async def my_profile(request: Request, validator: Signed) -> ValidatorProfile:
     async with request.app.state.db.sessions() as session:
         row = (
             (
@@ -118,6 +124,10 @@ async def my_profile(request: Request, validator: Validator) -> ValidatorProfile
         organization=row["organization_name"],
         region=row["region"],
         synthetic=row["synthetic"],
+        path=row["path"],
+        probation=row["status"] == "probation",
+        confidence=row["confidence"],
+        rejection_reason=row["rejection_reason"],
     )
 
 

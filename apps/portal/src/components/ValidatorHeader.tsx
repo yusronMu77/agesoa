@@ -13,6 +13,11 @@ export function ValidatorHeader({ profile }: { profile: ValidatorProfile }) {
         Signed in as <strong>{profile.role_label}</strong>
         {profile.tier ? ` · ${profile.tier} tier` : ""}
         {profile.organization ? ` · ${profile.organization}` : " · independent"} · status {profile.status}
+        {profile.probation ? (
+          <span className="badge badge--neutral" data-testid="probation-badge" style={{ marginLeft: 8 }}>
+            New validator (probation)
+          </span>
+        ) : null}
       </p>
       <form method="post" action="/logout">
         <button type="submit" className="button button--secondary">

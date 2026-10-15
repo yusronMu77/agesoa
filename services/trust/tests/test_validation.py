@@ -169,6 +169,10 @@ def test_my_profile_shows_role_label_and_tier(client):
         "organization": "Redaksi Sukamaju (fictional)",
         "region": me["region"],
         "synthetic": True,
+        "path": "org_confirmed",
+        "probation": False,  # seeded demo validators are established, not new
+        "confidence": None,
+        "rejection_reason": None,
     }
     assert client.get("/v1/validators/me", headers=UNREGISTERED).status_code == 403
     assert client.get("/v1/validators/me", headers=REPORTER).status_code == 403

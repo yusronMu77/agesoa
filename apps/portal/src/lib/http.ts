@@ -24,6 +24,8 @@ export interface FetchOptions {
   method?: "GET" | "POST";
   /** JSON request body (POST). */
   body?: unknown;
+  /** Multipart request body (POST with a file); exclusive with `body`. */
+  form?: FormData;
 }
 
 function describeError(error: unknown, timeoutMs: number): string {
@@ -53,7 +55,7 @@ export async function fetchJson<T>(url: string, options: FetchOptions = {}): Pro
         ...(options.body !== undefined ? { "content-type": "application/json" } : {}),
         ...options.headers,
       },
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body: options.form ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined),
       cache: "no-store",
       signal: AbortSignal.timeout(timeoutMs),
     });

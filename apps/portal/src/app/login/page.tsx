@@ -13,9 +13,18 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
   const next = typeof raw === "string" && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/validate";
   const organizations = next.startsWith("/organizations");
   const operator = next.startsWith("/ops");
+  const registering = next.startsWith("/validators/register");
   return (
     <>
-      <h1>{organizations ? "Organization sign-in" : operator ? "Operator sign-in" : "Validator sign-in"}</h1>
+      <h1>
+        {organizations
+          ? "Organization sign-in"
+          : operator
+            ? "Operator sign-in"
+            : registering
+              ? "Become a validator"
+              : "Validator sign-in"}
+      </h1>
       <p className="muted">
         {organizations
           ? "Newsrooms and agencies manage their organization and domain verification here."
@@ -29,7 +38,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
           Local environment: accounts live in the Firebase Auth emulator (seeded demo accounts only).
         </p>
       ) : null}
-      <LoginForm auth={config.auth} next={next} />
+      <LoginForm auth={config.auth} next={next} allowSignup={registering} />
     </>
   );
 }

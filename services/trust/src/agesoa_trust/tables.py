@@ -55,6 +55,8 @@ validators = Table(
     Column("valid_until", DateTime(timezone=True)),
     Column("synthetic", Boolean, nullable=False, server_default="false"),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("rejection_reason", String(32)),  # registration.Reason when status = rejected
+    Column("decided_at", DateTime(timezone=True)),  # accepted/rejected (by rule or by the organization)
 )
 
 staff_confirmations = Table(

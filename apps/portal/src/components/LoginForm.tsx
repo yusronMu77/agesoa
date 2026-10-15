@@ -1,16 +1,17 @@
 "use client";
 
 import { getApps, initializeApp } from "firebase/app";
-import { connectAuthEmulator, getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { connectAuthEmulator, createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import type { AuthConfig } from "@/lib/config";
 
 /** Email + password sign-in (Identity Platform; the Firebase Auth emulator locally). */
-export function LoginForm({ auth: config, next }: { auth: AuthConfig; next: string }) {
+export function LoginForm({ auth: config, next, allowSignup = false }: { auth: AuthConfig; next: string; allowSignup?: boolean }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [signup, setSignup] = useState(false);
   // Until React is attached the form must not submit natively (that would put the password in a URL).
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
@@ -26,7 +27,11 @@ export function LoginForm({ auth: config, next }: { auth: AuthConfig; next: stri
       if (config.emulatorUrl && !(auth as unknown as { emulatorConfig?: unknown }).emulatorConfig) {
         connectAuthEmulator(auth, config.emulatorUrl, { disableWarnings: true });
       }
-      const credential = await signInWithEmailAndPassword(auth, String(form.get("email")), String(form.get("password")));
+      const email = String(form.get("email"));
+      const password = String(form.get("password"));
+      const credential = signup
+        ? await createUserWithEmailAndPassword(auth, email, password)
+        : await signInWithEmailAndPassword(auth, email, password);
       const idToken = await credential.user.getIdToken(true);
       const response = await fetch("/api/session", {
         method: "POST",
@@ -37,7 +42,7 @@ export function LoginForm({ auth: config, next }: { auth: AuthConfig; next: stri
       router.replace(next);
       router.refresh();
     } catch {
-      setError("Sign-in failed. Check the email and password.");
+      setError(signup ? "Could not create the account (email in use, or password shorter than 6 characters)." : "Sign-in failed. Check the email and password.");
       setBusy(false);
     }
   }
@@ -58,8 +63,13 @@ export function LoginForm({ auth: config, next }: { auth: AuthConfig; next: stri
         </p>
       ) : null}
       <button type="submit" className="button" disabled={busy || !ready}>
-        {busy ? "Signing in…" : "Sign in"}
+        {busy ? "Please wait…" : signup ? "Create account" : "Sign in"}
       </button>
+      {allowSignup ? (
+        <button type="button" className="button button--secondary" onClick={() => setSignup(!signup)} data-testid="toggle-signup">
+          {signup ? "I already have an account" : "New here? Create an account"}
+        </button>
+      ) : null}
     </form>
   );
 }

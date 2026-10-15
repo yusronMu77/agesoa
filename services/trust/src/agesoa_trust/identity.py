@@ -56,6 +56,13 @@ class IdentityAdmin:
             raise ValueError(f"unknown roles: {sorted(unknown)}")
         return json.dumps({role: True for role in sorted(roles)})
 
+    async def claims_of(self, uid: str) -> set[str]:
+        """Current role claims of an account (empty when it has none)."""
+        users = (await self._post("accounts:lookup", {"localId": [uid]})).get("users") or []
+        raw = users[0].get("customAttributes") if users else None
+        current = json.loads(raw) if raw else {}
+        return {role for role in ROLE_CLAIMS if current.get(role)}
+
     async def set_roles(self, uid: str, roles: set[str]) -> None:
         """Replace the role claims of an account (takes effect at the user's next token refresh)."""
         await self._post("accounts:update", {"localId": uid, "customAttributes": self.claims(roles)})
