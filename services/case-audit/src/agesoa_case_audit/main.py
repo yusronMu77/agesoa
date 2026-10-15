@@ -1,23 +1,28 @@
+from agesoa_packs import load_packs
 from agesoa_platform.app import create_app
 from fastapi import FastAPI
 
 from agesoa_case_audit import __version__
 from agesoa_case_audit.api import router
-from agesoa_case_audit.events import HANDLERS
+from agesoa_case_audit.events import build_handlers
 from agesoa_case_audit.settings import Settings, get_settings
 
 DESCRIPTION = "Cases, evidence deadlines, witness interviews, audit trail and findings; agent Audit."
 
 
 def build_app(settings: Settings | None = None) -> FastAPI:
-    return create_app(
-        settings=settings or get_settings(),
+    settings = settings or get_settings()
+    packs = load_packs(settings.domain_packs_dir)  # fail fast on a broken pack, like the other services
+    app = create_app(
+        settings=settings,
         title="AGESOA case-audit",
         description=DESCRIPTION,
         version=__version__,
         routers=[router],
-        event_handlers=HANDLERS,
+        event_handlers=build_handlers(packs),
     )
+    app.state.packs = packs
+    return app
 
 
 def __getattr__(name: str) -> FastAPI:

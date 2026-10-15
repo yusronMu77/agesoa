@@ -78,6 +78,11 @@ def evidence_status(
     return EvidenceStatus("likely_lost", deadline, cfg["after_deadline_max_status"])
 
 
+def evidence_anchor(pack: DomainPack, fields: dict[str, Any], tz: ZoneInfo = DEFAULT_TZ) -> datetime | None:
+    """When the incident happened as far as the evidence deadline is concerned (anchor field, else the fallback)."""
+    return _anchor(fields, pack.evidence_deadline, tz)
+
+
 def _anchor(fields: dict[str, Any], cfg: dict[str, Any], tz: ZoneInfo) -> datetime | None:
     if fields.get(cfg["anchor_field"]) is not None:
         return parse_datetime(fields[cfg["anchor_field"]])

@@ -1,6 +1,13 @@
 """Domain packs: load + validate, evaluate rules and the evidence deadline, synthetic scenarios. Domain-agnostic."""
 
-from agesoa_packs.engine import EvidenceStatus, RuleResult, evaluate_rules, evidence_status, parse_datetime
+from agesoa_packs.engine import (
+    EvidenceStatus,
+    RuleResult,
+    evaluate_rules,
+    evidence_anchor,
+    evidence_status,
+    parse_datetime,
+)
 from agesoa_packs.loader import DomainPack, PackError, load_pack, load_packs, parse_pack
 from agesoa_packs.scenarios import Scenario, load_scenarios, parse_scenario
 
@@ -11,6 +18,7 @@ __all__ = [
     "RuleResult",
     "Scenario",
     "evaluate_rules",
+    "evidence_anchor",
     "evidence_status",
     "load_pack",
     "load_packs",

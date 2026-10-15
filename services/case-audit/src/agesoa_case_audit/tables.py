@@ -36,6 +36,9 @@ cases = Table(
     Column("synthetic", Boolean, nullable=False, server_default="false"),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    # When the earliest incident of the case happened: the reference for grouping new reports (cases.py).
+    Column("occurred_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Index("ix_cases_matching", "domain", "category", "occurred_at"),
 )
 
 # Reports and signals grouped into a case (copied from events; never read from ingestion's database).
