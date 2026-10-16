@@ -5,15 +5,20 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
+from sqlalchemy.exc import DBAPIError, StatementError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from agesoa_platform.db import Database
 from agesoa_platform.demo import require_demo_mode, reset_tables
@@ -245,7 +250,71 @@ def create_app(
         app.include_router(router)
     instrument_app(app)
     _document_body_errors(app)
+    app.add_exception_handler(StarletteHTTPException, _contract_http_exception)
+    app.add_exception_handler(RequestValidationError, _validation_errors)
+    app.add_exception_handler(DBAPIError, _unstorable_text)
+    app.add_exception_handler(StatementError, _unstorable_text)
     return app
+
+
+HTTP_METHODS = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
+
+
+def _allowed_methods(app: FastAPI, path: str) -> list[str]:
+    """Methods the contract lists for a request path (templates like `/v1/reports/{report_id}`)."""
+    for template, operations in app.openapi().get("paths", {}).items():
+        if re.fullmatch(re.sub(r"\{[^}]+\}", "[^/]+", template), path):
+            return sorted(m.upper() for m in operations if m in HTTP_METHODS)
+    return []
+
+
+async def _contract_http_exception(request: Request, exc: StarletteHTTPException):
+    """Answer like the contract: 422 as `HTTPValidationError` (a list of `{type, loc, msg}`), also when a handler
+    raises it with a plain message (FastAPI's own validation errors already have this shape), and 405 with every
+    method of the path in `Allow` (RFC 9110 15.5.6)."""
+    if exc.status_code == 405 and (allowed := _allowed_methods(request.app, request.scope["path"])):
+        # One path with several methods is several routes; Starlette reports the methods of only one of them.
+        exc = StarletteHTTPException(405, exc.detail, {**(exc.headers or {}), "Allow": ", ".join(allowed)})
+        return await http_exception_handler(request, exc)
+    if exc.status_code == 422 and isinstance(exc.detail, str):
+        return _unprocessable([{"type": "value_error", "loc": ["body"], "msg": exc.detail}], exc.headers)
+    return await http_exception_handler(request, exc)
+
+
+def _unprocessable(errors: list[dict[str, Any]], headers: dict[str, str] | None = None) -> Response:
+    """422 body of the contract. ASCII-escaped on purpose: a field name or message may carry an unpaired surrogate,
+    which cannot be encoded to UTF-8 (the response would turn into a 500)."""
+    body = json.dumps({"detail": errors})
+    return Response(body, status_code=422, headers=headers, media_type="application/json")
+
+
+async def _validation_errors(request: Request, exc: RequestValidationError) -> Response:
+    """FastAPI's 422 without the echoed `input` and `ctx`: what the client sent (personal text in a report, a
+    secret in a wrong field) is never sent back, and values that cannot be encoded cannot break the answer."""
+    errors = [{key: e[key] for key in ("type", "loc", "msg") if key in e} for e in exc.errors()]
+    return _unprocessable(json.loads(json.dumps(errors, default=str)))
+
+
+# Postgres cannot store NUL in text (22021) or in JSON text (22P05); a lone surrogate cannot be encoded to UTF-8.
+UNSTORABLE_TEXT = {"22021", "22P05"}
+
+
+async def _unstorable_text(request: Request, exc: Exception):
+    """Text that no database can store (NUL, lone surrogates) is a client error: 422, not a 500 from the insert."""
+    cause = getattr(exc, "orig", None)
+    causes = (cause, getattr(cause, "__cause__", None), exc.__cause__)
+    codes = {getattr(c, "sqlstate", None) or getattr(c, "pgcode", None) for c in causes if c is not None}
+    if codes & UNSTORABLE_TEXT or any(isinstance(c, UnicodeEncodeError) for c in causes):
+        return _unprocessable(
+            [
+                {
+                    "type": "value_error",
+                    "loc": ["body"],
+                    "msg": "text contains characters that cannot be stored (NUL or an unpaired surrogate)",
+                }
+            ]
+        )
+    raise exc
 
 
 def _document_body_errors(app: FastAPI) -> None:

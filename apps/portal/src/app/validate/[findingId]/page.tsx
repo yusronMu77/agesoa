@@ -5,6 +5,7 @@ import { EvidenceBadge } from "@/components/EvidenceBadge";
 import { ValidatorHeader } from "@/components/ValidatorHeader";
 import { loadConfig } from "@/lib/config";
 import { formatTime } from "@/lib/format";
+import { errorDetail } from "@/lib/http";
 import { sessionToken } from "@/lib/session";
 import { decide, getAuditTrail, getMyProfile, getValidationRequest } from "@/lib/trust";
 
@@ -27,10 +28,7 @@ async function submitDecision(formData: FormData) {
     confidence: formData.get("confidence") ? Number(formData.get("confidence")) : null,
   });
   if (!result.ok) {
-    const detail = (result.body as { detail?: unknown } | null)?.detail;
-    redirect(
-      `/validate/${encodeURIComponent(findingId)}?error=${encodeURIComponent(typeof detail === "string" ? detail : result.error)}`,
-    );
+    redirect(`/validate/${encodeURIComponent(findingId)}?error=${encodeURIComponent(errorDetail(result))}`);
   }
   redirect(`/validate?done=${encodeURIComponent(findingId)}`);
 }

@@ -15,7 +15,7 @@ wording that belongs to a domain lives here.
 | `oidc`, `auth` | Google OIDC for service callers (push, scheduler); Identity Platform ID tokens + role claims for users |
 | `hashing`, `hmac` | canonical JSON, SHA-256, hash chaining; webhook HMAC signing/verification (5-minute tolerance) |
 | `observability` | JSON logs for Cloud Logging with trace correlation; OpenTelemetry → Cloud Trace |
-| `app` | `create_app()`: `/healthz`, `/readyz`, `/internal/outbox/sweep`, `/internal/probe`, push router, CORS |
+| `app` | `create_app()`: `/healthz`, `/readyz`, `/internal/outbox/sweep`, `/internal/probe`, push router, CORS; error answers shaped like the contract: 422 is always `{"detail": [{type, loc, msg}]}` (no echoed input; text Postgres cannot store, such as NUL, is a 422 not a 500), 405 lists every method of the path in `Allow` |
 | `devtools.relay` | `agesoa-dev-relay`: emulator topics/subscriptions from the catalog + local push forwarding |
 
 Local-only relaxations (unsigned push from the relay, `Bearer dev:<uid>:<roles>` user tokens) exist only when

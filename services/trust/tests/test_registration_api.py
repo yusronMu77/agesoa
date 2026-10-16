@@ -135,6 +135,8 @@ def test_unreadable_documents_and_bad_input(client):
     assert r.json()["status"] == "rejected" and r.json()["reason"] == "unreadable"
     assert register(client, "cand-pdf", None, data_override=b"%PDF-1.7 not an image").status_code == 415
     assert register(client, "cand-role", "press-id-card.png", role="astronaut").status_code == 422
+    empty_role = register(client, "cand-norole", "press-id-card.png", role="")
+    assert empty_role.status_code == 422 and empty_role.json()["detail"][0]["loc"] == ["body", "role"]
     assert register(client, "cand-org", "press-id-card.png", organization_id="ORG-NOPE").status_code == 422
     # one registration per person (a rejected one may try again)
     assert (

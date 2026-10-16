@@ -30,7 +30,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictFloat
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -51,12 +51,18 @@ EvidenceKind = Literal["photo", "audio", "screenshot"]
 
 
 class Coordinates(BaseModel):
-    lat: float = Field(ge=-90, le=90)
-    lon: float = Field(ge=-180, le=180)
+    # Strict: pydantic's lax mode would turn `false` into 0.0 and "1.5" into 1.5; the contract says number.
+    lat: StrictFloat = Field(ge=-90, le=90)
+    lon: StrictFloat = Field(ge=-180, le=180)
 
 
 class SharedPostIn(BaseModel):
-    url: str = Field(max_length=social.MAX_URL, description="Link to a social post, pasted by the reporter")
+    url: str = Field(
+        min_length=8,
+        max_length=social.MAX_URL,
+        pattern=social.URL_PATTERN,
+        description="Link to a social post, pasted by the reporter",
+    )
     excerpt: str | None = Field(
         None, max_length=1000, description="Optional short quote; @handles are masked"
     )
@@ -73,7 +79,9 @@ class ReportCreate(BaseModel):
 
 
 class ReportPatch(BaseModel):
-    category: str | None = None
+    category: str | None = Field(
+        None, min_length=1, description="Category id of the domain pack of the report"
+    )
     fields: dict[str, Any] | None = Field(
         None, description="Corrections by field id; null removes a value. Merged into the current fields."
     )
@@ -390,7 +398,13 @@ async def upload_evidence(
     request: Request,
     reporter: Reporter,
     kind: Annotated[EvidenceKind, Form()],
-    file: Annotated[UploadFile, File(description="The file; its declared content type is not trusted")],
+    file: Annotated[
+        UploadFile,
+        File(
+            description="The file; its declared content type is not trusted",
+            json_schema_extra={"minLength": 1},
+        ),
+    ],
 ) -> EvidenceOut:
     data = await file.read(MAX_BYTES + 1)
     try:

@@ -37,6 +37,11 @@ OrgAdmin = Annotated[Principal, Depends(require_role("org_admin"))]
 NOT_FOUND = {404: {"description": "No such organization of yours"}}
 TXT_PREFIX = "agesoa-verify="
 HOSTNAME = re.compile(r"^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
+# The same rule for the contract (OpenAPI), without lookahead and case-insensitive: the length bounds are
+# `min_length`/`max_length` of the field (the 253 characters of a DNS name count the raw input, so a trailing dot
+# never pushes a name past the limit). Input is lowercased and a trailing dot (fully qualified name) dropped
+# before HOSTNAME is applied.
+DOMAIN_PATTERN = r"^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}\.?$"
 log = logging.getLogger(__name__)
 
 
@@ -48,7 +53,12 @@ class Region(BaseModel):
 class OrganizationIn(BaseModel):
     name: str = Field(min_length=2, max_length=200)
     kind: Literal["newsroom", "agency"]
-    domain: str = Field(description="The organization's own domain, e.g. redaksi.example.org")
+    domain: str = Field(
+        min_length=4,
+        max_length=253,
+        pattern=DOMAIN_PATTERN,
+        description="The organization's own domain, e.g. redaksi.example.org",
+    )
     region: Region
 
     @field_validator("domain")

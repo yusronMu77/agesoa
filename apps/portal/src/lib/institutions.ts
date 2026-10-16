@@ -3,6 +3,8 @@
 import type { PortalConfig } from "./config";
 import { type FetchLike, type FetchResult, fetchJson } from "./http";
 
+export { errorDetail } from "./http";
+
 export interface Subscription {
   id: string;
   webhook_url: string;
@@ -141,19 +143,6 @@ export function attemptsSummary(attempts: DeliveryAttempt[]): string {
     .sort((a, b) => a.attempt - b.attempt)
     .map((a) => `${a.attempt}: ${a.http_status ?? a.error ?? "no answer"}`)
     .join(", ");
-}
-
-/** FastAPI error detail of a failed call as one line of plain text. */
-export function errorDetail(result: { status: number | null; body: unknown; error: string }): string {
-  const detail = (result.body as { detail?: unknown } | null)?.detail;
-  if (typeof detail === "string") return detail;
-  if (Array.isArray(detail)) {
-    const messages = detail
-      .map((d) => (d && typeof d === "object" && "msg" in d ? String((d as { msg: unknown }).msg) : null))
-      .filter((m): m is string => Boolean(m));
-    if (messages.length) return messages.join("; ");
-  }
-  return result.error;
 }
 
 // --- Results of the dashboard server actions (useActionState); one-time values live only here, never in a URL ----

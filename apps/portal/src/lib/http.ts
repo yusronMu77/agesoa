@@ -80,3 +80,16 @@ export async function fetchJson<T>(url: string, options: FetchOptions = {}): Pro
   }
   return { ok: true, status: response.status, data: body as T, latencyMs: elapsed() };
 }
+
+/** FastAPI error detail of a failed call as one line of plain text. */
+export function errorDetail(result: { status: number | null; body: unknown; error: string }): string {
+  const detail = (result.body as { detail?: unknown } | null)?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((d) => (d && typeof d === "object" && "msg" in d ? String((d as { msg: unknown }).msg) : null))
+      .filter((m): m is string => Boolean(m));
+    if (messages.length) return messages.join("; ");
+  }
+  return result.error;
+}

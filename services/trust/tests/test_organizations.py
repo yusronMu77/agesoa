@@ -126,6 +126,32 @@ def test_domains_are_validated(client, domain):
     assert register(client, domain=domain).status_code == 422
 
 
+@pytest.mark.parametrize("name", [r"bad\u0000name", r"lone\ud81dsurrogate"])
+def test_text_the_database_cannot_store_is_422_never_500(client, name):
+    """Regression: NUL in a name reached Postgres and answered 500; an unpaired surrogate broke the 422 itself."""
+    body = (
+        r'{"name": "NAME", "kind": "agency", "domain": "text.example.org", "region": {"regency_name": "Kab"}}'
+    )
+    response = client.post(
+        "/v1/organizations",
+        content=body.replace("NAME", name).encode(),
+        headers={**ADMIN, "Content-Type": "application/json"},
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["detail"][0]["loc"][0] == "body"
+
+
+def test_contract_states_the_domain_and_role_limits_and_the_staff_conflict(client):
+    spec = client.get("/openapi.json").json()
+    schemas = spec["components"]["schemas"]
+    domain = schemas["OrganizationIn"]["properties"]["domain"]
+    assert domain["minLength"] == 4 and domain["maxLength"] == 253 and domain["pattern"].startswith("^(")
+    assert schemas["Body_register_v1_validators_registrations_post"]["properties"]["role"]["minLength"] == 1
+    staff = "/v1/organizations/{organization_id}/staff"
+    assert "409" in spec["paths"][staff]["get"]["responses"]
+    assert "409" in spec["paths"][staff + "/{validator_id}"]["post"]["responses"]
+
+
 def test_demo_org_admin_account_is_seeded_with_its_role():
     accounts = json.loads(DEMO_FILE.read_text(encoding="utf-8"))["accounts"]
     assert {

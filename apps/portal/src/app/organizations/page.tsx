@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SimOrgBand } from "@/components/SimOrgBand";
 import { loadConfig } from "@/lib/config";
+import { errorDetail } from "@/lib/http";
 import { KIND_LABEL, listMyOrganizations, registerOrganization, STATUS_LABEL } from "@/lib/organizations";
 import { sessionToken } from "@/lib/session";
 
@@ -22,15 +23,12 @@ async function register(formData: FormData) {
     region: { regency_name: String(formData.get("regency") ?? "") },
   });
   if (!result.ok) {
-    const detail = (result.body as { detail?: unknown } | null)?.detail;
     const message =
       result.status === 409
         ? "This domain is already registered."
         : result.status === 422
           ? "Check the fields: the domain must be a domain name you control (e.g. newsroom.example.org)."
-          : typeof detail === "string"
-            ? detail
-            : result.error;
+          : errorDetail(result);
     redirect(`/organizations?error=${encodeURIComponent(message)}`);
   }
   redirect(`/organizations/${encodeURIComponent(result.data.organization_id)}`);

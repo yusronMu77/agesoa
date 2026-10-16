@@ -465,6 +465,9 @@
           "404": {
             "description": "No such organization of yours"
           },
+          "409": {
+            "description": "The organization is not a verified newsroom"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -529,6 +532,9 @@
           },
           "404": {
             "description": "No such pending candidate of your organization"
+          },
+          "409": {
+            "description": "The organization is not a verified newsroom"
           },
           "422": {
             "description": "Validation Error",
@@ -713,6 +719,7 @@
         "properties": {
           "role": {
             "type": "string",
+            "minLength": 1,
             "title": "Role",
             "description": "Validator role id from a domain pack"
           },
@@ -1280,6 +1287,9 @@
           },
           "domain": {
             "type": "string",
+            "maxLength": 253,
+            "minLength": 4,
+            "pattern": "^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}\\.?$",
             "title": "Domain",
             "description": "The organization's own domain, e.g. redaksi.example.org"
           },

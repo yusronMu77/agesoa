@@ -147,7 +147,7 @@ async def register(
     request: Request,
     principal: Signed,
     background: BackgroundTasks,
-    role: Annotated[str, Form(description="Validator role id from a domain pack")],
+    role: Annotated[str, Form(min_length=1, description="Validator role id from a domain pack")],
     field: Annotated[str, Form(min_length=2, max_length=120)],
     regency_name: Annotated[str, Form(min_length=2, max_length=120)],
     document: Annotated[UploadFile, File(description="Press card, assignment letter or certificate (image)")],
@@ -251,11 +251,17 @@ async def register(
     )
 
 
+STAFF_ERRORS = {
+    404: {"description": "No such organization of yours"},
+    409: {"description": "The organization is not a verified newsroom"},
+}
+
+
 @router.get(
     "/organizations/{organization_id}/staff",
     tags=["organizations"],
     summary="Candidates waiting for this newsroom to confirm them as staff (name + position read, no image)",
-    responses={404: {"description": "No such organization of yours"}},
+    responses=STAFF_ERRORS,
 )
 async def pending_staff(organization_id: str, request: Request, admin: OrgAdmin) -> list[StaffCandidate]:
     roles = _role_ids(request)
@@ -299,7 +305,7 @@ async def pending_staff(organization_id: str, request: Request, admin: OrgAdmin)
     "/organizations/{organization_id}/staff/{validator_id}",
     tags=["organizations"],
     summary="Confirm (tier high) or refuse a candidate as this newsroom's staff",
-    responses={404: {"description": "No such pending candidate of your organization"}},
+    responses={**STAFF_ERRORS, 404: {"description": "No such pending candidate of your organization"}},
 )
 async def decide_staff(
     organization_id: str,

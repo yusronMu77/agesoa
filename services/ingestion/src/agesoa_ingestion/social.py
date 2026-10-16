@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from urllib.parse import parse_qs, urlsplit
 
 MAX_URL = 2048
+# The contract's view of a link (OpenAPI `pattern`): http(s), then a host; `canonical_post` decides the rest.
+URL_PATTERN = r"^https?://[A-Za-z0-9][A-Za-z0-9.-]*(:[0-9]+)?([/?#]\S*)?$"
 MAX_EXCERPT = 280
 _HANDLE = re.compile(r"(?<![\w.])@[\w.]{2,30}")
 
@@ -30,10 +32,14 @@ def canonical_post(raw: str) -> CanonicalPost:
     value = raw.strip()
     if len(value) > MAX_URL:
         raise InvalidPostUrl("link is too long")
-    parts = urlsplit(value)
-    if parts.scheme not in ("http", "https") or not parts.hostname or " " in value:
+    try:
+        parts = urlsplit(value)
+        host = parts.hostname
+    except ValueError:  # e.g. an unbalanced IPv6 bracket
+        raise InvalidPostUrl("not a web link (expected https://...)") from None
+    if parts.scheme not in ("http", "https") or not host or " " in value:
         raise InvalidPostUrl("not a web link (expected https://...)")
-    host = parts.hostname.lower().removeprefix("www.").removeprefix("m.").removeprefix("mobile.")
+    host = host.lower().removeprefix("www.").removeprefix("m.").removeprefix("mobile.")
     segments = [s for s in parts.path.split("/") if s]
     for matcher in _MATCHERS:
         result = matcher(host, segments, parts.query)

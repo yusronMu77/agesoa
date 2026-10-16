@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SimOrgBand } from "@/components/SimOrgBand";
 import { loadConfig } from "@/lib/config";
+import { errorDetail } from "@/lib/http";
 import { sessionToken } from "@/lib/session";
 import { getMyProfile, listNewsrooms, listRoles, REJECTION_TEXT, registerValidator } from "@/lib/trust";
 
@@ -31,8 +32,8 @@ async function submit(formData: FormData) {
         ? "The document must be a JPEG, PNG or WebP image."
         : result.status === 409
           ? "You are already registered."
-          : typeof detail === "string"
-            ? detail
+          : detail
+            ? errorDetail(result)
             : `The registration could not be processed (${result.error}).`;
     redirect(`${NEXT}?error=${encodeURIComponent(message)}`);
   }
