@@ -183,6 +183,11 @@ textarea:focus-visible {
   color: var(--ag-color-text-primary);
 }
 
+.field textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .field [aria-invalid="true"] {
   border: 2px solid var(--ag-color-feedback-danger);
 }
