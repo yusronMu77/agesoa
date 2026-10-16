@@ -21,6 +21,11 @@ A rule in a domain pack may name the cause branch a violation is evidence for (`
 `cause_framework`). The core ranking of hypotheses adds a small bonus to that branch; the rule itself stays a
 parameterised kind implemented in `libs/pack-core`.
 
+`pattern_metrics` defines the cross-case metrics a cause branch may list (`cause_framework/branches/*/pattern_metrics`
+holds their ids). A metric has a `kind` (`count_by`, `sum_by`, `interval_minutes`, `violations_by`) and `params`
+that only name report fields (`group_by` must be a string field) or a rule; the kinds are implemented, fixed and
+tested in `libs/pack-core`, so a pack can never carry a query.
+
 ## Rules
 
 - A breaking change to an event creates a new version file (`.v2.schema.json`) and a catalog change; consumers

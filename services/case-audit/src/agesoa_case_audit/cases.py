@@ -34,6 +34,7 @@ class Source:
     occurred_at: datetime  # when the incident happened (UTC)
     deadline_at: datetime | None  # when physical evidence is presumed gone (UTC), None when unknown
     synthetic: bool
+    reporter_ref: str | None = None  # pseudonymous; kept beside the snapshot, never inside it
 
     def snapshot(self, data: dict[str, Any]) -> dict[str, Any]:
         """What case-audit keeps of the source: the event data without the pseudonymous reporter id."""
@@ -68,6 +69,7 @@ def source_from_report(pack: DomainPack, data: dict[str, Any]) -> Source:
         occurred_at=(anchor or received_at).astimezone(UTC),
         deadline_at=_deadline(pack, anchor),
         synthetic=data["synthetic"],
+        reporter_ref=data.get("reporter_ref"),
     )
 
 

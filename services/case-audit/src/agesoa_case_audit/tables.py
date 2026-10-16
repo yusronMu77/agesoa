@@ -49,7 +49,10 @@ case_sources = Table(
     Column("source_kind", String(16), primary_key=True),  # report | signal
     Column("source_id", String(32), primary_key=True),
     Column("snapshot", JSONB, nullable=False),
+    # Pseudonymous reporter of a report (never a uid or a name): where the witness questions of the case go.
+    Column("reporter_ref", String(40)),
     Column("linked_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Index("ix_case_sources_reporter", "reporter_ref"),
 )
 
 # Audit trail: every hypothesis, question, answer, pattern test and conclusion, with its evidence status.

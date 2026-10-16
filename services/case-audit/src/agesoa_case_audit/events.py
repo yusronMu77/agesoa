@@ -20,7 +20,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agesoa_case_audit import SERVICE
-from agesoa_case_audit.audit import LinkedSource, refresh_hypotheses
+from agesoa_case_audit.audit import run_round
 from agesoa_case_audit.cases import (
     MATCH_WINDOW,
     OPEN_STATUSES,
@@ -34,6 +34,7 @@ from agesoa_case_audit.cases import (
     source_from_signal,
 )
 from agesoa_case_audit.decisions import decision_event
+from agesoa_case_audit.patterns import IncidentStore
 from agesoa_case_audit.tables import case_sources, cases
 
 log = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ async def attach_source(
     event: dict[str, Any],
     packs: dict[str, DomainPack],
     read: SourceReader,
+    store: IncidentStore,
 ) -> None:
     """Join a report or signal to the matching open case, or open a new case; recompute the evidence deadline."""
     data = event["data"]
@@ -90,7 +92,13 @@ async def attach_source(
 
     await session.execute(
         insert(case_sources)
-        .values(case_id=case_id, source_kind=source.kind, source_id=source.id, snapshot=source.snapshot(data))
+        .values(
+            case_id=case_id,
+            source_kind=source.kind,
+            source_id=source.id,
+            snapshot=source.snapshot(data),
+            reporter_ref=source.reporter_ref,
+        )
         .on_conflict_do_nothing()
     )
     linked = (
@@ -156,15 +164,7 @@ async def attach_source(
     await add_event(
         session, _decision(case_id, source, "case.deadline_set", "evidence_deadline", deadline_reason, [], at)
     )
-    await refresh_hypotheses(
-        session,
-        case_id=case_id,
-        pack=pack,
-        sources=[LinkedSource(kind, source_id, snapshot["data"]) for kind, source_id, snapshot in linked],
-        max_status=evidence.max_finding_status,
-        at=at,
-        synthetic=synthetic,
-    )
+    await run_round(session, case_id=case_id, pack=pack, store=store, at=at)
 
 
 def _deadline_reason(pack: DomainPack, evidence: Any) -> str:
@@ -237,12 +237,12 @@ async def _find_case(session: AsyncSession, source: Source) -> OpenCase | None:
     )
 
 
-def build_handlers(packs: dict[str, DomainPack]) -> dict[str, EventHandler]:
+def build_handlers(packs: dict[str, DomainPack], store: IncidentStore) -> dict[str, EventHandler]:
     async def on_report(session: AsyncSession, event: dict[str, Any]) -> None:
-        await attach_source(session, event, packs, source_from_report)
+        await attach_source(session, event, packs, source_from_report, store)
 
     async def on_signal(session: AsyncSession, event: dict[str, Any]) -> None:
-        await attach_source(session, event, packs, source_from_signal)
+        await attach_source(session, event, packs, source_from_signal, store)
 
     handlers: dict[str, EventHandler] = {
         event_type: not_handled_yet for event_type in consumed_events(SERVICE)

@@ -11,6 +11,7 @@ case, not the product: everything MBG-specific lives in [`pack.json`](pack.json)
 | `rules` | `consume_within_4h`: eaten at most 240 minutes after cooking (exactly 4:00 passes) |
 | `evidence_deadline` | food samples are kept 2×24 h **counted from cooking time** (fallback: 00:00 of the meal date); after that the highest reachable finding status is *supported* |
 | `cause_framework` | fishbone: ingredients, process, people, facility, distribution, oversight, with hypothesis seeds, witness questions and cross-case metrics for the Audit agent |
+| `pattern_metrics` | cross-case metrics per kitchen (reports, distinct schools, meal days, minutes from cooking to eating, 4-hour violations). No supplier metric: reports carry no supplier field yet |
 | `validator_roles` | nutritionist, health worker, journalist, education watchdog NGO |
 | `signal_sources` | keywords + official publishers for the Signal agent |
 | `evidence_tips` | shown to the reporter while evidence is still available |

@@ -325,10 +325,37 @@
         }
       }
     },
+    "/v1/witness/questions": {
+      "get": {
+        "tags": [
+          "cases",
+          "witness"
+        ],
+        "summary": "Audit questions waiting for me, as the reporter of a report of the case",
+        "operationId": "my_questions_v1_witness_questions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WitnessQuestion"
+                  },
+                  "type": "array",
+                  "title": "Response My Questions V1 Witness Questions Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/cases/{case_id}/witness-answers": {
       "post": {
         "tags": [
-          "cases"
+          "cases",
+          "witness"
         ],
         "summary": "A witness (the reporter) answers an audit question",
         "operationId": "answer_question_v1_cases__case_id__witness_answers_post",
@@ -364,8 +391,11 @@
               }
             }
           },
-          "501": {
-            "description": "Not implemented yet (planned for CP3)"
+          "404": {
+            "description": "No such question for this reporter"
+          },
+          "409": {
+            "description": "The question already has an answer"
           },
           "422": {
             "description": "Validation Error",
@@ -1119,12 +1149,14 @@
           "answer": {
             "type": "string",
             "maxLength": 4000,
+            "minLength": 1,
             "title": "Answer"
           },
           "choice": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 200
               },
               {
                 "type": "null"
@@ -1140,6 +1172,44 @@
           "answer"
         ],
         "title": "WitnessAnswer"
+      },
+      "WitnessQuestion": {
+        "properties": {
+          "question_id": {
+            "type": "string",
+            "title": "Question Id"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "text": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Text",
+            "description": "The question per language (en, id)"
+          },
+          "asked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Asked At"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "case_id",
+          "text",
+          "asked_at",
+          "synthetic"
+        ],
+        "title": "WitnessQuestion"
       }
     }
   }

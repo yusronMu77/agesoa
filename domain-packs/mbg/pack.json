@@ -91,7 +91,7 @@
           { "en": "Raw ingredients past their prime or from an unchecked supplier", "id": "Bahan baku tidak segar atau dari pemasok yang tidak diperiksa" }
         ],
         "witness_questions": [{ "en": "Did the food smell or taste unusual?", "id": "Apakah makanannya berbau atau berasa tidak biasa?" }],
-        "pattern_metrics": ["incidents_per_supplier"]
+        "pattern_metrics": []
       },
       {
         "id": "process", "label": { "en": "Process (temperature, delay)", "id": "Proses (suhu, jeda)" },
@@ -113,7 +113,7 @@
       {
         "id": "facility", "label": { "en": "Facility (certificate, capacity)", "id": "Fasilitas (sertifikat, kapasitas)" },
         "examples": [{ "en": "Kitchen without a hygiene certificate or above its capacity", "id": "Dapur tanpa sertifikat laik higiene atau melebihi kapasitas" }],
-        "pattern_metrics": ["portions_per_kitchen"]
+        "pattern_metrics": []
       },
       {
         "id": "distribution", "label": { "en": "Distribution (distance, schools per kitchen)", "id": "Distribusi (jarak, jumlah sekolah)" },
@@ -129,6 +129,38 @@
       }
     ]
   },
+  "pattern_metrics": [
+    {
+      "id": "cook_to_meal_minutes",
+      "kind": "interval_minutes",
+      "label": { "en": "Minutes from cooking to eating at the same kitchen", "id": "Menit dari masak ke makan di dapur yang sama" },
+      "params": { "group_by": "kitchen", "from_field": "cooked_at", "to_field": "eaten_at" }
+    },
+    {
+      "id": "rule_violations_per_kitchen",
+      "kind": "violations_by",
+      "label": { "en": "Reports of the same kitchen that broke the 4-hour rule", "id": "Laporan dapur yang sama yang melanggar aturan 4 jam" },
+      "params": { "group_by": "kitchen", "rule": "consume_within_4h" }
+    },
+    {
+      "id": "schools_per_kitchen",
+      "kind": "count_by",
+      "label": { "en": "Schools with reports about the same kitchen", "id": "Sekolah yang melaporkan dapur yang sama" },
+      "params": { "group_by": "kitchen", "distinct": "school" }
+    },
+    {
+      "id": "incidents_per_kitchen",
+      "kind": "count_by",
+      "label": { "en": "Reports about the same kitchen", "id": "Laporan tentang dapur yang sama" },
+      "params": { "group_by": "kitchen" }
+    },
+    {
+      "id": "repeat_incidents_same_kitchen",
+      "kind": "count_by",
+      "label": { "en": "Distinct meal days with an incident at the same kitchen", "id": "Hari makan berbeda dengan kejadian di dapur yang sama" },
+      "params": { "group_by": "kitchen", "distinct": "meal_date" }
+    }
+  ],
   "validator_roles": [
     { "id": "nutritionist", "label": { "en": "Nutritionist", "id": "Ahli gizi" } },
     { "id": "health_worker", "label": { "en": "Health worker", "id": "Tenaga kesehatan" } },

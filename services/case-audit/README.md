@@ -9,6 +9,9 @@ Owns the Postgres database `case_audit`; no other service reads it. Generated fr
 |---|---|
 | `src/agesoa_case_audit/api.py` | public HTTP API (`/v1/...`) |
 | `src/agesoa_case_audit/cases.py` | case rules as code: grouping, evidence deadline, status cap (pure functions) |
+| `src/agesoa_case_audit/audit.py` | one audit round: hypotheses, witness questions, pattern tests |
+| `src/agesoa_case_audit/interview.py` | witness questions (which next, who may answer) and answers |
+| `src/agesoa_case_audit/patterns.py` | pattern tests: fixed metric queries per cause branch, incident stores |
 | `src/agesoa_case_audit/events.py` | handlers for the events routed here by `packages/contracts/events/catalog.json` |
 | `src/agesoa_case_audit/tables.py`, `alembic/` | owned tables + migrations (`0001` = outbox/inbox) |
 | `openapi.json` | published API contract, exported from code |
@@ -44,6 +47,39 @@ case's `hypothesis` rows in `audit_trail` (top 3: rank, score, supporting and ag
 - This is the lexical fallback, not an understanding of the case: on the six synthetic scenarios it puts the planted
   cause in the top 3 for 3 of 6 (`uv run eval`). The model-written hypotheses (Gemini via ADK) have to beat it.
 - A hypothesis is not a finding: findings and `temuan.siap_validasi` come with the validation flow (#45).
+
+## Witness interview
+
+After each ranking, `interview.py` keeps up to 2 questions waiting for the reporter (at most 6 per case). Questions
+come from the `witness_questions` of the pack's cause branches, best-ranked branch first, never twice
+(`question` steps in the audit trail, `audit.question_asked` in the decision log). A rule, not a prompt: a model
+that writes its own questions would use the same steps; this is the scripted fallback (T2).
+
+- `GET /v1/witness/questions`: the questions waiting for me. Any signed-in reporter, anonymous included: the
+  service matches the caller's pseudonymous `reporter_ref` (`Principal.reporter_ref`, the same for every service)
+  against the reports of the case. It keeps no uid and no name, and a signal has nobody to ask.
+- `POST /v1/cases/{case_id}/witness-answers`: one answer per question, only from the reporter of a report of the
+  case (otherwise 404, a second answer 409). The answer is an `answer` step labelled `alleged` (the reporter's own
+  word) with `question:<id>` and `report:<id>` references, an `audit.answer_received` decision, and a new round:
+  the answer feeds the ranking of hypotheses but never lifts an evidence status.
+- `case_sources.reporter_ref` (migration `0004`) is where the link lives; it is never part of an API response
+  or the decision log.
+
+## Pattern tests
+
+"Why does it keep happening": after each ranking, every metric of the leading branches is tested for the group
+values of the case's own reports (the kitchen, ...). Metrics are defined in the pack (`pattern_metrics`: `count_by`,
+`sum_by`, `interval_minutes`, `violations_by`), implemented as fixed, parameterised kinds in
+`libs/pack-core` (`agesoa_packs.metrics`). `patterns.check_pattern` takes a branch, one of that branch's metrics and
+a window of 1-365 days; everything else is refused, so an agent calls a tool and never writes a query.
+
+- A pattern **recurs** when a report of *another case* has the same group value. Then the `pattern_test` step is
+  `supported` (capped by the case's maximum finding status) with `report:<id>` references to every incident
+  counted; otherwise it is `alleged`: nothing was found, nothing is proven.
+- Incidents are read through an `IncidentStore`: `DatabaseIncidentStore` (this service's own `case_sources`, no other
+  database) is the default. A case is tested when a source joins it or its reporter answers; a case that an
+  *older* case now recurs with is not retested until its next round.
+- The decision log gets one `audit.patterns_tested` entry per round (counts only, no group value).
 
 ## Run locally
 

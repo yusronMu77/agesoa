@@ -49,6 +49,10 @@ class DomainPack:
     def cause_branches(self) -> list[dict[str, Any]]:
         return self.document["cause_framework"]["branches"]
 
+    @property
+    def pattern_metrics(self) -> dict[str, dict[str, Any]]:
+        return {m["id"]: m for m in self.document.get("pattern_metrics", [])}
+
     def required_field_ids(self) -> list[str]:
         return [f["id"] for f in self.document["report_fields"] if f["required"]]
 
@@ -110,9 +114,10 @@ def _duplicates(ids: list[str]) -> list[str]:
 
 def _cross_reference_errors(doc: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    for section in ("categories", "report_fields", "rules", "validator_roles"):
+    for section in ("categories", "report_fields", "rules", "validator_roles", "pattern_metrics"):
         errors += [
-            f"{section}: duplicate id {d!r}" for d in _duplicates([item["id"] for item in doc[section]])
+            f"{section}: duplicate id {d!r}"
+            for d in _duplicates([item["id"] for item in doc.get(section, [])])
         ]
     branch_ids = [b["id"] for b in doc["cause_framework"]["branches"]]
     errors += [f"cause_framework/branches: duplicate id {d!r}" for d in _duplicates(branch_ids)]
@@ -134,6 +139,27 @@ def _cross_reference_errors(doc: dict[str, Any]) -> list[str]:
         if rule["kind"] == "max_interval":
             need(f"rules/{i}/params/from_field", rule["params"]["from_field"], ("datetime",))
             need(f"rules/{i}/params/to_field", rule["params"]["to_field"], ("datetime",))
+
+    rule_ids = {r["id"] for r in doc["rules"]}
+    metric_ids = {m["id"] for m in doc.get("pattern_metrics", [])}
+    for i, metric in enumerate(doc.get("pattern_metrics", [])):
+        p, params = f"pattern_metrics/{i}/params", metric["params"]
+        need(f"{p}/group_by", params["group_by"], ("string",))
+        if metric["kind"] == "count_by":
+            need(f"{p}/distinct", params.get("distinct"), ("string", "date", "datetime", "integer"))
+        elif metric["kind"] == "sum_by":
+            need(f"{p}/field", params["field"], ("integer",))
+        elif metric["kind"] == "interval_minutes":
+            need(f"{p}/from_field", params["from_field"], ("datetime",))
+            need(f"{p}/to_field", params["to_field"], ("datetime",))
+        elif metric["kind"] == "violations_by" and params["rule"] not in rule_ids:
+            errors.append(f"{p}/rule: unknown rule {params['rule']!r}")
+    for i, branch in enumerate(doc["cause_framework"]["branches"]):
+        errors += [
+            f"cause_framework/branches/{i}/pattern_metrics: unknown metric {m!r}"
+            for m in branch.get("pattern_metrics", [])
+            if m not in metric_ids
+        ]
 
     deadline = doc["evidence_deadline"]
     need("evidence_deadline/anchor_field", deadline["anchor_field"], ("datetime",))

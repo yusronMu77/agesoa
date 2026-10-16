@@ -17,7 +17,6 @@ from agesoa_packs import DomainPack, evaluate_rules, evidence_status
 from agesoa_platform.app import flush_outbox
 from agesoa_platform.auth import Principal, authenticate
 from agesoa_platform.events import isoformat, new_event, utc_now
-from agesoa_platform.hashing import sha256_hex
 from agesoa_platform.outbox import add_event
 from fastapi import (
     APIRouter,
@@ -154,7 +153,7 @@ DRAFT_ONLY = {409: {"description": "The report was already submitted"}}
 
 def reporter_ref(principal: Principal) -> str:
     """Pseudonymous, stable per anonymous uid; the uid itself is not stored."""
-    return sha256_hex(f"reporter:{principal.uid}".encode())[:40]
+    return principal.reporter_ref
 
 
 def _pack(request: Request, pack_id: str) -> DomainPack:

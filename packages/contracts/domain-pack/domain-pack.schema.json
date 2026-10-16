@@ -105,13 +105,45 @@
               "label": { "$ref": "#/$defs/label" },
               "examples": { "type": "array", "items": { "$ref": "#/$defs/label" }, "minItems": 1, "description": "Hypothesis seeds for the Audit agent." },
               "witness_questions": { "type": "array", "items": { "$ref": "#/$defs/label" } },
-              "pattern_metrics": { "type": "array", "items": { "$ref": "#/$defs/slug" }, "description": "Cross-case metrics the Audit agent may test (implemented as fixed queries)." }
+              "pattern_metrics": { "type": "array", "items": { "$ref": "#/$defs/slug" }, "description": "Ids of top-level pattern_metrics the Audit agent may test for this branch." }
             },
             "additionalProperties": false
           }
         }
       },
       "additionalProperties": false
+    },
+    "pattern_metrics": {
+      "type": "array",
+      "description": "Cross-case metrics the Audit agent may test: does the same cause show up in other incidents. Kinds are implemented (and tested) in libs/pack-core as fixed, parameterised queries; packs only name the fields.",
+      "items": {
+        "type": "object", "required": ["id", "kind", "label", "params"],
+        "properties": {
+          "id": { "$ref": "#/$defs/slug" },
+          "kind": { "enum": ["count_by", "sum_by", "interval_minutes", "violations_by"] },
+          "label": { "$ref": "#/$defs/label" },
+          "params": { "type": "object", "required": ["group_by"], "properties": { "group_by": { "$ref": "#/$defs/slug", "description": "String report field whose value groups incidents (incidents with the same value are the same place or supplier)." } } }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": { "properties": { "kind": { "const": "count_by" } } },
+            "then": { "properties": { "params": { "properties": { "group_by": true, "distinct": { "$ref": "#/$defs/slug", "description": "Count distinct values of this field instead of reports." } }, "additionalProperties": false } } }
+          },
+          {
+            "if": { "properties": { "kind": { "const": "sum_by" } } },
+            "then": { "properties": { "params": { "required": ["field"], "properties": { "group_by": true, "field": { "$ref": "#/$defs/slug" } }, "additionalProperties": false } } }
+          },
+          {
+            "if": { "properties": { "kind": { "const": "interval_minutes" } } },
+            "then": { "properties": { "params": { "required": ["from_field", "to_field"], "properties": { "group_by": true, "from_field": { "$ref": "#/$defs/slug" }, "to_field": { "$ref": "#/$defs/slug" } }, "additionalProperties": false } } }
+          },
+          {
+            "if": { "properties": { "kind": { "const": "violations_by" } } },
+            "then": { "properties": { "params": { "required": ["rule"], "properties": { "group_by": true, "rule": { "$ref": "#/$defs/slug" } }, "additionalProperties": false } } }
+          }
+        ]
+      }
     },
     "validator_roles": {
       "type": "array", "minItems": 1,

@@ -17,6 +17,7 @@ from google.auth import jwt as google_jwt
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 
+from agesoa_platform.hashing import sha256_hex
 from agesoa_platform.oidc import bearer_token
 
 ROLE_CLAIMS = ("validator", "org_admin", "operator")
@@ -29,6 +30,12 @@ class Principal:
     roles: frozenset[str] = field(default_factory=frozenset)
     anonymous: bool = False
     claims: dict = field(default_factory=dict, compare=False, repr=False)
+
+    @property
+    def reporter_ref(self) -> str:
+        """Pseudonymous, stable per uid: what services store instead of the uid. Every service derives it the same
+        way, so a reporter can be matched across services without any of them keeping the uid."""
+        return sha256_hex(f"reporter:{self.uid}".encode())[:40]
 
 
 def _from_dev_token(token: str) -> Principal:
