@@ -20,6 +20,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agesoa_case_audit import SERVICE
+from agesoa_case_audit.agent import Ranker
 from agesoa_case_audit.audit import run_round
 from agesoa_case_audit.cases import (
     MATCH_WINDOW,
@@ -48,6 +49,7 @@ async def attach_source(
     packs: dict[str, DomainPack],
     read: SourceReader,
     store: IncidentStore,
+    ranker: Ranker | None = None,
 ) -> None:
     """Join a report or signal to the matching open case, or open a new case; recompute the evidence deadline."""
     data = event["data"]
@@ -164,7 +166,7 @@ async def attach_source(
     await add_event(
         session, _decision(case_id, source, "case.deadline_set", "evidence_deadline", deadline_reason, [], at)
     )
-    await run_round(session, case_id=case_id, pack=pack, store=store, at=at)
+    await run_round(session, case_id=case_id, pack=pack, store=store, at=at, ranker=ranker)
 
 
 def _deadline_reason(pack: DomainPack, evidence: Any) -> str:
@@ -237,12 +239,14 @@ async def _find_case(session: AsyncSession, source: Source) -> OpenCase | None:
     )
 
 
-def build_handlers(packs: dict[str, DomainPack], store: IncidentStore) -> dict[str, EventHandler]:
+def build_handlers(
+    packs: dict[str, DomainPack], store: IncidentStore, ranker: Ranker | None = None
+) -> dict[str, EventHandler]:
     async def on_report(session: AsyncSession, event: dict[str, Any]) -> None:
-        await attach_source(session, event, packs, source_from_report, store)
+        await attach_source(session, event, packs, source_from_report, store, ranker)
 
     async def on_signal(session: AsyncSession, event: dict[str, Any]) -> None:
-        await attach_source(session, event, packs, source_from_signal, store)
+        await attach_source(session, event, packs, source_from_signal, store, ranker)
 
     handlers: dict[str, EventHandler] = {
         event_type: not_handled_yet for event_type in consumed_events(SERVICE)

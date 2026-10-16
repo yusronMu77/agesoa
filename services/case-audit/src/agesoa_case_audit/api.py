@@ -189,6 +189,7 @@ async def answer_question(
             pack=request.app.state.packs[case["domain"]],
             store=request.app.state.incident_store,
             at=at,
+            ranker=request.app.state.ranker,
         )
     background.add_task(request.app.state.outbox.dispatch)
     return AuditStep(**step)

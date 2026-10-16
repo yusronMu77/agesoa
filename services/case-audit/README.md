@@ -44,8 +44,16 @@ case's `hypothesis` rows in `audit_trail` (top 3: rank, score, supporting and ag
   `alleged`; a stored photo/voice note, a news signal or a second source reaches `supported`; `proven` needs a lab
   result, which no source kind carries yet. It is always capped by the case's maximum finding status.
 - Each ranking adds one `audit.hypotheses_ranked` entry to the decision log (rule `hypothesis_ranking`).
-- This is the lexical fallback, not an understanding of the case: on the six synthetic scenarios it puts the planted
-  cause in the top 3 for 3 of 6 (`uv run eval`). The model-written hypotheses (Gemini via ADK) have to beat it.
+- The lexical ranking is the fallback and the baseline, not an understanding of the case: on the six synthetic
+  scenarios it puts the planted cause in the top 3 for 3 of 6 (`uv run eval`). The model-written hypotheses have to
+  beat it (TC-017, `uv run eval --model <gemini model id>`).
+- **Agen Audit** (`agent.py`) is that model: an ADK `LlmAgent` with an output schema built from the pack. It ranks
+  the pack's branches and cites the sources behind each; code keeps only branches of the pack, only sources that
+  exist, at most 3, and computes the evidence status itself from the cited sources, so a model can neither invent
+  evidence nor raise a status. If the model fails, times out (45 s) or returns nothing usable, the round uses the
+  lexical ranking; the `method` of each row (`lexical` or `model:<id>`) and the decision log say which one ran.
+  `AUDIT_MODEL=rules` (default, local and demo_mode only) writes the lexical ranking as a model response, so the
+  whole path runs without a model call; set a Gemini model id (and Vertex or API-key credentials) to use the model.
 - A hypothesis is not a finding: findings and `temuan.siap_validasi` come with the validation flow (#45).
 
 ## Witness interview

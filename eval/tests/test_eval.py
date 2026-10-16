@@ -55,3 +55,18 @@ def test_eval_harness_is_deterministic(tmp_path: Path):
 
     assert report1 == report2
     assert out1.read_text(encoding="utf-8") == out2.read_text(encoding="utf-8")
+
+
+def test_the_rules_model_run_goes_through_the_agent_and_cannot_beat_the_baseline(tmp_path: Path):
+    """`rules` writes the lexical ranking as a model response: the whole agent path runs without a model call, and
+    since it adds nothing to the keyword ranking it must not pass TC-017 (which needs a real improvement)."""
+    from eval.runner import run_model_eval
+
+    out_file = tmp_path / "model.json"
+    report = run_model_eval("rules", packs_dir="domain-packs", output_file=out_file)
+
+    metrics = report["metrics"]
+    assert metrics["top_3_count"] == metrics["baseline_top_3_count"]
+    assert metrics["beats_baseline"] is False and metrics["passed_tc017"] is False
+    assert all(s["rank"] == s["baseline_rank"] for s in report["scenarios"])
+    assert json.loads(out_file.read_text(encoding="utf-8"))["model"] == "rules"

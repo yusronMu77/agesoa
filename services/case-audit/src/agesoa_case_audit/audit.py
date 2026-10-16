@@ -14,11 +14,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from agesoa_packs import DomainPack, Incident, branch_metrics, field_text, group_value, rank_branches
+from agesoa_packs import DomainPack, Incident, branch_metrics, field_text, group_value
 from agesoa_platform.outbox import add_event
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agesoa_case_audit.agent import TOP_N, LexicalRanker, Ranker
 from agesoa_case_audit.cases import STATUS_ORDER, cap_status
 from agesoa_case_audit.decisions import decision_event
 from agesoa_case_audit.interview import sync_questions
@@ -27,8 +28,6 @@ from agesoa_case_audit.patterns import MAX_GROUPS, WINDOW_DAYS, IncidentStore, c
 from agesoa_case_audit.tables import audit_trail, case_sources, cases
 
 ACTOR = "hypothesis_ranking"  # a rule, never a person
-TOP_N = 3
-METHOD = "lexical"  # the deterministic ranking; a model-written ranking would say so here
 MAX_REFS = 20  # evidence references listed on one pattern test
 
 
@@ -102,9 +101,16 @@ async def load_sources(session: AsyncSession, case_id: str) -> list[LinkedSource
 
 
 async def run_round(
-    session: AsyncSession, *, case_id: str, pack: DomainPack, store: IncidentStore, at: datetime
+    session: AsyncSession,
+    *,
+    case_id: str,
+    pack: DomainPack,
+    store: IncidentStore,
+    at: datetime,
+    ranker: Ranker | None = None,
 ) -> None:
-    """Rank the hypotheses, keep the interview going and test the patterns of the leading branches."""
+    """Rank the hypotheses (`ranker`: the model-backed Agen Audit, the lexical ranking by default), keep the
+    interview going and test the patterns of the leading branches."""
     case = (await session.execute(select(cases).where(cases.c.id == case_id))).mappings().one()
     sources = await load_sources(session, case_id)
     ranked = await refresh_hypotheses(
@@ -115,6 +121,7 @@ async def run_round(
         max_status=case["max_finding_status"],
         at=at,
         synthetic=case["synthetic"],
+        ranker=ranker or LexicalRanker(),
     )
     await sync_questions(
         session,
@@ -144,9 +151,11 @@ async def refresh_hypotheses(
     max_status: str,
     at: datetime,
     synthetic: bool,
+    ranker: Ranker,
 ) -> Ranked:
     by_ref = {s.id: s for s in sources}
-    ranks = rank_branches(pack, [(s.id, evidence_text(s)) for s in sources], violated_rules(sources))
+    result = await ranker.rank(pack, [(s.id, evidence_text(s)) for s in sources], violated_rules(sources))
+    ranks, method = result.ranks, result.method
     top = [r for r in ranks if r.score > 0][:TOP_N]
     ranked = Ranked([r.branch for r in top], [r.branch for r in ranks])
 
@@ -174,7 +183,12 @@ async def refresh_hypotheses(
                     "rank": position,
                     "label": rank.label,
                     "score": rank.score,
-                    "method": METHOD,
+                    "method": method,
+                    **(
+                        {"reasoning": result.reasoning[rank.branch]}
+                        if rank.branch in result.reasoning
+                        else {}
+                    ),
                     "supporting": list(rank.supporting),
                     "against": list(rank.against),
                     "violated_rules": list(rank.violated_rules),
@@ -193,7 +207,7 @@ async def refresh_hypotheses(
 
     order = ", ".join(f"{r['content']['rank']}. {r['branch']} ({r['status_label']})" for r in rows)
     reason = (
-        f"Ranked {len(ranks)} cause branches against {len(sources)} source(s) with the {METHOD} method: {order}. "
+        f"Ranked {len(ranks)} cause branches against {len(sources)} source(s) with the {method} method: {order}. "
         "These are hypotheses to test, not a verdict."
     )
     await add_event(

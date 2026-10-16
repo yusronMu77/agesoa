@@ -3,6 +3,7 @@ from agesoa_platform.app import create_app
 from fastapi import FastAPI
 
 from agesoa_case_audit import __version__
+from agesoa_case_audit.agent import AuditAgent, Ranker
 from agesoa_case_audit.api import router
 from agesoa_case_audit.events import build_handlers
 from agesoa_case_audit.patterns import DatabaseIncidentStore
@@ -15,16 +16,18 @@ def build_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     packs = load_packs(settings.domain_packs_dir)  # fail fast on a broken pack, like the other services
     store = DatabaseIncidentStore()
+    ranker: Ranker = AuditAgent(settings.audit_model)
     app = create_app(
         settings=settings,
         title="AGESOA case-audit",
         description=DESCRIPTION,
         version=__version__,
         routers=[router],
-        event_handlers=build_handlers(packs, store),
+        event_handlers=build_handlers(packs, store, ranker),
     )
     app.state.packs = packs
     app.state.incident_store = store
+    app.state.ranker = ranker
     return app
 
 

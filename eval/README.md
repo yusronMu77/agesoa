@@ -16,6 +16,16 @@ uv run eval
 uv run python -m eval
 ```
 
+Put the same scenarios to the audit agent and compare with the lexical baseline (TC-017):
+
+```sh
+uv run eval --model rules                # the lexical ranking through the agent path: no model call, no cost
+uv run eval --model <gemini model id>    # a real model: one billable call per scenario; needs Vertex/API credentials
+```
+
+A model run writes `eval/results/model-<model>.json` and passes TC-017 only when the planted cause is in the top 3
+for at least 5 scenarios **and** more often than the lexical baseline. It never runs in CI.
+
 Run tests for the evaluation harness:
 
 ```sh
