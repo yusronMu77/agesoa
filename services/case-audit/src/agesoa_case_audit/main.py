@@ -1,9 +1,13 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from agesoa_packs import load_packs
 from agesoa_platform.app import create_app
 from fastapi import FastAPI
+from google.adk.sessions import DatabaseSessionService
 
 from agesoa_case_audit import __version__
-from agesoa_case_audit.agent import AuditAgent, Ranker
+from agesoa_case_audit.agent import AuditAgent
 from agesoa_case_audit.api import router
 from agesoa_case_audit.events import build_handlers
 from agesoa_case_audit.patterns import DatabaseIncidentStore
@@ -16,7 +20,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     packs = load_packs(settings.domain_packs_dir)  # fail fast on a broken pack, like the other services
     store = DatabaseIncidentStore()
-    ranker: Ranker = AuditAgent(settings.audit_model)
+    ranker = AuditAgent(settings.audit_model)
     app = create_app(
         settings=settings,
         title="AGESOA case-audit",
@@ -25,10 +29,25 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         routers=[router],
         event_handlers=build_handlers(packs, store, ranker),
     )
+    _keep_sessions_in_database(app, ranker)
     app.state.packs = packs
     app.state.incident_store = store
     app.state.ranker = ranker
     return app
+
+
+def _keep_sessions_in_database(app: FastAPI, ranker: AuditAgent) -> None:
+    """The ADK session of every case lives in this service's own database (tables `sessions`, `events`, ... created
+    by ADK's `DatabaseSessionService` on first use). The engine only exists once the app has started."""
+    started = app.router.lifespan_context
+
+    @asynccontextmanager
+    async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+        async with started(application):
+            ranker.sessions = DatabaseSessionService(db_engine=application.state.db.engine)
+            yield
+
+    app.router.lifespan_context = lifespan
 
 
 def __getattr__(name: str) -> FastAPI:

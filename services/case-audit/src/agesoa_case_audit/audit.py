@@ -154,7 +154,9 @@ async def refresh_hypotheses(
     ranker: Ranker,
 ) -> Ranked:
     by_ref = {s.id: s for s in sources}
-    result = await ranker.rank(pack, [(s.id, evidence_text(s)) for s in sources], violated_rules(sources))
+    result = await ranker.rank(
+        pack, [(s.id, evidence_text(s)) for s in sources], violated_rules(sources), case_id=case_id
+    )
     ranks, method = result.ranks, result.method
     top = [r for r in ranks if r.score > 0][:TOP_N]
     ranked = Ranked([r.branch for r in top], [r.branch for r in ranks])

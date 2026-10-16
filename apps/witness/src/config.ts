@@ -7,11 +7,14 @@ export const APP_ENVS = ["local", "demo", "staging", "prod"] as const;
 export type AppEnv = (typeof APP_ENVS)[number];
 
 export const DEFAULT_INGESTION_URL = "http://localhost:8001";
+export const DEFAULT_CASE_AUDIT_URL = "http://localhost:8002";
 
 export interface WitnessConfig {
   appEnv: AppEnv;
   demoMode: boolean;
   ingestionUrl: string;
+  /** case-audit: the audit questions put to the reporter (SCR-006). */
+  caseAuditUrl: string;
   /** Domain pack the reports belong to. */
   domain: string;
 }
@@ -64,6 +67,7 @@ export function loadConfig(env: Env = import.meta.env): WitnessConfig {
     throw new ConfigError("VITE_DEMO_MODE=true is refused when VITE_APP_ENV=prod");
   }
   const ingestionUrl = parseUrl("VITE_INGESTION_URL", read(env, "VITE_INGESTION_URL") ?? DEFAULT_INGESTION_URL);
+  const caseAuditUrl = parseUrl("VITE_CASE_AUDIT_URL", read(env, "VITE_CASE_AUDIT_URL") ?? DEFAULT_CASE_AUDIT_URL);
   const domain = read(env, "VITE_DOMAIN") ?? "mbg";
-  return { appEnv, demoMode, ingestionUrl, domain };
+  return { appEnv, demoMode, ingestionUrl, caseAuditUrl, domain };
 }

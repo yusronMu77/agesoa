@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { ApiError, errorDetail, IngestionClient } from "./api";
+import { ApiError, CaseAuditClient, errorDetail, IngestionClient } from "./api";
 import type { KeyValueStore } from "./auth";
 import { bearerToken, deviceId } from "./auth";
 import { ConfigError, loadConfig } from "./config";
@@ -28,6 +28,7 @@ describe("config", () => {
       appEnv: "local",
       demoMode: false,
       ingestionUrl: "http://localhost:8001",
+      caseAuditUrl: "http://localhost:8002",
       domain: "mbg",
     });
   });
@@ -156,6 +157,45 @@ describe("ingestion client", () => {
   test("FastAPI validation errors are readable", () => {
     expect(errorDetail({ detail: [{ loc: ["body", "location", "lat"], msg: "too large" }] })).toBe(
       "location.lat: too large",
+    );
+  });
+});
+
+describe("case-audit client (SCR-006)", () => {
+  const config = loadConfig({});
+
+  test("reads the questions with the anonymous token and posts one answer", async () => {
+    const seen: { url: string; method?: string; body?: unknown; auth?: string }[] = [];
+    const client = new CaseAuditClient(config, async (url, init) => {
+      seen.push({
+        url: String(url),
+        method: init?.method,
+        body: init?.body ? JSON.parse(String(init.body)) : undefined,
+        auth: (init?.headers as Record<string, string>).authorization,
+      });
+      return Response.json(init?.method === "POST" ? {} : [], { status: 200 });
+    });
+    await client.questions();
+    await client.answer("C-1", "Q-1", "Makanan disajikan dingin");
+    expect(seen[0].url).toBe("http://localhost:8002/v1/witness/questions");
+    expect(seen[0].auth).toMatch(/^Bearer dev:/);
+    expect(seen[1]).toMatchObject({
+      url: "http://localhost:8002/v1/cases/C-1/witness-answers",
+      method: "POST",
+      body: { question_id: "Q-1", answer: "Makanan disajikan dingin" },
+    });
+  });
+
+  test("an answered question is a 409 the screen can show", async () => {
+    const client = new CaseAuditClient(config, async () => Response.json({ detail: "already answered" }, { status: 409 }));
+    const error: unknown = await client.answer("C-1", "Q-1", "x").catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(409);
+  });
+
+  test("the case-audit URL is configurable", () => {
+    expect(loadConfig({ VITE_CASE_AUDIT_URL: "https://audit.example.id/" }).caseAuditUrl).toBe(
+      "https://audit.example.id",
     );
   });
 });

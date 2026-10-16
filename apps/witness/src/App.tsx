@@ -2,19 +2,21 @@
  * AGESOA Witness: anonymous citizen reporting.
  * SCR-001 record evidence -> (SCR-002 permission explainer) -> (SCR-003 social link / screenshot)
  * -> SCR-004 review the Agen Intake draft -> SCR-005 submitted.
+ * SCR-006 answer audit questions: reachable from any screen once Agen Audit has a question for this device.
  */
 
 import { useEffect, useMemo, useState } from "react";
-import type { PackDocument, Report } from "./api";
-import { ApiError, IngestionClient } from "./api";
+import type { PackDocument, Report, WitnessQuestion } from "./api";
+import { ApiError, CaseAuditClient, IngestionClient } from "./api";
 import { Notice, SimulationBand } from "./components";
 import type { WitnessConfig } from "./config";
-import { T } from "./copy";
+import { T, t } from "./copy";
 import type { Capability } from "./device";
 import { permissionStatus } from "./device";
 import { Capture } from "./screens/Capture";
 import { DraftReview } from "./screens/DraftReview";
 import { PermissionExplainer } from "./screens/PermissionExplainer";
+import { Questions } from "./screens/Questions";
 import { SharedPost } from "./screens/SharedPost";
 import { Submitted } from "./screens/Submitted";
 import type { CaptureState } from "./state";
@@ -24,13 +26,16 @@ type Screen =
   | { name: "capture" }
   | { name: "social" }
   | { name: "draft"; report: Report; intakeFailed: boolean }
-  | { name: "submitted"; report: Report };
+  | { name: "submitted"; report: Report }
+  | { name: "questions"; from: Screen };
 
 interface PendingPermission {
   kind: Capability;
   action: () => void;
   onSkip: () => void;
 }
+
+const QUESTION_POLL_MS = 10_000;
 
 export function messageFor(error: unknown): string {
   if (error instanceof ApiError) {
@@ -45,6 +50,7 @@ export function messageFor(error: unknown): string {
 
 export default function App({ config }: { config: WitnessConfig }) {
   const client = useMemo(() => new IngestionClient(config), [config]);
+  const audit = useMemo(() => new CaseAuditClient(config), [config]);
   const [screen, setScreen] = useState<Screen>({ name: "capture" });
   const [capture, setCapture] = useState<CaptureState>(EMPTY_CAPTURE);
   const [pack, setPack] = useState<PackDocument | null>(null);
@@ -52,6 +58,29 @@ export default function App({ config }: { config: WitnessConfig }) {
   const [pending, setPending] = useState<PendingPermission | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<WitnessQuestion[]>([]);
+
+  // Questions appear after the report has been grouped into a case, so look again while the app is open. An
+  // unreachable audit service never blocks reporting: the banner just stays away.
+  useEffect(() => {
+    let live = true;
+    const load = () =>
+      audit.questions().then(
+        (list) => live && setQuestions(list),
+        () => undefined,
+      );
+    void load();
+    const timer = setInterval(() => void load(), QUESTION_POLL_MS);
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
+  }, [audit]);
+
+  const answer = async (question: WitnessQuestion, text: string) => {
+    await audit.answer(question.case_id, question.question_id, text);
+    setQuestions((list) => list.filter((q) => q.question_id !== question.question_id));
+  };
 
   useEffect(() => {
     client.pack(config.domain).then(setPack, (err) => setError(messageFor(err)));
@@ -129,6 +158,17 @@ export default function App({ config }: { config: WitnessConfig }) {
         <span className="app-name">{T["TXT-WIT-001"]}</span>
       </header>
 
+      {questions.length > 0 && screen.name !== "questions" && (
+        <button
+          type="button"
+          className="button wide notice notice--info"
+          data-testid="audit-questions-banner"
+          onClick={() => setScreen({ name: "questions", from: screen })}
+        >
+          {t("TXT-WIT-147", { jumlah: questions.length })} · {T["TXT-WIT-148"]}
+        </button>
+      )}
+
       {screen.name === "capture" && (
         <Capture
           client={client}
@@ -162,6 +202,9 @@ export default function App({ config }: { config: WitnessConfig }) {
         />
       )}
       {screen.name === "submitted" && <Submitted report={screen.report} onNew={restart} />}
+      {screen.name === "questions" && (
+        <Questions questions={questions} onAnswer={answer} onBack={() => setScreen(screen.from)} />
+      )}
       {!pack && error && screen.name !== "capture" && <Notice tone="error">{error}</Notice>}
 
       {pending && (

@@ -1,4 +1,4 @@
-/** Client for the ingestion service (types mirror services/ingestion/openapi.json). */
+/** Clients for the ingestion and case-audit services (types mirror their openapi.json). */
 
 import { bearerToken } from "./auth";
 import type { WitnessConfig } from "./config";
@@ -113,13 +113,14 @@ export class ApiError extends Error {
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
-export class IngestionClient {
+abstract class ServiceClient {
   constructor(
     private readonly config: WitnessConfig,
-    private readonly fetchImpl: FetchLike = (input, init) => fetch(input, init),
+    private readonly baseUrl: string,
+    private readonly fetchImpl: FetchLike,
   ) {}
 
-  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  protected async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const headers: Record<string, string> = {
       accept: "application/json",
       authorization: `Bearer ${bearerToken(this.config.appEnv)}`,
@@ -133,7 +134,7 @@ export class IngestionClient {
     }
     let response: Response;
     try {
-      response = await this.fetchImpl(`${this.config.ingestionUrl}${path}`, { method, headers, body: payload });
+      response = await this.fetchImpl(`${this.baseUrl}${path}`, { method, headers, body: payload });
     } catch (error) {
       throw new ApiError(null, error instanceof Error ? error.message : String(error));
     }
@@ -143,6 +144,12 @@ export class IngestionClient {
       throw new ApiError(response.status, errorDetail(json) ?? (text.slice(0, 200) || response.statusText));
     }
     return json as T;
+  }
+}
+
+export class IngestionClient extends ServiceClient {
+  constructor(config: WitnessConfig, fetchImpl: FetchLike = (input, init) => fetch(input, init)) {
+    super(config, config.ingestionUrl, fetchImpl);
   }
 
   pack(id: string) {
@@ -183,6 +190,33 @@ export class IngestionClient {
 
   submit(id: string) {
     return this.request<Report>("POST", `/v1/reports/${id}/submit`);
+  }
+}
+
+/** An audit question waiting for this reporter (case-audit `GET /v1/witness/questions`). */
+export interface WitnessQuestion {
+  question_id: string;
+  case_id: string;
+  text: Label;
+  asked_at: string;
+  synthetic: boolean;
+}
+
+export class CaseAuditClient extends ServiceClient {
+  constructor(config: WitnessConfig, fetchImpl: FetchLike = (input, init) => fetch(input, init)) {
+    super(config, config.caseAuditUrl, fetchImpl);
+  }
+
+  /** The questions waiting for this device. Anonymous: the service matches a pseudonym of the device id. */
+  questions() {
+    return this.request<WitnessQuestion[]>("GET", "/v1/witness/questions");
+  }
+
+  answer(caseId: string, questionId: string, answer: string) {
+    return this.request<unknown>("POST", `/v1/cases/${encodeURIComponent(caseId)}/witness-answers`, {
+      question_id: questionId,
+      answer,
+    });
   }
 }
 

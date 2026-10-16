@@ -12,6 +12,10 @@ the whole path (prompt, schema, validation) runs without a model call. Either wa
 
 When the model fails, times out or returns nothing usable, the lexical ranking is used instead and the audit trail
 says so (`method`), so a model outage never stops an audit round.
+
+Every round of a case runs in the ADK session of that case. In the service the session store is the `case_audit`
+database (`DatabaseSessionService`), so what the agent was asked and answered survives a restart and stays next to the
+audit trail it produced; without a store (eval, unit tests) a round runs in memory.
 """
 
 from __future__ import annotations
@@ -28,12 +32,14 @@ from google.adk.agents import LlmAgent
 from google.adk.models.base_llm import BaseLlm
 from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
-from google.adk.runners import InMemoryRunner
+from google.adk.runners import InMemoryRunner, Runner
+from google.adk.sessions import BaseSessionService
 from google.genai import types
 from pydantic import BaseModel, Field, create_model
 
 log = logging.getLogger(__name__)
 APP_NAME = "agesoa-audit"
+USER_ID = "audit"  # the agent itself: a case has one session, and no person is ever its user
 TOP_N = 3  # hypotheses kept per round
 TIMEOUT_SECONDS = 45  # a round holds a database transaction open: a slow model falls back instead of waiting
 MAX_SOURCES = 30
@@ -70,7 +76,12 @@ class RankResult:
 
 class Ranker(Protocol):
     async def rank(
-        self, pack: DomainPack, sources: Sequence[tuple[str, str]], violated: set[str]
+        self,
+        pack: DomainPack,
+        sources: Sequence[tuple[str, str]],
+        violated: set[str],
+        *,
+        case_id: str | None = None,
     ) -> RankResult: ...
 
 
@@ -78,7 +89,12 @@ class LexicalRanker:
     """The deterministic ranking (`agesoa_packs.rank_branches`): the fallback and the baseline of the eval."""
 
     async def rank(
-        self, pack: DomainPack, sources: Sequence[tuple[str, str]], violated: set[str]
+        self,
+        pack: DomainPack,
+        sources: Sequence[tuple[str, str]],
+        violated: set[str],
+        *,
+        case_id: str | None = None,
     ) -> RankResult:
         return RankResult(rank_branches(pack, sources, violated), LEXICAL)
 
@@ -148,22 +164,34 @@ def _case_part(llm_request: LlmRequest) -> dict[str, Any]:
 
 
 class AuditAgent:
-    def __init__(self, model: str | BaseLlm, *, timeout: float = TIMEOUT_SECONDS):
+    def __init__(
+        self,
+        model: str | BaseLlm,
+        *,
+        timeout: float = TIMEOUT_SECONDS,
+        sessions: BaseSessionService | None = None,
+    ):
         self._rules = model == "rules" or isinstance(model, RulesModel)  # the pack is bound per call
         self.model_name = model if isinstance(model, str) else model.model
         self._model = model
         self._timeout = timeout
         self._fallback = LexicalRanker()
+        self.sessions = sessions  # where the sessions of the cases are kept; None = in memory, per round
 
     async def rank(
-        self, pack: DomainPack, sources: Sequence[tuple[str, str]], violated: set[str]
+        self,
+        pack: DomainPack,
+        sources: Sequence[tuple[str, str]],
+        violated: set[str],
+        *,
+        case_id: str | None = None,
     ) -> RankResult:
         lexical = await self._fallback.rank(pack, sources, violated)
         if not sources:
             return lexical
         try:
             async with asyncio.timeout(self._timeout):
-                raw = await self._ask(pack, sources, violated)
+                raw = await self._ask(pack, sources, violated, case_id)
             checked = self._checked(pack, raw, sources, violated, lexical)
         except Exception as exc:  # whatever goes wrong with a model must not stop the round
             log.warning("audit model failed, lexical ranking used", extra={"detail": {"error": repr(exc)}})
@@ -174,7 +202,7 @@ class AuditAgent:
         return checked
 
     async def _ask(
-        self, pack: DomainPack, sources: Sequence[tuple[str, str]], violated: set[str]
+        self, pack: DomainPack, sources: Sequence[tuple[str, str]], violated: set[str], case_id: str | None
     ) -> dict[str, Any]:
         model = RulesModel(pack=pack) if self._rules else self._model
         agent = LlmAgent(
@@ -182,18 +210,25 @@ class AuditAgent:
             model=model,
             instruction=_instruction(pack, violated),
             output_schema=output_schema(pack),
+            include_contents="none",  # each round carries the whole case, so earlier rounds are not repeated
             disallow_transfer_to_parent=True,
             disallow_transfer_to_peers=True,
         )
-        runner = InMemoryRunner(agent=agent, app_name=APP_NAME)
-        session = await runner.session_service.create_session(app_name=APP_NAME, user_id="audit")
+        if self.sessions is not None and case_id:
+            runner = Runner(agent=agent, app_name=APP_NAME, session_service=self.sessions)
+            session = await self.sessions.get_session(
+                app_name=APP_NAME, user_id=USER_ID, session_id=case_id
+            ) or await self.sessions.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=case_id)
+        else:
+            runner = InMemoryRunner(agent=agent, app_name=APP_NAME)
+            session = await runner.session_service.create_session(app_name=APP_NAME, user_id=USER_ID)
         case = {
             "sources": [{"id": i, "text": t[:MAX_SOURCE_CHARS]} for i, t in list(sources)[:MAX_SOURCES]],
             "violated_rules": sorted(violated),
         }
         text = None
         async for event in runner.run_async(
-            user_id="audit",
+            user_id=USER_ID,
             session_id=session.id,
             new_message=types.Content(
                 role="user", parts=[types.Part(text=json.dumps(case, ensure_ascii=False))]

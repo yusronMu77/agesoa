@@ -54,6 +54,13 @@ case's `hypothesis` rows in `audit_trail` (top 3: rank, score, supporting and ag
   lexical ranking; the `method` of each row (`lexical` or `model:<id>`) and the decision log say which one ran.
   `AUDIT_MODEL=rules` (default, local and demo_mode only) writes the lexical ranking as a model response, so the
   whole path runs without a model call; set a Gemini model id (and Vertex or API-key credentials) to use the model.
+- **One ADK session per case**, kept in this service's own database: `main.py` gives the agent ADK's
+  `DatabaseSessionService` on the service's engine, so the tables `sessions`, `events`, `app_states`, `user_states`
+  and `adk_internal_metadata` live in `case_audit` (created by ADK on first use, the one exception to "tables come
+  from Alembic": ADK versions its own schema). Every round of the case appends what the agent was asked and what it
+  answered; the session id is the case id and the user is the agent, never a person. Each round carries the whole
+  case, so the model is not shown earlier rounds (`include_contents="none"`). Evals and unit tests run without a
+  store, in memory.
 - A hypothesis is not a finding: findings and `temuan.siap_validasi` come with the validation flow (#45).
 
 ## Witness interview
@@ -70,6 +77,9 @@ that writes its own questions would use the same steps; this is the scripted fal
   case (otherwise 404, a second answer 409). The answer is an `answer` step labelled `alleged` (the reporter's own
   word) with `question:<id>` and `report:<id>` references, an `audit.answer_received` decision, and a new round:
   the answer feeds the ranking of hypotheses but never lifts an evidence status.
+- The Witness app shows them on SCR-006 (`apps/witness`, `VITE_CASE_AUDIT_URL`): a banner on every screen once the
+  device has a question, a text answer per question, sent with the same anonymous device token as the report (TC-018).
+  The browser calls this service directly, so `CORS_ORIGINS` must list the Witness origin. Answering by voice is not built.
 - `case_sources.reporter_ref` (migration `0004`) is where the link lives; it is never part of an API response
   or the decision log.
 

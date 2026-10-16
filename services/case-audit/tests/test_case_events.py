@@ -465,3 +465,27 @@ def test_pattern_tests_are_replaced_not_duplicated_when_a_source_joins(client):
     keys = [(s["branch"], s["content"]["metric"], s["content"]["group_value"]) for s in steps]
     assert steps and len(keys) == len(set(keys))
     assert all(s["content"]["incidents"] == 2 and s["content"]["other_cases"] == 0 for s in steps)
+
+
+def test_the_adk_session_of_a_case_is_kept_in_the_case_audit_database(client):
+    from sqlalchemy import text
+
+    deliver(client, report_event("R-1"))
+    case_id = only_case_id(client)
+    deliver(client, report_event("R-2", fields=SAME_KITCHEN | {"cooked_at": "2026-10-14T01:00:00Z"}))
+
+    async def stored():
+        async with client.app.state.db.engine.connect() as conn:
+            sessions = (await conn.execute(text("select id, app_name from sessions"))).all()
+            events = (
+                await conn.execute(
+                    text("select count(*) from events where session_id = :id"), {"id": case_id}
+                )
+            ).scalar()
+        return sessions, events
+
+    sessions, events = client.portal.call(stored)
+    assert [(s.id, s.app_name) for s in sessions] == [
+        (case_id, "agesoa-audit")
+    ]  # one session per case, not per round
+    assert events >= 4  # two rounds: the case put to the agent and what it answered, each time
