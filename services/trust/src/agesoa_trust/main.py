@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from agesoa_packs import load_packs
@@ -23,7 +24,10 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         if settings.demo_mode:
             count = await seed_demo_validators(app.state.db)
             log.info("demo validators seeded", extra={"detail": {"validators": count}})
-            await app.state.outbox.dispatch()  # seeded organizations (the sweep retries a failure)
+            if settings.environment != "test":
+                # Seeded organizations (organisasi.terverifikasi) go out now, in the background: startup never
+                # waits on Pub/Sub (the sweep retries a failure). Tests publish through their own recorder.
+                app.state.seed_dispatch = asyncio.create_task(app.state.outbox.dispatch())
             password = settings.demo_validator_password
             if app.state.identity and password:
                 try:
