@@ -26,6 +26,10 @@ uv run eval --model <gemini model id>    # a real model: one billable call per s
 A model run writes `eval/results/model-<model>.json` and passes TC-017 only when the planted cause is in the top 3
 for at least 5 scenarios **and** more often than the lexical baseline. It never runs in CI.
 
+Per 2026-10-16, `gemini-3.8-flash` on Vertex (`GOOGLE_GENAI_USE_VERTEXAI=true`, location `global`) put the planted
+cause in the top 3 for 6 of 6 scenarios (top 1: 3 of 6, MRR 0.7222) against 3 of 6 for the lexical baseline: TC-017
+passed. One run of six scenarios is a sample, not a benchmark; the numbers move with the model version.
+
 Run tests for the evaluation harness:
 
 ```sh
