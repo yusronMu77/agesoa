@@ -65,12 +65,12 @@ resource "google_cloud_run_v2_service" "portal" {
   }
 
   lifecycle {
+    # The revision name is not set here nor by the deploy workflow: Cloud Run generates a new one per change.
     ignore_changes = [
       client,
       client_version,
       labels,
       template[0].labels,
-      template[0].revision,
       template[0].containers[0].image,
     ]
   }
