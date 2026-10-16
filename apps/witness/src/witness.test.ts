@@ -4,6 +4,10 @@ import type { KeyValueStore } from "./auth";
 import { bearerToken, deviceId } from "./auth";
 import { ConfigError, loadConfig } from "./config";
 import { T, t } from "./copy";
+import { EmptyRecording, LocationUnavailable, locationError, PermissionDenied, recordingResult } from "./device";
+import { appendDictated, dictationSupported, startDictation } from "./dictation";
+import { errorText } from "./errors";
+import { lastReportId, rememberReport } from "./reports";
 import {
   canonicalWord,
   fieldInError,
@@ -197,5 +201,110 @@ describe("case-audit client (SCR-006)", () => {
     expect(loadConfig({ VITE_CASE_AUDIT_URL: "https://audit.example.id/" }).caseAuditUrl).toBe(
       "https://audit.example.id",
     );
+  });
+});
+
+describe("device errors (#106, #107)", () => {
+  test("geolocation codes: 1 is a refusal, 2 and 3 let the reporter pick a district", () => {
+    expect(locationError({ code: 1 })).toBeInstanceOf(PermissionDenied);
+    const unavailable = locationError({ code: 2 });
+    const timeout = locationError({ code: 3 });
+    expect(unavailable).toBeInstanceOf(LocationUnavailable);
+    expect((unavailable as LocationUnavailable).reason).toBe("unavailable");
+    expect((timeout as LocationUnavailable).reason).toBe("timeout");
+  });
+
+  test("a raw non-Error value is never shown as text", () => {
+    const raw = { code: 2, message: "" }; // what a GeolocationPositionError looks like to String()
+    expect(errorText(raw)).toBe(T["TXT-WIT-133"]);
+    expect(errorText(new ApiError(null, "down"))).toBe(T["TXT-WIT-130"]);
+    expect(errorText(new Error("specific"))).toBe("specific");
+  });
+
+  test("a recording without data is refused; the duration comes from the data", () => {
+    expect(() => recordingResult([], "audio/webm", 4000)).toThrow(EmptyRecording);
+    expect(() => recordingResult([new Blob([])], "audio/webm", 4000)).toThrow(EmptyRecording);
+    const { blob, seconds } = recordingResult([new Blob([new Uint8Array(512)])], "audio/webm", 2600);
+    expect(blob.size).toBe(512);
+    expect(seconds).toBe(3);
+    // data that arrived within the first half second still counts as one second, never "0 detik"
+    expect(recordingResult([new Blob([new Uint8Array(8)])], "audio/webm", 120).seconds).toBe(1);
+  });
+
+  test("copy for the new messages exists", () => {
+    for (const id of ["TXT-WIT-033", "TXT-WIT-034", "TXT-WIT-036", "TXT-WIT-037", "TXT-WIT-133"] as const) {
+      expect(T[id].length).toBeGreaterThan(10);
+    }
+  });
+});
+
+describe("SCR-006 voice answers by dictation + report status (#49)", () => {
+  class FakeRecognition {
+    static last: FakeRecognition;
+    lang = "";
+    interimResults = true;
+    continuous = false;
+    onresult: ((event: unknown) => void) | null = null;
+    onerror: ((event: { error: string }) => void) | null = null;
+    onend: (() => void) | null = null;
+    started = false;
+    constructor() {
+      FakeRecognition.last = this;
+    }
+    start() {
+      this.started = true;
+    }
+    stop() {
+      this.onend?.();
+    }
+  }
+
+  test("not offered without speech recognition", () => {
+    expect(dictationSupported({})).toBe(false);
+    expect(startDictation(() => undefined, () => undefined, {})).toBeNull();
+    expect(dictationSupported({ webkitSpeechRecognition: FakeRecognition })).toBe(true);
+  });
+
+  test("final phrases in Indonesian go to the answer; interim ones do not", () => {
+    const phrases: string[] = [];
+    let ended: string | undefined = "not yet";
+    const dictation = startDictation(
+      (text) => phrases.push(text),
+      (error) => {
+        ended = error;
+      },
+      { SpeechRecognition: FakeRecognition },
+    );
+    const r = FakeRecognition.last;
+    expect(r.started && r.lang === "id-ID" && !r.interimResults).toBe(true);
+    r.onresult?.({
+      resultIndex: 0,
+      results: [
+        { isFinal: false, 0: { transcript: "nasi" } },
+        { isFinal: true, 0: { transcript: " nasinya basi " } },
+      ],
+    });
+    dictation?.stop();
+    expect(phrases).toEqual(["nasinya basi"]);
+    expect(ended).toBeUndefined();
+    expect(appendDictated("Sudah dingin.  ", "nasinya basi")).toBe("Sudah dingin. nasinya basi");
+    expect(appendDictated("", "nasinya basi")).toBe("nasinya basi");
+  });
+
+  test("a dictation error is reported once at the end", () => {
+    let ended: string | undefined;
+    startDictation(() => undefined, (error) => (ended = error), { webkitSpeechRecognition: FakeRecognition });
+    FakeRecognition.last.onerror?.({ error: "network" });
+    FakeRecognition.last.stop();
+    expect(ended).toBe("network");
+  });
+
+  test("the device remembers only the id of its last report", () => {
+    const store = memory();
+    expect(lastReportId(store)).toBeNull();
+    rememberReport("0b8c1d2e3f40", store);
+    expect(lastReportId(store)).toBe("0b8c1d2e3f40");
+    store.setItem("agesoa.witness.last-report", "../etc/passwd");
+    expect(lastReportId(store)).toBeNull();
   });
 });

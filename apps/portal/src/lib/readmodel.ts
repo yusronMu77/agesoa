@@ -66,6 +66,29 @@ export interface PublicCase {
   follow_ups?: PublicFollowUp[];
   /** Right of reply statements, oldest first. */
   replies?: PublicReply[];
+  /** Audit report of the case (SCR-041), null until the Report agent (or the demo fallback) wrote one. */
+  audit_report?: PublicAuditReport | null;
+}
+
+export interface PublicRootCause {
+  statement: string;
+  status: EvidenceStatus;
+  /** How many evidence items back the statement (the items themselves are not public). */
+  evidence_count: number;
+}
+
+export interface PublicAuditReport {
+  audit_report_id: string;
+  summary: string;
+  root_causes: PublicRootCause[];
+  recommendations: string[];
+  created_at: string;
+}
+
+/** "Based on 2 evidence items" / "No evidence item yet" under a root cause. */
+export function evidenceCountText(count: number): string {
+  if (count <= 0) return "No evidence item yet: reported or inferred only";
+  return `Based on ${count} evidence item${count === 1 ? "" : "s"}`;
 }
 
 export type FollowUpStatus = "received" | "in_progress" | "done";

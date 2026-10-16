@@ -93,6 +93,14 @@ export default async function CasePage({ params, searchParams }: { params: Param
         </dl>
       ) : null}
 
+      {c?.audit_report ? (
+        <p>
+          <Link className="button" href={`/cases/${encodeURIComponent(caseId)}/report`} data-testid="open-audit-report">
+            Read the audit report
+          </Link>
+        </p>
+      ) : null}
+
       <section aria-labelledby="case-findings">
         <h2 id="case-findings">Findings</h2>
         {caseFindings.length === 0 ? (

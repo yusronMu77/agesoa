@@ -16,6 +16,7 @@ import { permissionStatus } from "./device";
 import { Capture } from "./screens/Capture";
 import { DraftReview } from "./screens/DraftReview";
 import { PermissionExplainer } from "./screens/PermissionExplainer";
+import { lastReportId, rememberReport } from "./reports";
 import { Questions } from "./screens/Questions";
 import { SharedPost } from "./screens/SharedPost";
 import { Submitted } from "./screens/Submitted";
@@ -59,6 +60,7 @@ export default function App({ config }: { config: WitnessConfig }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [questions, setQuestions] = useState<WitnessQuestion[]>([]);
+  const [lastReport, setLastReport] = useState<Report | null>(null);
 
   // Questions appear after the report has been grouped into a case, so look again while the app is open. An
   // unreachable audit service never blocks reporting: the banner just stays away.
@@ -163,7 +165,12 @@ export default function App({ config }: { config: WitnessConfig }) {
           type="button"
           className="button wide notice notice--info"
           data-testid="audit-questions-banner"
-          onClick={() => setScreen({ name: "questions", from: screen })}
+          onClick={() => {
+            setScreen({ name: "questions", from: screen });
+            const id = lastReportId();
+            // The status card is a courtesy: an unreachable or unknown report never blocks answering.
+            if (id) client.getReport(id).then(setLastReport, () => setLastReport(null));
+          }}
         >
           {t("TXT-WIT-147", { jumlah: questions.length })} · {T["TXT-WIT-148"]}
         </button>
@@ -198,12 +205,20 @@ export default function App({ config }: { config: WitnessConfig }) {
           pack={pack}
           initial={screen.report}
           intakeFailed={screen.intakeFailed}
-          onSubmitted={(report) => setScreen({ name: "submitted", report })}
+          onSubmitted={(report) => {
+            rememberReport(report.id);
+            setScreen({ name: "submitted", report });
+          }}
         />
       )}
       {screen.name === "submitted" && <Submitted report={screen.report} onNew={restart} />}
       {screen.name === "questions" && (
-        <Questions questions={questions} onAnswer={answer} onBack={() => setScreen(screen.from)} />
+        <Questions
+          questions={questions}
+          report={lastReport}
+          onAnswer={answer}
+          onBack={() => setScreen(screen.from)}
+        />
       )}
       {!pack && error && screen.name !== "capture" && <Notice tone="error">{error}</Notice>}
 

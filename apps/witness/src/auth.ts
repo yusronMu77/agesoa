@@ -24,7 +24,7 @@ function memoryStore(): KeyValueStore {
   };
 }
 
-function defaultStore(): KeyValueStore {
+export function defaultStore(): KeyValueStore {
   try {
     const store = globalThis.localStorage;
     store.getItem(DEVICE_KEY);

@@ -23,6 +23,28 @@ export class PermissionDenied extends Error {
   }
 }
 
+/** Geolocation answered but gave no position (code 2) or took too long (code 3): the reporter picks a district. */
+export class LocationUnavailable extends Error {
+  constructor(readonly reason: "unavailable" | "timeout") {
+    super(`location ${reason}`);
+    this.name = "LocationUnavailable";
+  }
+}
+
+/** The recorder stopped without any audio data (e.g. a muted or busy microphone). */
+export class EmptyRecording extends Error {
+  constructor() {
+    super("empty recording");
+    this.name = "EmptyRecording";
+  }
+}
+
+/** Maps a GeolocationPositionError (codes 1, 2, 3) to the errors the screens handle. */
+export function locationError(error: { code: number }): Error {
+  if (error.code === 1) return new PermissionDenied("geolocation");
+  return new LocationUnavailable(error.code === 3 ? "timeout" : "unavailable");
+}
+
 function denied(error: unknown): boolean {
   return error instanceof DOMException && (error.name === "NotAllowedError" || error.name === "SecurityError");
 }
@@ -57,6 +79,7 @@ export function captureFrame(video: HTMLVideoElement): Promise<Blob> {
 const AUDIO_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
 
 export interface Recording {
+  /** Rejects with EmptyRecording when no audio data arrived. */
   stop(): Promise<{ blob: Blob; seconds: number }>;
   cancel(): void;
 }
@@ -72,16 +95,25 @@ export async function startRecording(): Promise<Recording> {
   const mimeType = AUDIO_TYPES.find((type) => MediaRecorder.isTypeSupported(type));
   const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
   const chunks: Blob[] = [];
-  recorder.ondataavailable = (event) => event.data.size && chunks.push(event.data);
   const started = performance.now();
+  let lastData = started;
+  recorder.ondataavailable = (event) => {
+    if (!event.data.size) return;
+    chunks.push(event.data);
+    lastData = performance.now();
+  };
   recorder.start(250);
   return {
     stop: () =>
-      new Promise((resolve) => {
+      new Promise((resolve, reject) => {
         recorder.onstop = () => {
           stopStream(stream);
           const type = (recorder.mimeType || mimeType || "audio/webm").split(";")[0];
-          resolve({ blob: new Blob(chunks, { type }), seconds: Math.round((performance.now() - started) / 1000) });
+          try {
+            resolve(recordingResult(chunks, type, lastData - started));
+          } catch (error) {
+            reject(error);
+          }
         };
         recorder.stop();
       }),
@@ -93,13 +125,20 @@ export async function startRecording(): Promise<Recording> {
   };
 }
 
+/** The recorded blob and a duration taken from the data that arrived (not the wall clock of the button). */
+export function recordingResult(chunks: Blob[], type: string, elapsedMs: number): { blob: Blob; seconds: number } {
+  const blob = new Blob(chunks, { type });
+  if (blob.size === 0) throw new EmptyRecording();
+  return { blob, seconds: Math.max(1, Math.round(elapsedMs / 1000)) };
+}
+
 /** Approximate position, used once to find the district and then dropped. */
 export function approximatePosition(): Promise<{ lat: number; lon: number }> {
   return new Promise((resolve, reject) => {
     if (!("geolocation" in navigator)) return reject(new PermissionDenied("geolocation"));
     navigator.geolocation.getCurrentPosition(
       (position) => resolve({ lat: position.coords.latitude, lon: position.coords.longitude }),
-      (error) => reject(error.code === error.PERMISSION_DENIED ? new PermissionDenied("geolocation") : error),
+      (error) => reject(locationError(error)),
       { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 },
     );
   });

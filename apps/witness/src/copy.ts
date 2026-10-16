@@ -34,6 +34,10 @@ export const T = {
   "TXT-WIT-030": "Lanjut ke draf",
   "TXT-WIT-031": "Tambahkan cerita, foto, suara, atau link dulu.",
   "TXT-WIT-032": "Menyiapkan draf…",
+  "TXT-WIT-033": "Lokasi Anda tidak bisa ditentukan sekarang. Pilih kecamatan sendiri.",
+  "TXT-WIT-034": "Mencari lokasi terlalu lama. Pilih kecamatan sendiri.",
+  "TXT-WIT-036": "Rekaman suara kosong, tidak ada suara yang terekam. Rekam ulang atau ketik cerita Anda.",
+  "TXT-WIT-037": "Rekaman ini tidak bisa diputar di HP ini. Rekam ulang atau ketik cerita Anda.",
   "TXT-WIT-040": "Izinkan kamera?",
   "TXT-WIT-041":
     "Kamera dipakai untuk memotret bukti di lokasi. Info lokasi dan merek HP di dalam foto dihapus sebelum disimpan.",
@@ -100,9 +104,17 @@ export const T = {
   "TXT-WIT-147": "Ada {jumlah} pertanyaan audit untuk Anda",
   "TXT-WIT-148": "Jawab pertanyaan",
   "TXT-WIT-149": "Pertanyaan ini sudah dijawab.",
+  "TXT-WIT-170": "Status laporan Anda",
+  "TXT-WIT-171": "Kode laporan",
+  "TXT-WIT-172": "Terkirim",
+  "TXT-WIT-173": "Jawab dengan suara",
+  "TXT-WIT-174": "Selesai bicara",
+  "TXT-WIT-175": "Suara Anda diubah jadi teks oleh fitur dikte di browser. Yang dikirim ke AGESOA hanya teks, bukan suara.",
+  "TXT-WIT-176": "Dikte suara tidak berhasil. Ketik jawaban Anda.",
   "TXT-WIT-130": "Tidak tersambung ke server. Periksa koneksi lalu coba lagi.",
   "TXT-WIT-131": "File ini tidak bisa dipakai. Gunakan foto JPG, PNG, atau WebP, atau rekaman suara.",
   "TXT-WIT-132": "File terlalu besar (maksimal 20 MB).",
+  "TXT-WIT-133": "Terjadi kesalahan. Coba lagi.",
 } as const;
 
 export type TextId = keyof typeof T;

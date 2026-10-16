@@ -630,3 +630,43 @@ pre.json {
 .right-of-reply__body {
   white-space: pre-wrap;
 }
+
+/* SCR-041 audit report: root causes on the left, recommendations / validators / log on the right. */
+.report-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--ag-space-6);
+  align-items: start;
+}
+.report-side {
+  display: grid;
+  gap: var(--ag-space-4);
+}
+.cause-chain {
+  list-style: none;
+  margin: var(--ag-space-4) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--ag-space-3);
+}
+.cause-statement {
+  margin: var(--ag-space-2) 0 var(--ag-space-1);
+  font-size: var(--ag-font-size-lg);
+  font-weight: var(--ag-font-weight-medium);
+}
+.small {
+  font-size: var(--ag-font-size-sm);
+}
+.ai-label {
+  display: inline-block;
+  padding: 0 var(--ag-space-2);
+  border: 1px solid var(--ag-color-border-default);
+  border-radius: var(--ag-radius-sm);
+  font-size: var(--ag-font-size-sm);
+  color: var(--ag-color-text-secondary);
+}
+@media (max-width: 900px) {
+  .report-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

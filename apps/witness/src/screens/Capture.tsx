@@ -9,12 +9,15 @@ import type { Capability, Recording } from "../device";
 import {
   approximatePosition,
   captureFrame,
+  EmptyRecording,
+  LocationUnavailable,
   openCamera,
   PermissionDenied,
   startRecording,
   stopStream,
 } from "../device";
 import type { CaptureState, EvidenceItem } from "../state";
+import { errorText } from "../errors";
 import { newItem } from "../state";
 
 const DENIED_TEXT = {
@@ -61,15 +64,22 @@ export function Capture({ client, state, update, withPermission, onSocial, onCon
       markDenied(kind);
       if (kind === "microphone") narrativeRef.current?.focus();
       if (kind === "geolocation") void showPicker();
+    } else if (err instanceof LocationUnavailable) {
+      // Same way out as a refused permission: say why, and let the reporter pick the district.
+      setLocationNote(T[err.reason === "timeout" ? "TXT-WIT-034" : "TXT-WIT-033"]);
+      void showPicker();
     } else {
-      setLocalError(err instanceof Error ? err.message : String(err));
+      setLocalError(errorText(err));
     }
   };
 
   const camera = () =>
     withPermission(
       "camera",
-      () => openCamera().then(setStream, (err) => failed("camera", err)),
+      () => {
+        setLocalError(null);
+        void openCamera().then(setStream, (err) => failed("camera", err));
+      },
       () => markDenied("camera"),
     );
 
@@ -84,7 +94,10 @@ export function Capture({ client, state, update, withPermission, onSocial, onCon
   const record = () =>
     withPermission(
       "microphone",
-      () => startRecording().then(setRecording, (err) => failed("microphone", err)),
+      () => {
+        setLocalError(null);
+        void startRecording().then(setRecording, (err) => failed("microphone", err));
+      },
       () => {
         markDenied("microphone");
         narrativeRef.current?.focus();
@@ -93,8 +106,17 @@ export function Capture({ client, state, update, withPermission, onSocial, onCon
 
   const stopRecord = async () => {
     if (!recording) return;
-    const { blob, seconds } = await recording.stop();
+    let result: { blob: Blob; seconds: number };
+    try {
+      result = await recording.stop();
+    } catch (err) {
+      setRecording(null);
+      // Nothing was recorded: not added as evidence; the reporter can record again or type the story.
+      setLocalError(err instanceof EmptyRecording ? T["TXT-WIT-036"] : errorText(err));
+      return;
+    }
     setRecording(null);
+    const { blob, seconds } = result;
     const ext = blob.type.includes("mp4") ? "m4a" : blob.type.includes("ogg") ? "ogg" : "webm";
     addItems([{ ...newItem("audio", blob, `voice.${ext}`), seconds }]);
   };
@@ -105,7 +127,7 @@ export function Capture({ client, state, update, withPermission, onSocial, onCon
     try {
       setDistricts(await client.districts());
     } catch (err) {
-      setLocalError(err instanceof ApiError && err.status === null ? T["TXT-WIT-130"] : String(err));
+      setLocalError(errorText(err));
     }
   };
 
@@ -115,6 +137,7 @@ export function Capture({ client, state, update, withPermission, onSocial, onCon
       async () => {
         setLocating(true);
         setLocationNote(null);
+        setLocalError(null);
         try {
           const { lat, lon } = await approximatePosition();
           update({ district: await client.resolveDistrict(lat, lon) });
@@ -225,7 +248,7 @@ export function Capture({ client, state, update, withPermission, onSocial, onCon
         {audio.map((item) => (
           <div className="row audio" key={item.key}>
             <span data-testid="voice-note">{t("TXT-WIT-020", { detik: item.seconds ?? 0 })}</span>
-            <audio controls src={item.previewUrl} />
+            <audio controls src={item.previewUrl} onError={() => setLocalError(T["TXT-WIT-037"])} />
             <button
               type="button"
               className="button small"

@@ -1,7 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import { loadConfig } from "./config";
 import { projectShapes, shade } from "./geo";
-import { decodeFields, districtKey, FOLLOW_UP_STATUS_LABEL, getDocument, listCollection, safeLink } from "./readmodel";
+import {
+  decodeFields,
+  districtKey,
+  evidenceCountText,
+  FOLLOW_UP_STATUS_LABEL,
+  getDocument,
+  listCollection,
+  safeLink,
+} from "./readmodel";
 
 const config = loadConfig({ READ_MODEL_URL: "http://fs.test/v1/projects/p/databases/(default)/documents" });
 
@@ -106,5 +114,13 @@ describe("follow-up and right of reply (SCR-043)", () => {
     expect(safeLink("data:text/html,x")).toBeNull();
     expect(safeLink("/relative")).toBeNull();
     expect(safeLink(null)).toBeNull();
+  });
+});
+
+describe("audit report (SCR-041)", () => {
+  test("evidence count under a root cause", () => {
+    expect(evidenceCountText(0)).toBe("No evidence item yet: reported or inferred only");
+    expect(evidenceCountText(1)).toBe("Based on 1 evidence item");
+    expect(evidenceCountText(3)).toBe("Based on 3 evidence items");
   });
 });
