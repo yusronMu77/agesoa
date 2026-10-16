@@ -3,7 +3,8 @@
 The audit agent never writes a query. It calls `check_pattern` with a cause branch, one of that branch's metrics and a
 time window; all three are checked against the domain pack and bounded before anything runs. The metric itself is a
 fixed, parameterised query kind from `agesoa_packs.metrics`; here only the reading of incidents is plugged in
-(`IncidentStore`): the case-audit database (default, works everywhere) or the BigQuery event archive.
+(`IncidentStore`): the case-audit database (works everywhere) or the BigQuery event archive
+(`bigquery_store.py`), with the database as the fallback when the archive cannot answer.
 
 A pattern recurs when an incident of *another case* sits in the same group (same kitchen, same supplier, ...). That
 is evidence from other reports, so a recurring pattern is `supported` (capped by the case's maximum finding status)
@@ -12,6 +13,7 @@ and a pattern that does not recur is `alleged`: nothing was found, nothing is pr
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -24,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from agesoa_case_audit.tables import case_sources, cases
 
+log = logging.getLogger(__name__)
 ACTOR = "pattern_test"  # a rule, never a person
 WINDOW_DAYS = 90
 MAX_GROUPS = 3  # distinct group values of one case that are tested per metric
@@ -31,6 +34,12 @@ MAX_GROUPS = 3  # distinct group values of one case that are tested per metric
 
 class PatternError(ValueError):
     """A pattern test was asked for something the pack does not define."""
+
+
+@dataclass(frozen=True)
+class Found:
+    incidents: list[Incident]
+    store: str  # which archive answered: a store with a fallback names the one that did
 
 
 class IncidentStore(Protocol):
@@ -47,9 +56,9 @@ class IncidentStore(Protocol):
         group: str,
         since: datetime,
         until: datetime,
-    ) -> list[Incident]:
-        """Reports of `domain` with normalised `group_by` value `group`, whose case's first incident is in the
-        window. May include the tested case's own reports."""
+    ) -> Found:
+        """Reports of `domain` with normalised `group_by` value `group` in the window. May include the tested
+        case's own reports."""
         ...
 
 
@@ -67,7 +76,7 @@ class DatabaseIncidentStore:
         group: str,
         since: datetime,
         until: datetime,
-    ) -> list[Incident]:
+    ) -> Found:
         value = case_sources.c.snapshot["data"]["fields"][group_by].astext  # group_by is a bound parameter
         normalised = func.lower(func.regexp_replace(func.btrim(value), r"\s+", " ", "g"))
         rows = (
@@ -83,15 +92,37 @@ class DatabaseIncidentStore:
                 .order_by(case_sources.c.source_id)
             )
         ).all()
-        return [
-            Incident(
-                r.source_id,
-                r.case_id,
-                r.snapshot["data"]["fields"],
-                tuple(r.snapshot["data"]["rule_results"]),
+        return Found(
+            [
+                Incident(
+                    r.source_id,
+                    r.case_id,
+                    r.snapshot["data"]["fields"],
+                    tuple(r.snapshot["data"]["rule_results"]),
+                )
+                for r in rows
+            ],
+            self.name,
+        )
+
+
+class FallbackIncidentStore:
+    """Asks `primary` (the BigQuery archive); when it cannot answer the test still runs on `fallback` (the database),
+    and the pattern test says which one answered."""
+
+    def __init__(self, primary: IncidentStore, fallback: IncidentStore):
+        self.primary, self.fallback = primary, fallback
+        self.name = primary.name
+
+    async def find(self, session: AsyncSession, **query: Any) -> Found:
+        try:
+            return await self.primary.find(session, **query)
+        except Exception as exc:  # an archive outage must not stop an audit round
+            log.warning(
+                "incident store failed, fallback used",
+                extra={"detail": {"store": self.primary.name, "error": repr(exc)}},
             )
-            for r in rows
-        ]
+            return await self.fallback.find(session, **query)
 
 
 @dataclass(frozen=True)
@@ -147,10 +178,10 @@ async def check_pattern(
         until=until,
     )
     incidents = {
-        i.id: i for i in [*found, *own]
+        i.id: i for i in [*found.incidents, *own]
     }  # the case's own reports count once, whichever side lists them
     result = measure(metric, group, list(incidents.values()), case_id=case_id)
-    return PatternTest(branch, metric, result, window_days, store.name)
+    return PatternTest(branch, metric, result, window_days, found.store)
 
 
 def window(occurred_at: datetime, at: datetime, window_days: int = WINDOW_DAYS) -> tuple[datetime, datetime]:

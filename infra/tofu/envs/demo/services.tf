@@ -64,6 +64,7 @@ module "service" {
     each.value.agent ? ["roles/aiplatform.user"] : [],
     each.value.firestore ? ["roles/datastore.user"] : [],
     each.value.identity ? ["roles/firebaseauth.admin"] : [],
+    each.value.archive ? ["roles/bigquery.jobUser"] : [],
   )
 
   secret_env = each.value.identity && var.demo_mode ? {
@@ -83,6 +84,10 @@ module "service" {
     each.value.agent ? {
       GOOGLE_GENAI_USE_VERTEXAI = "TRUE"
       GOOGLE_CLOUD_LOCATION     = var.vertex_location
+    } : {},
+    each.value.archive && var.pattern_archive ? {
+      INCIDENT_STORE        = "bigquery"
+      BIGQUERY_EVENTS_TABLE = "${var.project_id}.${google_bigquery_dataset.events.dataset_id}.${google_bigquery_table.events.table_id}"
     } : {},
     each.key == "ingestion" ? { MEDIA_BUCKET = google_storage_bucket.media.name } : {},
     each.key == "delivery" ? {

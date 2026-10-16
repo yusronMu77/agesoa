@@ -23,8 +23,16 @@ from agesoa_case_audit.agent import TOP_N, LexicalRanker, Ranker
 from agesoa_case_audit.cases import STATUS_ORDER, cap_status
 from agesoa_case_audit.decisions import decision_event
 from agesoa_case_audit.interview import sync_questions
+from agesoa_case_audit.pattern_agent import PatternRunner, PlannedTest, run_directly
 from agesoa_case_audit.patterns import ACTOR as PATTERN_ACTOR
-from agesoa_case_audit.patterns import MAX_GROUPS, WINDOW_DAYS, IncidentStore, check_pattern, window
+from agesoa_case_audit.patterns import (
+    MAX_GROUPS,
+    WINDOW_DAYS,
+    IncidentStore,
+    PatternTest,
+    check_pattern,
+    window,
+)
 from agesoa_case_audit.tables import audit_trail, case_sources, cases
 
 ACTOR = "hypothesis_ranking"  # a rule, never a person
@@ -139,6 +147,7 @@ async def run_round(
         sources=sources,
         branches=ranked.top,
         at=at,
+        runner=ranker,
     )
 
 
@@ -238,6 +247,7 @@ async def refresh_pattern_tests(
     sources: list[LinkedSource],
     branches: list[str],
     at: datetime,
+    runner: object | None = None,
 ) -> None:
     """Test every metric of the leading branches for the group values (kitchen, supplier, ...) of the case's own
     reports, and write the results as `pattern_test` steps. Replaces the previous results of this rule."""
@@ -248,50 +258,67 @@ async def refresh_pattern_tests(
         if s.kind == "report"
     ]
     start, until = window(case["occurred_at"], at)
-    rows: list[dict[str, Any]] = []
+    plan: list[PlannedTest] = []
+    metrics: dict[tuple[str, str], dict[str, Any]] = {}
     for branch in branches:
         for metric in branch_metrics(pack, branch):
+            metrics[(branch, metric["id"])] = metric
             field = metric["params"]["group_by"]
             groups = sorted({g for i in own if (g := group_value(i.fields.get(field))) is not None})
-            for group in groups[:MAX_GROUPS]:
-                test = await check_pattern(
-                    session,
-                    store,
-                    pack,
-                    case_id=case_id,
-                    domain=case["domain"],
-                    own=own,
-                    branch=branch,
-                    metric_id=metric["id"],
-                    group=group,
-                    window_start=start,
-                    until=until,
-                )
-                result = test.result
-                rows.append(
-                    {
-                        "case_id": case_id,
-                        "step": "pattern_test",
-                        "branch": branch,
-                        "content": {
-                            "metric": metric["id"],
-                            "kind": metric["kind"],
-                            "label": metric["label"],
-                            "group_by": result.group_by,
-                            "group_value": result.group_value,
-                            "value": result.value,
-                            "incidents": result.n,
-                            "other_cases": len(result.other_cases),
-                            "recurs": result.recurs,
-                            "window_days": WINDOW_DAYS,
-                            "store": test.store,
-                        },
-                        "status_label": cap_status(test.status, case["max_finding_status"]),
-                        "evidence_refs": [f"report:{i}" for i in result.incidents[:MAX_REFS]],
-                        "actor": PATTERN_ACTOR,
-                        "created_at": at,
-                    }
-                )
+            plan += [PlannedTest(branch, metric["id"], group) for group in groups[:MAX_GROUPS]]
+
+    async def execute(test: PlannedTest) -> PatternTest:
+        return await check_pattern(
+            session,
+            store,
+            pack,
+            case_id=case_id,
+            domain=case["domain"],
+            own=own,
+            branch=test.branch,
+            metric_id=test.metric_id,
+            group=test.group,
+            window_start=start,
+            until=until,
+        )
+
+    # The agent runs the tests as tool calls when it can; the plan is the same either way.
+    done = (
+        await runner.run_pattern_tests(plan, execute, case_id=case_id)
+        if isinstance(runner, PatternRunner)
+        else await run_directly(plan, execute)
+    )
+    rows: list[dict[str, Any]] = []
+    for planned in plan:
+        test = done.get(planned.key)
+        if test is None:
+            continue  # the agent left this test out
+        metric = metrics[(planned.branch, planned.metric_id)]
+        result = test.result
+        rows.append(
+            {
+                "case_id": case_id,
+                "step": "pattern_test",
+                "branch": planned.branch,
+                "content": {
+                    "metric": metric["id"],
+                    "kind": metric["kind"],
+                    "label": metric["label"],
+                    "group_by": result.group_by,
+                    "group_value": result.group_value,
+                    "value": result.value,
+                    "incidents": result.n,
+                    "other_cases": len(result.other_cases),
+                    "recurs": result.recurs,
+                    "window_days": WINDOW_DAYS,
+                    "store": test.store,
+                },
+                "status_label": cap_status(test.status, case["max_finding_status"]),
+                "evidence_refs": [f"report:{i}" for i in result.incidents[:MAX_REFS]],
+                "actor": PATTERN_ACTOR,
+                "created_at": at,
+            }
+        )
     await session.execute(
         delete(audit_trail).where(
             audit_trail.c.case_id == case_id,
@@ -319,7 +346,8 @@ async def refresh_pattern_tests(
             rule=PATTERN_ACTOR,
             reason=(
                 f"Tested {len(rows)} fixed pattern metric(s) on the leading cause branches against the "
-                f"{store.name} archive: {len(recurring)} recur in other cases. "
+                f"{' and '.join(sorted({r['content']['store'] for r in rows}))} archive: "
+                f"{len(recurring)} recur in other cases. "
                 "A pattern that recurs supports a hypothesis; it is not a verdict."
             ),
             refs=_unique([ref for r in rows for ref in r["evidence_refs"]]),

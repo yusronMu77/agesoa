@@ -37,6 +37,9 @@ from google.adk.sessions import BaseSessionService
 from google.genai import types
 from pydantic import BaseModel, Field, create_model
 
+from agesoa_case_audit.pattern_agent import Execute, PlannedTest, run_directly, run_with_agent
+from agesoa_case_audit.patterns import PatternTest
+
 log = logging.getLogger(__name__)
 APP_NAME = "agesoa-audit"
 USER_ID = "audit"  # the agent itself: a case has one session, and no person is ever its user
@@ -200,6 +203,18 @@ class AuditAgent:
             log.warning("audit model returned no usable hypothesis, lexical ranking used")
             return lexical
         return checked
+
+    async def run_pattern_tests(
+        self, plan: list[PlannedTest], execute: Execute, *, case_id: str
+    ) -> dict[tuple[str, str, str], PatternTest]:
+        """The planned pattern tests as tool calls of this agent (`pattern_agent`); when it fails or runs none, the
+        whole plan runs directly, so a model outage never leaves a case without its pattern tests."""
+        done: dict[tuple[str, str, str], PatternTest] = {}
+        try:
+            done = await run_with_agent(self._model, self.sessions, plan, execute, case_id=case_id)
+        except Exception as exc:
+            log.warning("pattern agent failed, plan run directly", extra={"detail": {"error": repr(exc)}})
+        return done or await run_directly(plan, execute)
 
     async def _ask(
         self, pack: DomainPack, sources: Sequence[tuple[str, str]], violated: set[str], case_id: str | None

@@ -26,6 +26,12 @@ variable "demo_mode" {
   description = "Fictional data and scripted fallbacks. The services refuse it when environment = prod."
 }
 
+variable "pattern_archive" {
+  type        = bool
+  default     = false
+  description = "case-audit reads the BigQuery event archive for its pattern tests (INCIDENT_STORE=bigquery; its own database is the fallback). Off until the archive query has been tried against the deployed archive."
+}
+
 variable "github_repository" {
   type        = string
   default     = "yusronMu77/agesoa-prototype"

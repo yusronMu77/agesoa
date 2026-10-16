@@ -20,7 +20,7 @@ envs/demo/         the demo environment (everything below)
 | Secrets | `agesoa-<service>-database-url` per service, readable only by that service; with `demo_mode`, `agesoa-demo-account-password` (shared password of the demo sign-in accounts, write-only, readable only by trust) |
 | Services | Cloud Run `agesoa-<service>` × 5 with their own service account (Cloud SQL client, trace, logs, metrics; Vertex AI for agent services; Firestore for read-model writers) |
 | Events | from `packages/contracts/events/catalog.json`: one topic per event type, publisher IAM per producer, one push subscription per consumer (`POST /events/{type}`, Google-signed OIDC token, audience `agesoa-demo-<service>`), dead letters after 5 attempts to `agesoa-dead-letter` |
-| Analytics | BigQuery `agesoa_events.events` (partitioned by publish time) fed by one BigQuery subscription per topic |
+| Analytics | BigQuery `agesoa_events.events` (partitioned by publish time) fed by one BigQuery subscription per topic; case-audit may read it for pattern tests (`dataViewer` on the dataset, `jobUser` on the project; `pattern_archive = true` makes it the default store, off until tried) |
 | Jobs | Cloud Scheduler: `/internal/outbox/sweep` per service every 5 minutes (OIDC, scheduler SA) |
 | Webhooks | Cloud Tasks queue `agesoa-webhooks`: each institution webhook attempt calls delivery back (`/internal/webhooks/<id>/attempts/<n>`, OIDC of the scheduler SA; delivery schedules the 30 s / 2 min / 10 min retries); delivery may create and read only `agesoa-webhook-*` secrets (one per subscription) |
 | Storage | private media bucket `<project>-agesoa-media` (written only by ingestion after EXIF removal; no browser access) |

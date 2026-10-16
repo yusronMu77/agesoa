@@ -8,6 +8,7 @@ dependencies = [
   "agesoa-contracts",
   "agesoa-packs",
   "google-adk~=2.11.0",
+  "google-cloud-bigquery~=3.40",
 ]
 
 [build-system]

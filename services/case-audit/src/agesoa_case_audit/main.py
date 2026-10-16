@@ -9,8 +9,9 @@ from google.adk.sessions import DatabaseSessionService
 from agesoa_case_audit import __version__
 from agesoa_case_audit.agent import AuditAgent
 from agesoa_case_audit.api import router
+from agesoa_case_audit.bigquery_store import BigQueryIncidentStore
 from agesoa_case_audit.events import build_handlers
-from agesoa_case_audit.patterns import DatabaseIncidentStore
+from agesoa_case_audit.patterns import DatabaseIncidentStore, FallbackIncidentStore, IncidentStore
 from agesoa_case_audit.settings import Settings, get_settings
 
 DESCRIPTION = "Cases, evidence deadlines, witness interviews, audit trail and findings; agent Audit."
@@ -19,7 +20,10 @@ DESCRIPTION = "Cases, evidence deadlines, witness interviews, audit trail and fi
 def build_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     packs = load_packs(settings.domain_packs_dir)  # fail fast on a broken pack, like the other services
-    store = DatabaseIncidentStore()
+    store: IncidentStore = DatabaseIncidentStore()
+    if settings.incident_store == "bigquery":
+        assert settings.bigquery_events_table  # checked by Settings
+        store = FallbackIncidentStore(BigQueryIncidentStore(settings.bigquery_events_table), store)
     ranker = AuditAgent(settings.audit_model)
     app = create_app(
         settings=settings,

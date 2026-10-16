@@ -94,8 +94,20 @@ a window of 1-365 days; everything else is refused, so an agent calls a tool and
 - A pattern **recurs** when a report of *another case* has the same group value. Then the `pattern_test` step is
   `supported` (capped by the case's maximum finding status) with `report:<id>` references to every incident
   counted; otherwise it is `alleged`: nothing was found, nothing is proven.
+- **Agen Audit runs the tests as tool calls** (`pattern_agent.py`): its only tool is `check_pattern(branch, metric_id,
+  group, window_days)`. The round plans the tests (every metric of the leading branches, for the group values of the
+  case's own reports); the tool runs a test only if it is in that plan, so a model cannot ask for another kitchen,
+  and `patterns.check_pattern` still checks branch, metric and window against the pack. The full result is kept by
+  code and written to the trail; the model only sees a short summary. With `AUDIT_MODEL=rules` a scripted stand-in
+  calls the tool for every planned test (same trail as a model that tests everything); with a Gemini model the model
+  may skip tests it finds irrelevant. If the agent fails or runs nothing, the plan runs directly. Its session is kept
+  per case like the ranking's (`agesoa-audit-patterns`).
 - Incidents are read through an `IncidentStore`: `DatabaseIncidentStore` (this service's own `case_sources`, no other
-  database) is the default. A case is tested when a source joins it or its reporter answers; a case that an
+  database) is the default. `INCIDENT_STORE=bigquery` + `BIGQUERY_EVENTS_TABLE=project.dataset.table` reads the
+  BigQuery event archive instead (`bigquery_store.py`: one fixed, parameterised statement over the partitions of the
+  window, jobs capped at 200 MB billed, the case of each report looked up in `case_sources`), with the database as the
+  fallback when the archive cannot answer; each `pattern_test` step says which store answered (`store`). The
+  statement's JSON paths follow the event as published; it has not been run against the deployed archive yet. A case is tested when a source joins it or its reporter answers; a case that an
   *older* case now recurs with is not retested until its next round.
 - The decision log gets one `audit.patterns_tested` entry per round (counts only, no group value).
 

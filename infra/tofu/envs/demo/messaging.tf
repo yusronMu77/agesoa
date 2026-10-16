@@ -147,3 +147,12 @@ resource "google_pubsub_subscription" "bigquery" {
 
   depends_on = [google_bigquery_dataset_iam_member.pubsub_writer]
 }
+
+# case-audit reads the archive for pattern tests ("does the same kitchen show up in other cases"): the events dataset
+# (read only) and query jobs in this project. The service caps every job (maximum_bytes_billed) and falls back to its
+# own database when the archive cannot answer.
+resource "google_bigquery_dataset_iam_member" "case_audit_reader" {
+  dataset_id = google_bigquery_dataset.events.dataset_id
+  role       = "roles/bigquery.dataViewer"
+  member     = module.service["case-audit"].service_account.member
+}

@@ -476,7 +476,7 @@ def test_the_adk_session_of_a_case_is_kept_in_the_case_audit_database(client):
 
     async def stored():
         async with client.app.state.db.engine.connect() as conn:
-            sessions = (await conn.execute(text("select id, app_name from sessions"))).all()
+            sessions = (await conn.execute(text("select id, app_name from sessions order by app_name"))).all()
             events = (
                 await conn.execute(
                     text("select count(*) from events where session_id = :id"), {"id": case_id}
@@ -485,7 +485,9 @@ def test_the_adk_session_of_a_case_is_kept_in_the_case_audit_database(client):
         return sessions, events
 
     sessions, events = client.portal.call(stored)
+    # one session per case for each of the agent's two jobs (ranking, pattern tests), not one per round
     assert [(s.id, s.app_name) for s in sessions] == [
-        (case_id, "agesoa-audit")
-    ]  # one session per case, not per round
+        (case_id, "agesoa-audit"),
+        (case_id, "agesoa-audit-patterns"),
+    ]
     assert events >= 4  # two rounds: the case put to the agent and what it answered, each time
