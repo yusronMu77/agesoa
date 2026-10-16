@@ -53,6 +53,13 @@ resource "google_cloud_run_v2_service" "portal" {
           {
             APP_ENV   = var.environment
             DEMO_MODE = tostring(var.demo_mode)
+            # Sign-in (browser): Identity Platform through the portal's Firebase web app. The web API key is public
+            # by design (it identifies the project; access is governed by Identity Platform and the rules).
+            FIREBASE_PROJECT_ID  = var.project_id
+            FIREBASE_API_KEY     = data.google_firebase_web_app_config.portal.api_key
+            FIREBASE_AUTH_DOMAIN = data.google_firebase_web_app_config.portal.auth_domain
+            # Public read models, read server-side without credentials (Firestore rules: public_* readable).
+            READ_MODEL_URL = "https://firestore.googleapis.com/v1/projects/${var.project_id}/databases/(default)/documents"
           },
           { for k, m in module.service : "SERVICE_URL_${upper(replace(k, "-", "_"))}" => m.uri },
         )
@@ -83,4 +90,9 @@ check "portal_url_is_deterministic" {
     condition     = contains(google_cloud_run_v2_service.portal.urls, "https://${local.portal_host}")
     error_message = "Cloud Run URL format changed; update local.portal_host (used for CORS and auth domains)."
   }
+}
+
+data "google_firebase_web_app_config" "portal" {
+  provider   = google-beta
+  web_app_id = google_firebase_web_app.portal.app_id
 }
