@@ -15,6 +15,12 @@ Contracts shared by the services and apps. The JSON files here are the source of
 Service HTTP APIs are described by each service's `services/<svc>/openapi.json` (exported from code, see the
 service README).
 
+## Domain pack rules and hypotheses
+
+A rule in a domain pack may name the cause branch a violation is evidence for (`supports_branch`, must exist in
+`cause_framework`). The core ranking of hypotheses adds a small bonus to that branch; the rule itself stays a
+parameterised kind implemented in `libs/pack-core`.
+
 ## Rules
 
 - A breaking change to an event creates a new version file (`.v2.schema.json`) and a catalog change; consumers

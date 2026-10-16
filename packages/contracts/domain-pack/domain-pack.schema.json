@@ -46,6 +46,7 @@
           "kind": { "enum": ["max_interval"], "description": "Rule kinds are implemented (and tested) in the core engine; packs only set parameters." },
           "label": { "$ref": "#/$defs/label" },
           "standard": { "$ref": "#/$defs/label", "description": "The reference standard the rule comes from." },
+          "supports_branch": { "$ref": "#/$defs/slug", "description": "Optional cause_framework branch a violation of this rule is evidence for (hypothesis ranking)." },
           "params": { "type": "object" }
         },
         "additionalProperties": false,

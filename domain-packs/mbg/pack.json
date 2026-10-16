@@ -57,6 +57,7 @@
   "rules": [
     {
       "id": "consume_within_4h", "kind": "max_interval",
+      "supports_branch": "process",
       "label": { "en": "Eaten within 4 hours of cooking", "id": "Dikonsumsi paling lama 4 jam setelah dimasak" },
       "standard": { "en": "MBG program guidance: consume at most 4 hours after cooking; every tray carries a time label", "id": "Pedoman MBG: konsumsi paling lama 4 jam setelah dimasak; label waktu di tiap ompreng" },
       "params": { "from_field": "cooked_at", "to_field": "eaten_at", "max_minutes": 240 }

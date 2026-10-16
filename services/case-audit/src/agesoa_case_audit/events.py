@@ -5,7 +5,6 @@ decision-log entries are committed together through the outbox. The app refuses 
 catalog disagree.
 """
 
-import hashlib
 import logging
 from collections.abc import Callable
 from datetime import datetime
@@ -21,6 +20,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agesoa_case_audit import SERVICE
+from agesoa_case_audit.audit import LinkedSource, refresh_hypotheses
 from agesoa_case_audit.cases import (
     MATCH_WINDOW,
     OPEN_STATUSES,
@@ -33,6 +33,7 @@ from agesoa_case_audit.cases import (
     source_from_report,
     source_from_signal,
 )
+from agesoa_case_audit.decisions import decision_event
 from agesoa_case_audit.tables import case_sources, cases
 
 log = logging.getLogger(__name__)
@@ -155,6 +156,15 @@ async def attach_source(
     await add_event(
         session, _decision(case_id, source, "case.deadline_set", "evidence_deadline", deadline_reason, [], at)
     )
+    await refresh_hypotheses(
+        session,
+        case_id=case_id,
+        pack=pack,
+        sources=[LinkedSource(kind, source_id, snapshot["data"]) for kind, source_id, snapshot in linked],
+        max_status=evidence.max_finding_status,
+        at=at,
+        synthetic=synthetic,
+    )
 
 
 def _deadline_reason(pack: DomainPack, evidence: Any) -> str:
@@ -173,24 +183,15 @@ def _deadline_reason(pack: DomainPack, evidence: Any) -> str:
 def _decision(
     case_id: str, source: Source, action: str, rule: str, reason: str, refs: list[str], at: datetime
 ) -> dict[str, Any]:
-    decision_id = (
-        "CD-" + hashlib.sha256(f"{case_id}|{source.kind}:{source.id}|{action}".encode()).hexdigest()[:24]
-    )
-    return new_event(
-        "keputusan.dicatat",
-        source=SERVICE,
-        subject=decision_id,
-        data={
-            "decision_id": decision_id,
-            "actor": {"kind": "rule", "name": rule, "service": SERVICE},
-            "action": action,
-            "subject": {"kind": "case", "id": case_id},
-            "reason": reason,
-            "evidence_refs": refs,
-            "status_label": None,
-            "occurred_at": isoformat(at),
-            "synthetic": source.synthetic,
-        },
+    return decision_event(
+        case_id,
+        f"{source.kind}:{source.id}",
+        action=action,
+        rule=rule,
+        reason=reason,
+        refs=refs,
+        at=at,
+        synthetic=source.synthetic,
     )
 
 

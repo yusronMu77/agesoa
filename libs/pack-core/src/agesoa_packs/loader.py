@@ -129,6 +129,8 @@ def _cross_reference_errors(doc: dict[str, Any]) -> list[str]:
             errors.append(f"{path}: field {field_id!r} must be of type {' or '.join(types)}, not {kind!r}")
 
     for i, rule in enumerate(doc["rules"]):
+        if rule.get("supports_branch") is not None and rule["supports_branch"] not in branch_ids:
+            errors.append(f"rules/{i}/supports_branch: unknown cause branch {rule['supports_branch']!r}")
         if rule["kind"] == "max_interval":
             need(f"rules/{i}/params/from_field", rule["params"]["from_field"], ("datetime",))
             need(f"rules/{i}/params/to_field", rule["params"]["to_field"], ("datetime",))

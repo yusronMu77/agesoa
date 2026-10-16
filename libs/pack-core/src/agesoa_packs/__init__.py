@@ -8,10 +8,12 @@ from agesoa_packs.engine import (
     evidence_status,
     parse_datetime,
 )
+from agesoa_packs.hypotheses import BranchRank, field_text, rank_branches
 from agesoa_packs.loader import DomainPack, PackError, load_pack, load_packs, parse_pack
 from agesoa_packs.scenarios import Scenario, load_scenarios, parse_scenario
 
 __all__ = [
+    "BranchRank",
     "DomainPack",
     "EvidenceStatus",
     "PackError",
@@ -20,10 +22,12 @@ __all__ = [
     "evaluate_rules",
     "evidence_anchor",
     "evidence_status",
+    "field_text",
     "load_pack",
     "load_packs",
     "load_scenarios",
     "parse_datetime",
     "parse_pack",
     "parse_scenario",
+    "rank_branches",
 ]

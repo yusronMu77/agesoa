@@ -30,6 +30,21 @@ Platform endpoints (from `libs/platform-py`): `GET /healthz`, `GET /readyz` (own
 - Every change emits `kasus.diperbarui` and decision-log entries (`case.opened` / `case.source_added`,
   `case.deadline_set`) through the outbox; the log shows the rule name, never a person.
 
+## Hypotheses
+
+Whenever a source joins a case, `audit.py` ranks the domain pack's `cause_framework` branches against the case's
+reports and signals (`agesoa_packs.rank_branches`, deterministic: same evidence, same order) and replaces the
+case's `hypothesis` rows in `audit_trail` (top 3: rank, score, supporting and against sources, violated rules).
+
+- Each row carries an evidence status and evidence references (`report:<id>`, `signal:<id>`, stored evidence ids,
+  `rule:<id>`). The status follows the kind of evidence, never the words of a report: symptoms alone are
+  `alleged`; a stored photo/voice note, a news signal or a second source reaches `supported`; `proven` needs a lab
+  result, which no source kind carries yet. It is always capped by the case's maximum finding status.
+- Each ranking adds one `audit.hypotheses_ranked` entry to the decision log (rule `hypothesis_ranking`).
+- This is the lexical fallback, not an understanding of the case: on the six synthetic scenarios it puts the planted
+  cause in the top 3 for 3 of 6 (`uv run eval`). The model-written hypotheses (Gemini via ADK) have to beat it.
+- A hypothesis is not a finding: findings and `temuan.siap_validasi` come with the validation flow (#45).
+
 ## Run locally
 
 ```powershell

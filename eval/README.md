@@ -35,6 +35,15 @@ The harness evaluates acceptance test **TC-017**:
   * `mrr`: Mean Reciprocal Rank ($1/\text{rank}$) across all scenarios.
   * `deterministic`: True (the evaluation produces reproducible results).
 
+## What is measured
+
+The harness calls `agesoa_packs.rank_branches`, the same deterministic ranking the case-audit service writes to the
+audit trail. It reads report narratives and field values, signal text and witness *answers* (a question is the
+agent's own wording, so it is not evidence) and never the answer key. It is a lexical prior, a baseline for the
+model-written hypotheses, not the target: per 2026-10-16 it puts the planted cause in the top 3 for 3 of 6
+scenarios (top 1: 1 of 6), so `passed_tc017` is `false`. Six scenarios are too few to tune on; do not add
+scenario-specific words to the pack to raise this number.
+
 ## Output Format
 
 Results are saved to `eval/results/results.json`. The output JSON contains aggregate metrics and per-scenario breakdowns:
