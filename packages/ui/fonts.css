@@ -1,0 +1,11 @@
+/* Fonts of the design (agesoa-uiux tokens font.family.*): Saira for headings, IBM Plex Sans for text, IBM Plex Mono
+ * for hashes and IDs. Latin subset only, self-hosted (no request to a font CDN), weights used by the design. */
+@import "@fontsource/saira/latin-600.css";
+@import "@fontsource/saira/latin-700.css";
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource/ibm-plex-sans/latin-700.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+@import "@fontsource/ibm-plex-mono/latin-700.css";

@@ -5,7 +5,7 @@
 export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <html lang="en">
-      <body style={{ fontFamily: "system-ui, sans-serif", margin: "2rem", color: "#0F172A" }}>
+      <body style={{ fontFamily: "system-ui, sans-serif", margin: "2rem", color: "#2A1A18" }}>
         <main>
           <h1>AGESOA portal is unavailable</h1>
           <p>The portal could not start this page. Please try again later.</p>

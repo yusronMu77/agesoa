@@ -1,7 +1,7 @@
 # packages/ui (`@agesoa/ui`)
 
-Shared UI foundation for `apps/portal` and `apps/witness`. At CP0 it holds the design tokens as CSS custom
-properties; shared components follow when the first designs are final.
+Shared UI foundation for `apps/portal` and `apps/witness`: the design tokens as CSS custom properties, the
+self-hosted fonts of the design and the shadcn theme. Shared components follow with the screens.
 
 ## Contents
 
@@ -9,12 +9,23 @@ properties; shared components follow when the first designs are final.
 |---|---|
 | `tokens.css` | **Generated.** Design tokens as `--ag-*` CSS custom properties on `:root`. Do not edit by hand. |
 | `scripts/build-tokens.ts` | Generator: reads the token source (W3C Design Tokens format) and writes `tokens.css`. |
+| `fonts.css` | Saira (headings), IBM Plex Sans (text) and IBM Plex Mono (hashes, IDs), Latin subset, weights used by the design. Self-hosted through `@fontsource`. |
+| `penpot-theme.css` | **Copied** from `agesoa-uiux/design-system/penpot-theme.css` (generated there from `tokens.json`): the shadcn variables and radius/font pins. |
+| `theme.css` | shadcn theme of the apps: `penpot-theme.css` applied to a shadcn `:root`, plus the `@theme inline` colour mappings for Tailwind utilities. |
+| `scripts/check-theme.ts` | Fails when `theme.css` differs from `penpot-theme.css` or the token version differs from `tokens.css`. |
 
 ## Use
 
 ```ts
-// in an app's root layout (the app depends on "@agesoa/ui": "workspace:*")
+// in an app's entry (the app depends on "@agesoa/ui": "workspace:*")
+import "@agesoa/ui/fonts.css";
 import "@agesoa/ui/tokens.css";
+```
+
+```css
+/* in the app's stylesheet (Tailwind v4 + shadcn; components.json points at this file) */
+@import "tailwindcss";
+@import "@agesoa/ui/theme.css";
 ```
 
 ```css
@@ -35,8 +46,11 @@ Naming:
 - Evidence status and simulation colours also have English aliases:
   `--ag-color-evidence-alleged`, `--ag-color-evidence-supported`, `--ag-color-evidence-proven`,
   `--ag-color-simulation-band`, `--ag-color-simulation-on-band`.
+- Tailwind's preflight is on, in `@layer base`. The apps' own rules are unlayered and win, but a property the app
+  does not set falls back to the preflight reset: set `font-weight`, `text-decoration` and `list-style` of an
+  element explicitly (the preflight made headings regular and removed link underlines before the apps did).
 - Dark mode: a token may carry a dark value in the `agesoa.dark` extension; the generator emits those under
-  `@media (prefers-color-scheme: dark)`. The current token set (0.2.0, draft) has no dark values, so
+  `@media (prefers-color-scheme: dark)`. The current token set (0.3.0, final) has no dark values, so
   `tokens.css` is light only.
 
 ## Regenerate
@@ -52,3 +66,25 @@ bun packages/ui/scripts/build-tokens.ts --check     # exit 1 if tokens.css is ou
 
 The output is deterministic (no timestamps); the header records the source file and its token version. Commit
 `tokens.css` together with the design-repository commit it came from in the message.
+
+## shadcn theme
+
+`components.json` of each app points at its stylesheet (`apps/portal/src/app/globals.css`,
+`apps/witness/src/styles.css`); components are added with `bunx --bun shadcn@4.21.0 add <name>` from the app folder.
+The theme comes from the design repository, not from a shadcn preset:
+
+```sh
+# in agesoa-uiux: tokens.json -> design-system/penpot-theme.css
+bun design-system/scripts/shadcn-theme.ts
+# in this package: copy it, apply it to theme.css (uiux-design skill checker: replaces each variable, exits 1 if one did not land)
+cp ../../../agesoa-uiux/design-system/penpot-theme.css penpot-theme.css
+bun run <skills>/uiux-design/bin/shadcn-theme.mjs theme.css penpot-theme.css
+bun run ui:theme:check                              # from the repository root
+```
+
+Mapping (design token -> shadcn variable): `bg.canvas` -> `--background`, `bg.surface` -> `--card`/`--popover`,
+`text.primary` -> `--foreground`, `action.primary` -> `--primary`, `action.secondary` -> `--secondary`,
+`bg.sunken` -> `--muted`/`--accent`, `text.secondary` -> `--muted-foreground`, `status.danger` -> `--destructive`,
+`border.default` -> `--border`/`--input`, `focus.ring` -> `--ring`. Controls use `radius.md` (8 px, Button in the
+Penpot file) and surfaces `radius.lg` (16 px, Card temuan). Commit messages that change these files name the
+design commit and token version (`agesoa-uiux@<sha>`, tokens 0.3.0).

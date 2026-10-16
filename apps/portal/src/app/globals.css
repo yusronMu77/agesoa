@@ -1,3 +1,6 @@
+@import "tailwindcss";
+@import "@agesoa/ui/theme.css";
+
 /* Portal styles. Colours, type and spacing come from @agesoa/ui/tokens.css (--ag-*). */
 
 :root {
@@ -35,6 +38,8 @@ body.has-sim-band {
 h1,
 h2,
 h3 {
+  font-family: var(--ag-font-family-display);
+  font-weight: var(--ag-font-weight-bold);
   line-height: var(--ag-font-line-height-heading);
   margin: 0 0 var(--ag-space-3);
 }
@@ -49,6 +54,7 @@ h2 {
 
 h3 {
   font-size: var(--ag-font-size-lg);
+  font-weight: 600;
 }
 
 p {
@@ -57,6 +63,7 @@ p {
 
 a {
   color: var(--ag-color-text-link);
+  text-decoration: underline;
   text-underline-offset: 3px;
 }
 
@@ -468,11 +475,11 @@ pre.json {
   stroke: var(--ag-color-neutral-border-strong);
   stroke-width: 1;
 }
-.district--0 { fill: var(--ag-color-neutral-surface); }
-.district--1 { fill: var(--ag-color-role-publik); }
-.district--2 { fill: #5eead4; }
-.district--3 { fill: #14b8a6; }
-.district--4 { fill: var(--ag-color-role-publik-stroke); }
+.district--0 { fill: var(--ag-color-heat-0); }
+.district--1 { fill: var(--ag-color-heat-1); }
+.district--2 { fill: var(--ag-color-heat-2); }
+.district--3 { fill: var(--ag-color-heat-3); }
+.district--4 { fill: var(--ag-color-heat-4); }
 .district-count {
   font-family: var(--ag-font-family-sans);
   font-size: var(--ag-font-size-md);
@@ -580,22 +587,22 @@ pre.json {
   width: 100%;
   margin: 0;
   font-weight: var(--ag-font-weight-bold);
-  color: #7c2d12;
+  color: var(--ag-color-simulation-band);
 }
 
 /* TXT-SIM-001 band on simulation screens (organizations): not dismissible. */
 .sim-org-band {
   padding: var(--ag-space-2) var(--ag-space-3);
   margin-bottom: var(--ag-space-4);
-  background: #fff7ed;
-  border: 1px solid #fdba74;
-  border-radius: var(--ag-radius-md, 8px);
+  background: var(--ag-color-action-accent-subtle);
+  border: 1px solid var(--ag-color-brand-accent);
+  border-radius: var(--ag-radius-md);
 }
 .txt-record {
   overflow-x: auto;
   padding: var(--ag-space-2) var(--ag-space-3);
-  background: var(--ag-color-surface-muted, #f1f5f9);
-  border-radius: var(--ag-radius-md, 8px);
+  background: var(--ag-color-bg-sunken);
+  border-radius: var(--ag-radius-md);
   user-select: all;
 }
 
@@ -603,7 +610,7 @@ pre.json {
   display: flex;
   gap: var(--ag-space-2);
   margin-bottom: var(--ag-space-3);
-  border-bottom: 1px solid var(--ag-color-border, #cbd5e1);
+  border-bottom: 1px solid var(--ag-color-border-default);
 }
 .tab {
   padding: var(--ag-space-2) var(--ag-space-3);
@@ -613,8 +620,8 @@ pre.json {
   font-weight: var(--ag-font-weight-bold);
 }
 .button--danger {
-  background: #b91c1c;
-  border-color: #b91c1c;
+  background: var(--ag-color-action-danger);
+  border-color: var(--ag-color-action-danger);
 }
 
 /* SCR-062: one-time secret / API key and the institution's own statements on the case page (SCR-043). */

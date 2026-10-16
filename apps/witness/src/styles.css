@@ -1,3 +1,6 @@
+@import "tailwindcss";
+@import "@agesoa/ui/theme.css";
+
 /* Witness: mobile-first (reference viewport 412x915), one hand, primary action in the bottom third.
    Colours, type and spacing come from @agesoa/ui tokens only. */
 
@@ -56,6 +59,13 @@ body {
   padding: var(--ag-space-4) var(--ag-space-4) 0;
 }
 
+h1,
+h2,
+h3 {
+  font-family: var(--ag-font-family-display);
+  font-weight: var(--ag-font-weight-bold);
+}
+
 h1 {
   font-size: var(--ag-font-size-2xl);
   line-height: var(--ag-font-line-height-heading);
@@ -64,6 +74,7 @@ h1 {
 
 h2 {
   font-size: var(--ag-font-size-lg);
+  font-weight: 600;
   line-height: var(--ag-font-line-height-heading);
   margin: 0 0 var(--ag-space-2);
 }
@@ -432,7 +443,7 @@ dialog.sheet {
 }
 
 dialog.sheet::backdrop {
-  background: rgb(15 23 42 / 0.5);
+  background: color-mix(in srgb, var(--ag-color-bg-ink) 50%, transparent);
 }
 
 @media (prefers-reduced-motion: no-preference) {

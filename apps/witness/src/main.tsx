@@ -1,3 +1,4 @@
+import "@agesoa/ui/fonts.css";
 import "@agesoa/ui/tokens.css";
 import "./styles.css";
 import React from "react";
