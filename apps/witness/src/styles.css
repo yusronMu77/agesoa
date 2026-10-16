@@ -185,7 +185,19 @@ textarea:focus-visible {
 
 .field textarea {
   width: 100%;
-  box-sizing: border-box;
+}
+
+/* A question stacks its text, answer field and button (the plain-list rows are side by side). */
+.plain .question {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: var(--ag-space-3);
+}
+
+.question-text {
+  margin: 0;
+  font-weight: var(--ag-font-weight-medium);
 }
 
 .field [aria-invalid="true"] {

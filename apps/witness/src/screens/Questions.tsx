@@ -63,7 +63,7 @@ export function Questions({
           const id = question.question_id;
           const error = errors[id];
           return (
-            <li key={id} className="card" data-testid="audit-question">
+            <li key={id} className="card question" data-testid="audit-question">
               <p className="question-text">{question.text.id || question.text.en}</p>
               <div className="field">
                 <label className="field-label" htmlFor={`answer-${id}`}>
