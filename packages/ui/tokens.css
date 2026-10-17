@@ -1,28 +1,28 @@
 /*
  * GENERATED FILE - do not edit by hand.
- * Source: agesoa-uiux/design-system/tokens.json (version 0.3.0, status final, updated 2026-10-16)
+ * Source: agesoa-uiux/design-system/tokens.json (version 0.4.0, status draft, updated 2026-10-16)
  * Generator: packages/ui/scripts/build-tokens.ts (bun run --cwd packages/ui build:tokens)
  */
 
 :root {
-  --ag-color-brand-primary: #6D151A; /* Primary actions, links, focus ring (burgundy). */
+  --ag-color-brand-primary: #6D151A; /* Logo maroon. Primary actions, links, focus ring, app header (contrast 12:1 on cream). */
   --ag-color-brand-primary-hover: #561014; /* Hover/pressed state of primary actions. */
-  --ag-color-brand-primary-subtle: #F7E6E1;
+  --ag-color-brand-primary-subtle: #F7E6E1; /* Tint of the primary: selected rows, secondary buttons. */
   --ag-color-brand-on-primary: #FFFBF1;
-  --ag-color-brand-accent: #B44819;
+  --ag-color-brand-accent: #B44819; /* Logo burnt orange. Highlights, orbit motif, key numbers; 5.4:1 on white, so usable as text. Never the primary action. */
   --ag-color-brand-accent-subtle: #FBE9DD;
-  --ag-color-neutral-text: #2A1A18; /* Body text on light surfaces. */
-  --ag-color-neutral-text-muted: #6B5651;
+  --ag-color-neutral-text: #2A1A18; /* Body text (warm near-black). */
+  --ag-color-neutral-text-muted: #6B5651; /* 6.6:1 on cream. */
   --ag-color-neutral-border: #E4D5C8;
   --ag-color-neutral-border-strong: #6B5651;
   --ag-color-neutral-surface: #FFFFFF;
   --ag-color-neutral-surface-alt: #F7EFE3;
-  --ag-color-neutral-on-ink-muted: #C9AFA5;
-  --ag-color-neutral-canvas: #FEFAF0;
-  --ag-color-neutral-ink: #2B0A0D;
-  --ag-color-neutral-ink-border: #5A2B30;
-  --ag-color-neutral-ink-raised: #3A1519;
+  --ag-color-neutral-canvas: #FEFAF0; /* Page background, the logo cream. */
+  --ag-color-neutral-ink: #2B0A0D; /* Darkest maroon: dark header/footer and the hash-log terminal surface. */
   --ag-color-neutral-on-ink: #F3E3D8;
+  --ag-color-neutral-on-ink-muted: #C9AFA5; /* Secondary text on the ink surface (9:1). */
+  --ag-color-neutral-ink-raised: #3A1519; /* Raised row/card on the ink surface. */
+  --ag-color-neutral-ink-border: #5A2B30; /* Hairlines on the ink surface. */
   --ag-color-role-warga: #DBEAFE; /* Citizen / reporter (Witness). */
   --ag-color-role-warga-stroke: #1D4ED8;
   --ag-color-role-agen-ai: #EDE9FE; /* AI agent output (marked as AI result). */
@@ -51,37 +51,15 @@
   --ag-color-feedback-warning-subtle: #FEF3C7;
   --ag-color-feedback-success-subtle: #DCFCE7;
   --ag-color-feedback-info-subtle: #DBEAFE;
-  --ag-color-simulasi-band: #7C2D12; /* Background of the 'SIMULASI – organisasi fiktif' band. */
-  --ag-color-simulasi-on-band: #FFFFFF;
   --ag-color-heat-tint-1: #F2D7C2;
   --ag-color-heat-tint-2: #E2A672;
+  --ag-color-simulasi-band: #7C2D12; /* Background of the 'SIMULASI – organisasi fiktif' band. */
+  --ag-color-simulasi-on-band: #FFFFFF;
   --ag-color-bg-canvas: var(--ag-color-neutral-canvas);
-  --ag-color-bg-surface: var(--ag-color-neutral-surface);
   --ag-color-bg-sunken: var(--ag-color-neutral-surface-alt);
   --ag-color-bg-ink: var(--ag-color-neutral-ink);
   --ag-color-bg-ink-raised: var(--ag-color-neutral-ink-raised);
-  --ag-color-text-primary: var(--ag-color-neutral-text);
-  --ag-color-text-secondary: var(--ag-color-neutral-text-muted);
-  --ag-color-text-on-primary: var(--ag-color-brand-on-primary);
-  --ag-color-text-danger: var(--ag-color-feedback-danger);
-  --ag-color-text-link: var(--ag-color-brand-primary);
-  --ag-color-text-on-ink: var(--ag-color-neutral-on-ink);
-  --ag-color-text-accent: var(--ag-color-brand-accent);
-  --ag-color-text-on-ink-muted: var(--ag-color-neutral-on-ink-muted);
-  --ag-color-border-default: var(--ag-color-neutral-border);
-  --ag-color-border-strong: var(--ag-color-neutral-border-strong);
-  --ag-color-border-on-ink: var(--ag-color-neutral-ink-border);
-  --ag-color-action-primary: var(--ag-color-brand-primary);
-  --ag-color-action-primary-hover: var(--ag-color-brand-primary-hover);
-  --ag-color-action-secondary: var(--ag-color-brand-primary-subtle);
-  --ag-color-action-disabled: var(--ag-color-neutral-surface-alt);
-  --ag-color-action-accent-subtle: var(--ag-color-brand-accent-subtle);
-  --ag-color-action-danger: var(--ag-color-feedback-danger);
-  --ag-color-focus-ring: var(--ag-color-brand-primary);
-  --ag-color-ai-bg: var(--ag-color-role-agen-ai);
-  --ag-color-ai-fg: var(--ag-color-role-agen-ai-stroke);
-  --ag-color-warga-bg: var(--ag-color-role-warga);
-  --ag-color-warga-fg: var(--ag-color-role-warga-stroke);
+  --ag-color-bg-surface: var(--ag-color-neutral-surface);
   --ag-color-status-danger: var(--ag-color-feedback-danger);
   --ag-color-status-danger-bg: var(--ag-color-feedback-danger-subtle);
   --ag-color-status-warning: var(--ag-color-feedback-warning);
@@ -95,9 +73,31 @@
   --ag-color-heat-2: var(--ag-color-heat-tint-2);
   --ag-color-heat-3: var(--ag-color-brand-accent);
   --ag-color-heat-4: var(--ag-color-brand-primary);
+  --ag-color-text-primary: var(--ag-color-neutral-text);
+  --ag-color-text-secondary: var(--ag-color-neutral-text-muted);
+  --ag-color-text-on-primary: var(--ag-color-brand-on-primary);
+  --ag-color-text-on-ink: var(--ag-color-neutral-on-ink);
+  --ag-color-text-on-ink-muted: var(--ag-color-neutral-on-ink-muted);
+  --ag-color-text-accent: var(--ag-color-brand-accent);
+  --ag-color-text-danger: var(--ag-color-feedback-danger);
+  --ag-color-text-link: var(--ag-color-brand-primary);
+  --ag-color-border-default: var(--ag-color-neutral-border);
+  --ag-color-border-strong: var(--ag-color-neutral-border-strong);
+  --ag-color-border-on-ink: var(--ag-color-neutral-ink-border);
+  --ag-color-action-primary: var(--ag-color-brand-primary);
+  --ag-color-action-primary-hover: var(--ag-color-brand-primary-hover);
+  --ag-color-action-secondary: var(--ag-color-brand-primary-subtle);
+  --ag-color-action-accent-subtle: var(--ag-color-brand-accent-subtle);
+  --ag-color-action-danger: var(--ag-color-feedback-danger);
+  --ag-color-action-disabled: var(--ag-color-neutral-surface-alt);
+  --ag-color-focus-ring: var(--ag-color-brand-primary);
+  --ag-color-ai-bg: var(--ag-color-role-agen-ai);
+  --ag-color-ai-fg: var(--ag-color-role-agen-ai-stroke);
+  --ag-color-warga-bg: var(--ag-color-role-warga);
+  --ag-color-warga-fg: var(--ag-color-role-warga-stroke);
+  --ag-font-family-display: "Saira", "Segoe UI", system-ui, sans-serif; /* Headings, numbers, wordmark-adjacent text. Squared retro-futuristic shapes echo the logo wordmark. */
   --ag-font-family-sans: "IBM Plex Sans", "Segoe UI", "Roboto", system-ui, sans-serif; /* Body and UI text. */
   --ag-font-family-mono: "IBM Plex Mono", "Consolas", ui-monospace, monospace; /* Hashes and IDs in the decision log. */
-  --ag-font-family-display: "Saira", "Segoe UI", system-ui, sans-serif; /* Headings and display. */
   --ag-font-weight-regular: 400;
   --ag-font-weight-medium: 500;
   --ag-font-weight-bold: 700;

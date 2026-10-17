@@ -50,7 +50,7 @@ Naming:
   does not set falls back to the preflight reset: set `font-weight`, `text-decoration` and `list-style` of an
   element explicitly (the preflight made headings regular and removed link underlines before the apps did).
 - Dark mode: a token may carry a dark value in the `agesoa.dark` extension; the generator emits those under
-  `@media (prefers-color-scheme: dark)`. The current token set (0.3.0, final) has no dark values, so
+  `@media (prefers-color-scheme: dark)`. The current token set (0.4.0) has no dark values, so
   `tokens.css` is light only.
 
 ## Regenerate
@@ -87,4 +87,4 @@ Mapping (design token -> shadcn variable): `bg.canvas` -> `--background`, `bg.su
 `bg.sunken` -> `--muted`/`--accent`, `text.secondary` -> `--muted-foreground`, `status.danger` -> `--destructive`,
 `border.default` -> `--border`/`--input`, `focus.ring` -> `--ring`. Controls use `radius.md` (8 px, Button in the
 Penpot file) and surfaces `radius.lg` (16 px, Card temuan). Commit messages that change these files name the
-design commit and token version (`agesoa-uiux@<sha>`, tokens 0.3.0).
+design commit and token version (`agesoa-uiux@<sha>`, tokens 0.4.0).
