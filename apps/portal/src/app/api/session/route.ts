@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { loadConfig } from "@/lib/config";
-import { SESSION_COOKIE, tokenExpiry } from "@/lib/session";
+import { loadConfig } from "@/configs/env.config";
+import { SESSION_COOKIE, tokenExpiry } from "@/features/auth/server/session";
 
 /** Stores the ID token from the sign-in page in an httpOnly cookie (expires with the token). */
 export async function POST(request: Request) {

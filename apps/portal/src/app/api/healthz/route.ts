@@ -1,4 +1,4 @@
-import { ConfigError, loadConfig } from "@/lib/config";
+import { ConfigError, loadConfig } from "@/configs/env.config";
 
 export const dynamic = "force-dynamic";
 
