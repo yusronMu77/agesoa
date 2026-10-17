@@ -1,9 +1,10 @@
 import type { HTMLAttributes } from "react";
-import { cn } from "@/lib/utils";
+import { Badge as UiBadge } from "@agesoa/ui/components/badge";
 
 export type BadgeTone = "ok" | "warn" | "error" | "neutral";
 
 const ICON: Record<BadgeTone, string> = { ok: "●", warn: "▲", error: "✕", neutral: "○" };
+const VARIANT = { ok: "success", warn: "warning", error: "destructive", neutral: "neutral" } as const;
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   tone: BadgeTone;
@@ -13,11 +14,11 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 /** Status pill; the text carries the meaning, colour only reinforces it. */
-export function Badge({ tone, testId, icon = true, className, children, ...rest }: BadgeProps) {
+export function Badge({ tone, testId, icon = true, children, ...rest }: BadgeProps) {
   return (
-    <span className={cn("badge", `badge--${tone}`, className)} data-testid={testId} {...rest}>
+    <UiBadge variant={VARIANT[tone]} data-testid={testId} {...rest}>
       {icon ? <span aria-hidden="true">{ICON[tone]}</span> : null}
       {children}
-    </span>
+    </UiBadge>
   );
 }

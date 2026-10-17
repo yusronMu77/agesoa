@@ -1,3 +1,4 @@
+import { Badge } from "@agesoa/ui/components/badge";
 import type { PublicFinding } from "@/services/read-model/read-model.model";
 
 /** Where a finding stands with the human validators. */
@@ -8,10 +9,10 @@ export function validationStatusText(validation: PublicFinding["validation"]): s
 
 /** The same status as a pill: green once validated, amber when returned, neutral while waiting. */
 export function ValidationStatusBadge({ validation }: { validation: PublicFinding["validation"] }) {
-  const tone = !validation ? "neutral" : validation.outcome === "approved" ? "ok" : "warn";
+  const variant = !validation ? "neutral" : validation.outcome === "approved" ? "success" : "warning";
   return (
-    <span className={`badge badge--${tone}`} data-testid="validation-status">
+    <Badge variant={variant} data-testid="validation-status">
       {validationStatusText(validation)}
-    </span>
+    </Badge>
   );
 }

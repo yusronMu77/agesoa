@@ -1,4 +1,2 @@
-/** Joins class names, skipping empty ones (the `utils` alias of components.json). */
-export function cn(...classes: (string | false | null | undefined)[]): string {
-  return classes.filter(Boolean).join(" ");
-}
+/** Class-name joiner of the shared UI (clsx + tailwind-merge); the `utils` alias of components.json. */
+export { cn } from "@agesoa/ui/lib/utils";

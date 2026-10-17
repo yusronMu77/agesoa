@@ -1,3 +1,4 @@
+import { button } from "../ui";
 /** SCR-001 Record evidence: photo, voice note or text, approximate location shown as a district. */
 
 import { useEffect, useRef, useState } from "react";
@@ -175,12 +176,12 @@ export function Capture({ client, state, update, withPermission, onSocial, onCon
           <div className="camera">
             <video ref={videoRef} autoPlay playsInline muted data-testid="camera-preview" />
             <div className="row">
-              <button type="button" className="button primary" onClick={snap}>
+              <button type="button" className={button("primary")} onClick={snap}>
                 {T["TXT-WIT-014"]}
               </button>
               <button
                 type="button"
-                className="button"
+                className={button()}
                 onClick={() => {
                   stopStream(stream);
                   setStream(null);
@@ -192,10 +193,10 @@ export function Capture({ client, state, update, withPermission, onSocial, onCon
           </div>
         ) : (
           <div className="row">
-            <button type="button" className="button" onClick={camera}>
+            <button type="button" className={button()} onClick={camera}>
               {T["TXT-WIT-012"]}
             </button>
-            <label className="button">
+            <label className={button()}>
               {T["TXT-WIT-013"]}
               <input
                 type="file"
@@ -218,7 +219,7 @@ export function Capture({ client, state, update, withPermission, onSocial, onCon
                 <img src={item.previewUrl} alt={`${T["TXT-WIT-011"]} ${index + 1}`} />
                 <button
                   type="button"
-                  className="button small"
+                  className={button("neutral", { small: true })}
                   aria-label={`${T["TXT-WIT-016"]} ${T["TXT-WIT-011"].toLowerCase()} ${index + 1}`}
                   onClick={() => removeItem(item.key)}
                 >
@@ -234,13 +235,13 @@ export function Capture({ client, state, update, withPermission, onSocial, onCon
         <h2 id="voice-heading">{T["TXT-WIT-017"]}</h2>
         {denied.includes("microphone") && <Notice tone="info">{DENIED_TEXT.microphone}</Notice>}
         {recording ? (
-          <button type="button" className="button danger" onClick={stopRecord}>
+          <button type="button" className={button("danger")} onClick={stopRecord}>
             <span className="rec-dot" aria-hidden="true" />
             {T["TXT-WIT-019"]}
           </button>
         ) : (
           audio.length === 0 && (
-            <button type="button" className="button" onClick={record}>
+            <button type="button" className={button()} onClick={record}>
               {T["TXT-WIT-018"]}
             </button>
           )
@@ -251,7 +252,7 @@ export function Capture({ client, state, update, withPermission, onSocial, onCon
             <audio controls src={item.previewUrl} onError={() => setLocalError(T["TXT-WIT-037"])} />
             <button
               type="button"
-              className="button small"
+              className={button("neutral", { small: true })}
               aria-label={`${T["TXT-WIT-016"]} ${T["TXT-WIT-017"].toLowerCase()}`}
               onClick={() => removeItem(item.key)}
             >
@@ -278,11 +279,11 @@ export function Capture({ client, state, update, withPermission, onSocial, onCon
         {locationNote && <Notice tone="info">{locationNote}</Notice>}
         {state.district && <RegionName region={state.district} synthetic={!!state.district.synthetic} />}
         <div className="row">
-          <button type="button" className="button" onClick={locate} disabled={locating}>
+          <button type="button" className={button()} onClick={locate} disabled={locating}>
             {T["TXT-WIT-024"]}
           </button>
           {!picking && (
-            <button type="button" className="button" onClick={showPicker}>
+            <button type="button" className={button()} onClick={showPicker}>
               {T["TXT-WIT-025"]}
             </button>
           )}
@@ -314,7 +315,7 @@ export function Capture({ client, state, update, withPermission, onSocial, onCon
             {T["TXT-WIT-069"]}: <span className="mono">{state.sharedPost.url}</span>
           </p>
         )}
-        <button type="button" className="button link" onClick={onSocial}>
+        <button type="button" className={button("link")} onClick={onSocial}>
           {T["TXT-WIT-029"]}
           {state.items.some((i) => i.kind === "screenshot") &&
             ` (${state.items.filter((i) => i.kind === "screenshot").length})`}
@@ -324,7 +325,7 @@ export function Capture({ client, state, update, withPermission, onSocial, onCon
       <div className="actions">
         {(error || localError) && <Notice tone="error">{error ?? localError}</Notice>}
         {busy && <Notice tone="info">{T["TXT-WIT-032"]}</Notice>}
-        <button type="button" className="button primary wide" onClick={onContinue} disabled={busy || !!recording}>
+        <button type="button" className={button("primary", { wide: true })} onClick={onContinue} disabled={busy || !!recording}>
           {T["TXT-WIT-030"]}
         </button>
       </div>

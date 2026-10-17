@@ -1,3 +1,4 @@
+import { button } from "../ui";
 /** SCR-003 Paste a social post link and/or upload screenshots as extra evidence. */
 
 import { useState } from "react";
@@ -65,7 +66,7 @@ export function SharedPost({
       </label>
       <Notice tone="info">{T["TXT-WIT-064"]}</Notice>
 
-      <label className="button">
+      <label className={button()}>
         {T["TXT-WIT-066"]}
         <input
           type="file"
@@ -86,7 +87,7 @@ export function SharedPost({
               <img src={item.previewUrl} alt={`Screenshot ${index + 1}`} />
               <button
                 type="button"
-                className="button small"
+                className={button("neutral", { small: true })}
                 aria-label={`${T["TXT-WIT-016"]} screenshot ${index + 1}`}
                 onClick={() => setShots((list) => list.filter((s) => s.key !== item.key))}
               >
@@ -98,10 +99,10 @@ export function SharedPost({
       )}
 
       <div className="actions">
-        <button type="button" className="button primary wide" onClick={save}>
+        <button type="button" className={button("primary", { wide: true })} onClick={save}>
           {T["TXT-WIT-067"]}
         </button>
-        <button type="button" className="button wide" onClick={onBack}>
+        <button type="button" className={button("neutral", { wide: true })} onClick={onBack}>
           {T["TXT-WIT-068"]}
         </button>
       </div>

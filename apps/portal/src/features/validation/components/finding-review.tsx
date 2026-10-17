@@ -1,3 +1,4 @@
+import { Badge } from "@agesoa/ui/components/badge";
 import { EvidenceBadge } from "@/components/shared/evidence-badge";
 import { Callout } from "@/components/ui/callout";
 import { formatTime } from "@/lib/format";
@@ -12,9 +13,9 @@ export function FindingSummary({ finding: f }: { finding: ValidationDetail }) {
       <h2 id="finding-heading">Finding</h2>
       <div className="finding-head">
         <EvidenceBadge status={f.status_label} />
-        <span className="badge badge--neutral" data-testid="quorum-status">
+        <Badge variant="neutral" data-testid="quorum-status">
           Quorum: {f.quorum.outcome} · {f.quorum.approvals} approval(s), {f.quorum.rejections} rejection(s)
-        </span>
+        </Badge>
       </div>
       <p className="finding-statement" data-testid="finding-statement">
         {f.statement}
@@ -43,7 +44,7 @@ export function AuditTrail({ trail }: { trail: FetchResult<AuditStep[]> }) {
           {trail.data.map((s) => (
             <li key={s.id} className="card">
               <div className="finding-head">
-                <span className="badge badge--neutral">{s.step}</span>
+                <Badge variant="neutral">{s.step}</Badge>
                 {s.status_label ? <EvidenceBadge status={s.status_label} /> : null}
                 <span className="muted">
                   {s.actor} · {formatTime(s.created_at)}

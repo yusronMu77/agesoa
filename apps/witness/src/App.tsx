@@ -1,3 +1,5 @@
+import { button } from "./ui";
+import { cn } from "@agesoa/ui/lib/utils";
 /**
  * AGESOA Witness: anonymous citizen reporting.
  * SCR-001 record evidence -> (SCR-002 permission explainer) -> (SCR-003 social link / screenshot)
@@ -163,7 +165,7 @@ export default function App({ config }: { config: WitnessConfig }) {
       {questions.length > 0 && screen.name !== "questions" && (
         <button
           type="button"
-          className="button wide notice notice--info"
+          className={cn(button("neutral", { wide: true }), "justify-start border-[var(--ag-color-feedback-info)] bg-[var(--ag-color-status-info-bg)] text-left font-medium")}
           data-testid="audit-questions-banner"
           onClick={() => {
             setScreen({ name: "questions", from: screen });

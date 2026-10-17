@@ -1,3 +1,4 @@
+import { button } from "../ui";
 /** SCR-002 Permission explainer, shown before the browser/phone permission prompt. */
 
 import { useEffect, useRef } from "react";
@@ -40,10 +41,10 @@ export function PermissionExplainer({
       <h2 id="permission-title">{title}</h2>
       <p>{body}</p>
       <div className="actions">
-        <button type="button" className="button primary wide" onClick={onAllow} autoFocus>
+        <button type="button" className={button("primary", { wide: true })} onClick={onAllow} autoFocus>
           {T["TXT-WIT-046"]}
         </button>
-        <button type="button" className="button wide" onClick={onSkip}>
+        <button type="button" className={button("neutral", { wide: true })} onClick={onSkip}>
           {T["TXT-WIT-047"]}
         </button>
       </div>

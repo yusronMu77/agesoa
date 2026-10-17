@@ -1,3 +1,4 @@
+import { Badge } from "@agesoa/ui/components/badge";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/configs/routes.config";
 import type { ValidatorProfile } from "@/services/trust/trust.model";
@@ -16,9 +17,9 @@ export function ValidatorHeader({ profile }: { profile: ValidatorProfile }) {
         {profile.tier ? ` · ${profile.tier} tier` : ""}
         {profile.organization ? ` · ${profile.organization}` : " · independent"} · status {profile.status}
         {profile.probation ? (
-          <span className="badge badge--neutral" data-testid="probation-badge" style={{ marginLeft: 8 }}>
+          <Badge variant="neutral" data-testid="probation-badge" style={{ marginLeft: 8 }}>
             New validator (probation)
-          </span>
+          </Badge>
         ) : null}
       </p>
       <form method="post" action={ROUTES.logout}>

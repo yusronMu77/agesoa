@@ -1,3 +1,4 @@
+import { button, pill, notice } from "../ui";
 /** SCR-005 Submitted: report code, evidence hashes, evidence deadline and how to keep the physical evidence. */
 
 import type { Report } from "../api";
@@ -21,7 +22,7 @@ export function Submitted({ report, onNew }: { report: Report; onNew: () => void
         </dd>
         <dt>{T["TXT-WIT-116"]}</dt>
         <dd>
-          <span className="badge badge--alleged">{T["TXT-EVD-001"]}</span>
+          <span className={pill("alleged")}>{T["TXT-EVD-001"]}</span>
         </dd>
       </dl>
       {report.region && <RegionName region={report.region} synthetic={report.synthetic} />}
@@ -52,13 +53,13 @@ export function Submitted({ report, onNew }: { report: Report; onNew: () => void
         </section>
       )}
       {deadline?.status === "likely_lost" && (
-        <p className="notice notice--info" data-testid="evidence-deadline-passed">
+        <p className={notice("info")} data-testid="evidence-deadline-passed">
           {T["TXT-WIT-115"]}
         </p>
       )}
 
       <div className="actions">
-        <button type="button" className="button primary wide" onClick={onNew}>
+        <button type="button" className={button("primary", { wide: true })} onClick={onNew}>
           {T["TXT-WIT-117"]}
         </button>
       </div>

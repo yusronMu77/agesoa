@@ -1,5 +1,6 @@
 import type { HTMLAttributes, ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { alertVariants } from "@agesoa/ui/components/alert";
+import { cn } from "@agesoa/ui/lib/utils";
 
 export type CalloutTone = "info" | "error";
 
@@ -10,7 +11,13 @@ interface CalloutProps extends HTMLAttributes<HTMLElement> {
 
 /** Highlighted message block. Pass `role="status"` for results and `role="alert"` for errors after an action. */
 export function Callout({ as: Tag = "p", tone = "info", className, ...rest }: CalloutProps) {
-  return <Tag className={cn("callout", tone === "error" && "callout--error", className)} {...rest} />;
+  return (
+    <Tag
+      data-slot="alert"
+      className={cn("callout mb-6", alertVariants({ variant: tone === "error" ? "destructive" : "default" }), "block", className)}
+      {...rest}
+    />
+  );
 }
 
 /** A titled callout section: data unavailable, empty list, or a result that needs a heading. */

@@ -1,3 +1,4 @@
+import { Badge } from "@agesoa/ui/components/badge";
 import type { EvidenceStatus } from "@/services/read-model/read-model.model";
 
 export const EVIDENCE_LABEL: Record<EvidenceStatus, string> = {
@@ -8,10 +9,10 @@ export const EVIDENCE_LABEL: Record<EvidenceStatus, string> = {
 
 /** Evidence status of a finding (the legend on the home page explains each level). AI never delivers a verdict. */
 export function EvidenceBadge({ status }: { status: EvidenceStatus | null }) {
-  if (!status) return <span className="badge badge--neutral">No status yet</span>;
+  if (!status) return <Badge variant="neutral">No status yet</Badge>;
   return (
-    <span className={`badge badge--evidence badge--${status}`} data-testid="evidence-status">
+    <Badge variant={status} data-testid="evidence-status">
       {EVIDENCE_LABEL[status]}
-    </span>
+    </Badge>
   );
 }

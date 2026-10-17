@@ -1,7 +1,32 @@
 # packages/ui (`@agesoa/ui`)
 
 Shared UI foundation for `apps/portal` and `apps/witness`: the design tokens as CSS custom properties, the
-self-hosted fonts of the design and the shadcn theme. Shared components follow with the screens.
+self-hosted fonts of the design, the shadcn theme and the React components both apps use. A component exists
+once, here; an app never keeps its own copy.
+
+## Components
+
+`src/components/*.tsx` are shadcn components (style `base-nova`, Base UI primitives), added with the shadcn CLI
+from this folder and adjusted to the Penpot variants of the design repository (`design-system/components.md`):
+
+| Component | Penpot name | Variants |
+|---|---|---|
+| `button` | `Button` | `default` (Primer), `secondary` (Sekunder), `outline`, `ghost`, `destructive` (Bahaya), `link`; sizes `default` 40 px (desktop), `touch` 48 px (Witness), `sm`, `icon`, `icon-touch` |
+| `badge` | `Badge`, `Badge status bukti` | `neutral`, `success`, `warning`, `destructive`, evidence `alleged` / `supported` / `proven` |
+| `alert` | `Callout` | `default`, `info`, `warning`, `destructive`; no default `role` (pass `status` or `alert`) |
+| `input`, `textarea`, `native-select`, `checkbox`, `radio-group`, `switch`, `label`, `field` | `Input`, `Textarea`, `Select`, `Checkbox`, `Radio`, `Switch` | 40 px controls, `border.strong` outline (3:1 on the canvas) |
+| `dialog`, `toast`, `tabs`, `skeleton`, `empty`, `card`, `table`, `separator`, `spinner` | `Dialog`, `Toast`, `Tab`, `Skeleton`, `Empty state` | shadcn defaults on the AGESOA theme |
+
+```tsx
+import { Button } from "@agesoa/ui/components/button";
+import { cn } from "@agesoa/ui/lib/utils";
+```
+
+- Apps resolve `@agesoa/ui/components/*` through `exports`; Next.js compiles the sources (`transpilePackages`), Vite
+  does so by default. `theme.css` declares `@source "./src"`, so the apps' Tailwind build sees the classes used here.
+- App styles are in `@layer components`, below the utilities of these components; keep them there.
+- Add a component: `bunx --bun shadcn@4.21.0 add <name>` in this folder. The CLI writes `import { cn } from "cn"`
+  for this alias layout: change it to `@agesoa/ui/lib/utils` and do not keep the `cn` npm package.
 
 ## Contents
 

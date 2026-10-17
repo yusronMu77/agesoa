@@ -1,3 +1,4 @@
+import { button, pill } from "../ui";
 /**
  * SCR-006 Answer audit questions: the status of the reporter's last report and the questions Agen Audit puts to this
  * reporter, answered in text or by voice (dictation into the text field; only text is sent).
@@ -37,7 +38,7 @@ function ReportStatus({ report }: { report: Report }) {
         )}
         <dt>{T["TXT-WIT-116"]}</dt>
         <dd>
-          <span className="badge badge--alleged">{T["TXT-EVD-001"]}</span>
+          <span className={pill("alleged")}>{T["TXT-EVD-001"]}</span>
         </dd>
       </dl>
       {deadline?.status === "likely_lost" && <p className="field-hint">{T["TXT-WIT-115"]}</p>}
@@ -140,7 +141,7 @@ export function Questions({
                   <>
                     <button
                       type="button"
-                      className="button wide"
+                      className={button("neutral", { wide: true })}
                       aria-pressed={listening === id}
                       data-testid="dictate-answer"
                       onClick={() => toggleDictation(id)}
@@ -158,7 +159,7 @@ export function Questions({
               </div>
               <button
                 type="button"
-                className="button primary wide"
+                className={button("primary", { wide: true })}
                 disabled={sending !== null}
                 onClick={() => void send(question)}
               >
@@ -169,7 +170,7 @@ export function Questions({
         })}
       </ul>
       <div className="actions">
-        <button type="button" className="button wide" onClick={onBack}>
+        <button type="button" className={button("neutral", { wide: true })} onClick={onBack}>
           {T["TXT-WIT-068"]}
         </button>
       </div>

@@ -1,3 +1,4 @@
+import { Badge } from "@agesoa/ui/components/badge";
 import { EvidenceBadge } from "@/components/shared/evidence-badge";
 import { ValidatedBy } from "@/components/shared/validated-by";
 import { validationStatusText } from "@/components/shared/validation-status";
@@ -39,7 +40,7 @@ export function CaseFindings({ findings }: { findings: PublicFinding[] }) {
             <li key={f.finding_id} className="card" data-testid="finding">
               <div className="finding-head">
                 <EvidenceBadge status={f.status} />
-                <span className="badge badge--neutral">{validationStatusText(f.validation)}</span>
+                <Badge variant="neutral">{validationStatusText(f.validation)}</Badge>
               </div>
               <p className="finding-statement">{f.statement}</p>
               <ValidatedBy validation={f.validation} />

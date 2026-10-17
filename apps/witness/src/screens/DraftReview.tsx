@@ -1,3 +1,4 @@
+import { button, pill } from "../ui";
 /**
  * SCR-004 Review the Agen Intake draft: every field can be corrected, the rule check is computed by the service
  * (code, not the model), then the reporter submits.
@@ -180,7 +181,7 @@ export function DraftReview({
               return (
                 <li key={r.rule_id} data-testid={`rule-${r.rule_id}`} data-violated={String(r.violated)}>
                   <span className="rule-name">{rule?.label.id ?? r.rule_id}</span>
-                  <span className={`badge badge--${tone}`}>
+                  <span className={pill(tone as "ok" | "error" | "neutral")}>
                     <span aria-hidden="true">{mark}</span>
                     {text}
                   </span>
@@ -210,10 +211,10 @@ export function DraftReview({
 
         <div className="actions">
           {error && <Notice tone="error">{error}</Notice>}
-          <button type="button" className="button wide" disabled={busy} onClick={() => void run(false)}>
+          <button type="button" className={button("neutral", { wide: true })} disabled={busy} onClick={() => void run(false)}>
             {T["TXT-WIT-093"]}
           </button>
-          <button type="submit" className="button primary wide" disabled={busy}>
+          <button type="submit" className={button("primary", { wide: true })} disabled={busy}>
             {T["TXT-WIT-094"]}
           </button>
         </div>

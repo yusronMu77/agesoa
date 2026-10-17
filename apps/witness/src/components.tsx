@@ -1,10 +1,11 @@
+import { notice } from "./ui";
 import type { ReactNode } from "react";
 import type { District } from "./api";
 import { T } from "./copy";
 
 export function Notice({ tone, children, testId }: { tone: "info" | "error"; children: ReactNode; testId?: string }) {
   return (
-    <p className={`notice notice--${tone}`} role={tone === "error" ? "alert" : "status"} data-testid={testId}>
+    <p className={notice(tone)} role={tone === "error" ? "alert" : "status"} data-testid={testId}>
       <span aria-hidden="true">{tone === "error" ? "!" : "i"}</span>
       {children}
     </p>
