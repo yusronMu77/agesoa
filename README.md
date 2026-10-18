@@ -13,9 +13,12 @@ Forest fires return every few years and their haze crosses borders; school meals
 Reports get filed and tickets get closed, but nobody keeps an independent record of why it keeps happening.
 
 **Live today** on Cloud Run: the public dashboard, the hash-chained decision log with chain verification, the
-readiness of the five services, and validator and organisation sign-in. The demo video walks through the full
-flow on the product's English UI designs; the Witness app and the portal are built to match them screen by
-screen.
+readiness of the five services, and validator and organisation sign-in. Synthetic reports are merged into a case,
+the Audit agent ranks the cause branches with Gemini and tests them against the BigQuery pattern archive, and one
+finding has been approved by a quorum of two validators from different organisations. One step is still manual in
+the demo: an operator turns the top-ranked hypotheses into the finding that goes to validators; drafting it
+automatically is the next piece of work. The demo video walks through the full flow on the product's English UI
+designs; the Witness app and the portal are built to match them screen by screen.
 
 ## How it works
 
