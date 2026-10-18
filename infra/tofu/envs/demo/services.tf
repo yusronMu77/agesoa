@@ -89,7 +89,8 @@ module "service" {
       INCIDENT_STORE        = "bigquery"
       BIGQUERY_EVENTS_TABLE = "${var.project_id}.${google_bigquery_dataset.events.dataset_id}.${google_bigquery_table.events.table_id}"
     } : {},
-    each.key == "ingestion" ? { MEDIA_BUCKET = google_storage_bucket.media.name } : {},
+    each.key == "ingestion" ? { MEDIA_BUCKET = google_storage_bucket.media.name, INTAKE_MODEL = var.agent_model } : {},
+    each.key == "case-audit" ? { AUDIT_MODEL = var.agent_model } : {},
     each.key == "delivery" ? {
       WEBHOOK_QUEUE       = google_cloud_tasks_queue.webhooks.id
       SELF_URL            = local.delivery_url
