@@ -8,7 +8,9 @@ export type AppEnv = (typeof APP_ENVS)[number];
 
 export const DEFAULT_INGESTION_URL = "http://localhost:8001";
 export const DEFAULT_CASE_AUDIT_URL = "http://localhost:8002";
-export const PUBLIC_REPORT_DOMAIN = "general";
+
+/** The general pack (domain-packs/general): any public problem. */
+export const DEFAULT_DOMAIN = "general";
 
 export interface WitnessConfig {
   appEnv: AppEnv;
@@ -16,7 +18,7 @@ export interface WitnessConfig {
   ingestionUrl: string;
   /** case-audit: the audit questions put to the reporter (SCR-006). */
   caseAuditUrl: string;
-  /** Public reporting always uses neutral incident fields, regardless of legacy deployment presets. */
+  /** Domain pack the reports belong to. */
   domain: string;
 }
 
@@ -69,6 +71,8 @@ export function loadConfig(env: Env = import.meta.env): WitnessConfig {
   }
   const ingestionUrl = parseUrl("VITE_INGESTION_URL", read(env, "VITE_INGESTION_URL") ?? DEFAULT_INGESTION_URL);
   const caseAuditUrl = parseUrl("VITE_CASE_AUDIT_URL", read(env, "VITE_CASE_AUDIT_URL") ?? DEFAULT_CASE_AUDIT_URL);
-  const domain = PUBLIC_REPORT_DOMAIN;
+  // Reports start on the general pack; the reporter can move a draft to another pack on SCR-004. VITE_DOMAIN is a
+  // legacy build variable and is ignored, so a deployment preset cannot replace the public form.
+  const domain = DEFAULT_DOMAIN;
   return { appEnv, demoMode, ingestionUrl, caseAuditUrl, domain };
 }

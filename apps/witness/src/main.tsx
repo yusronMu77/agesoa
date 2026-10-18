@@ -5,6 +5,11 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { loadConfig } from "./config";
+import { setLanguage } from "./copy";
+import { savedLanguage } from "./language";
+
+// Indonesian unless the reporter picked another language on this device (SCR-009); the browser locale is ignored.
+setLanguage(savedLanguage());
 
 const root = ReactDOM.createRoot(document.getElementById("root")!);
 try {

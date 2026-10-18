@@ -49,6 +49,16 @@ export function formatWib(iso: string): string {
   return `${longDate.format(new Date(iso)).replace(/,(?= \d{2}\.\d{2}$)/, "")} WIB`;
 }
 
+const dayFormats = {
+  id: new Intl.DateTimeFormat("id-ID", { timeZone: TZ, day: "numeric", month: "short", year: "numeric" }),
+  en: new Intl.DateTimeFormat("en-GB", { timeZone: TZ, day: "numeric", month: "short", year: "numeric" }),
+};
+
+/** "16 Okt 2026" / "16 Oct 2026", the calendar day in WIB. */
+export function formatDay(iso: string, lang: "id" | "en" = "id"): string {
+  return dayFormats[lang].format(new Date(iso));
+}
+
 type Vocabulary = Record<string, string[]>;
 
 export function vocabularyOf(pack: PackDocument, fieldId: string): Vocabulary | undefined {
