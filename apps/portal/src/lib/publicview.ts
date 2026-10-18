@@ -169,7 +169,7 @@ export interface EntryDecision {
   evidence_refs?: unknown[];
 }
 
-/** The `decision` object of a log entry (an agesoa.keputusan.dicatat event), or an empty object. */
+/** The `decision` object of a log entry (an agesoa.decision.recorded event), or an empty object. */
 export function entryDecision(entry: Pick<LogEntry, "entry">): EntryDecision {
   const value = entry.entry as { decision?: unknown } | null;
   const decision = value?.decision;

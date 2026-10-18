@@ -1,4 +1,4 @@
-"""Decision-log entries (`keputusan.dicatat`) written by case-audit. The decision id is a hash of the case and a
+"""Decision-log entries (`decision.recorded`) written by case-audit. The decision id is a hash of the case and a
 caller-supplied key, so a redelivered or recomputed decision keeps the same id and the log writer stays idempotent."""
 
 import hashlib
@@ -24,7 +24,7 @@ def decision_event(
 ) -> dict[str, Any]:
     decision_id = "CD-" + hashlib.sha256(f"{case_id}|{key}|{action}".encode()).hexdigest()[:24]
     return new_event(
-        "keputusan.dicatat",
+        "decision.recorded",
         source=SERVICE,
         subject=decision_id,
         data={

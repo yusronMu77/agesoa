@@ -21,7 +21,7 @@ async def restart_log(app: FastAPI) -> None:
     now = utc_now()
     decision_id = f"DEMO-RESET-{now:%Y%m%d%H%M%S%f}"
     event = new_event(
-        "keputusan.dicatat",
+        "decision.recorded",
         source=SERVICE,
         subject=decision_id,
         data={

@@ -1,6 +1,6 @@
 """Handlers for the events routed to case-audit by packages/contracts/events/catalog.json.
 
-Each handler runs inside the inbox transaction (once per event id): the case change, `kasus.diperbarui` and the
+Each handler runs inside the inbox transaction (once per event id): the case change, `case.updated` and the
 decision-log entries are committed together through the outbox. The app refuses to start if this mapping and the
 catalog disagree.
 """
@@ -128,7 +128,7 @@ async def attach_source(
     await add_event(
         session,
         new_event(
-            "kasus.diperbarui",
+            "case.updated",
             source=SERVICE,
             subject=case_id,
             data={
@@ -253,6 +253,6 @@ def build_handlers(
     handlers: dict[str, EventHandler] = {
         event_type: not_handled_yet for event_type in consumed_events(SERVICE)
     }
-    handlers["laporan.diterima"] = on_report
-    handlers["sinyal.diterima"] = on_signal
+    handlers["report.received"] = on_report
+    handlers["signal.received"] = on_signal
     return handlers

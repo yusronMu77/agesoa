@@ -38,7 +38,7 @@ class ContractError(ValueError):
 
 @dataclass(frozen=True)
 class EventSpec:
-    type: str  # catalog name, e.g. "laporan.diterima"
+    type: str  # catalog name, e.g. "report.received"
     schema_file: str
     producer: str  # service name, or "*" for any service
     consumers: tuple[str, ...]
@@ -99,7 +99,7 @@ def _describe(error: ValidationError) -> str:
 
 
 def event_spec(event_type: str) -> EventSpec:
-    """Look up a catalog entry by catalog name ("laporan.diterima") or CloudEvents type ("agesoa.laporan.diterima")."""
+    """Look up a catalog entry by catalog name ("report.received") or CloudEvents type ("agesoa.report.received")."""
     name = event_type.removeprefix(TYPE_PREFIX)
     try:
         return catalog()[name]

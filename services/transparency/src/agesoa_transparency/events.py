@@ -1,7 +1,7 @@
 """Handlers for the events routed to transparency by packages/contracts/events/catalog.json.
 
 Each handler runs inside the inbox transaction (once per event id); the app refuses to start if this mapping
-and the catalog disagree. `keputusan.dicatat` extends the hash-chained log; every other consumed event is kept
+and the catalog disagree. `decision.recorded` extends the hash-chained log; every other consumed event is kept
 as source for the public read model (see read_model.py).
 """
 
@@ -31,4 +31,4 @@ async def record_decision(session: AsyncSession, event: dict[str, Any]) -> None:
 HANDLERS: dict[str, EventHandler] = {
     event_type: store_event for event_type in consumed_events(SERVICE) if event_type in SOURCES
 }
-HANDLERS["keputusan.dicatat"] = record_decision
+HANDLERS["decision.recorded"] = record_decision

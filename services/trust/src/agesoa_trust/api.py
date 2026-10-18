@@ -292,7 +292,7 @@ def _status(votes: list[Vote]) -> QuorumStatus:
 
 
 async def _decision_rows(request: Request, session: AsyncSession, row: Any) -> list[dict[str, Any]]:
-    """Counted decisions for validasi.selesai: references + tier, and the role label and regency that the
+    """Counted decisions for validation.completed: references + tier, and the role label and regency that the
     public dashboard shows ("<role label>, <regency>"); never a name."""
     rows = (
         await session.execute(
@@ -362,7 +362,7 @@ def _vote_decision(request, row, me, body: DecisionIn, counted: bool, now: datet
     )
     decision_id = _decision_id(row["finding_id"], me["id"], body.decision)
     return new_event(
-        "keputusan.dicatat",
+        "decision.recorded",
         source=SERVICE,
         subject=decision_id,
         data={
@@ -381,7 +381,7 @@ def _vote_decision(request, row, me, body: DecisionIn, counted: bool, now: datet
 
 def _completed(row, outcome: str, decisions: list[dict[str, Any]], now: datetime) -> dict[str, Any]:
     return new_event(
-        "validasi.selesai",
+        "validation.completed",
         source=SERVICE,
         subject=row["case_id"],
         data={
@@ -398,7 +398,7 @@ def _completed(row, outcome: str, decisions: list[dict[str, Any]], now: datetime
 def _quorum_decision(row, outcome: str, reason: str, now: datetime) -> dict[str, Any]:
     decision_id = _decision_id(row["finding_id"], "quorum", outcome)
     return new_event(
-        "keputusan.dicatat",
+        "decision.recorded",
         source=SERVICE,
         subject=decision_id,
         data={

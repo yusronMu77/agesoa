@@ -27,16 +27,16 @@ from fastapi.testclient import TestClient
 ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 EXAMPLES = Path(__file__).resolve().parents[3] / "packages" / "contracts" / "events" / "examples"
 PRODUCERS = {
-    "kasus.diperbarui": "case-audit",
-    "temuan.siap_validasi": "case-audit",
-    "validasi.selesai": "trust",
-    "laporan_audit.dibuat": "delivery",
-    "tindak_lanjut.diperbarui": "delivery",
-    "hak_jawab.diterima": "delivery",
-    "sinyal.diterima": "ingestion",
-    "laporan.diterima": "ingestion",
-    "wilayah.diperbarui": "ingestion",
-    "keputusan.dicatat": "trust",
+    "case.updated": "case-audit",
+    "finding.ready_for_validation": "case-audit",
+    "validation.completed": "trust",
+    "audit_report.created": "delivery",
+    "follow_up.updated": "delivery",
+    "right_of_reply.received": "delivery",
+    "signal.received": "ingestion",
+    "report.received": "ingestion",
+    "region.updated": "ingestion",
+    "decision.recorded": "trust",
 }
 # A fictional person's name placed only in fields that must never reach the public side.
 PERSON = "Siti Rahmawati (fictional)"
@@ -62,22 +62,20 @@ def example_data(event_type: str, **changes) -> dict:
 
 
 def test_case_uses_the_latest_update_whatever_the_delivery_order():
-    newer = row("kasus.diperbarui", example_data("kasus.diperbarui", status="final"), minutes=10, id_=1)
-    older = row(
-        "kasus.diperbarui", example_data("kasus.diperbarui", status="investigating"), minutes=0, id_=2
-    )
+    newer = row("case.updated", example_data("case.updated", status="final"), minutes=10, id_=1)
+    older = row("case.updated", example_data("case.updated", status="investigating"), minutes=0, id_=2)
     assert build_case("K-2026-0007", [newer, older])["status"] == "final"
     assert build_case("K-2026-0007", [older, newer])["status"] == "final"
 
 
 def test_case_keeps_the_latest_follow_up_per_organization_and_every_reply():
-    fu = "tindak_lanjut.diperbarui"
+    fu = "follow_up.updated"
     rows = [
         row(fu, example_data(fu, status="received", organization_id="O-1"), 0, 1),
         row(fu, example_data(fu, status="done", organization_id="O-1"), 5, 2),
         row(fu, example_data(fu, status="in_progress", organization_id="O-2"), 1, 3),
-        row("hak_jawab.diterima", example_data("hak_jawab.diterima", reply_id="H-1"), 2, 4),
-        row("hak_jawab.diterima", example_data("hak_jawab.diterima", reply_id="H-2"), 3, 5),
+        row("right_of_reply.received", example_data("right_of_reply.received", reply_id="H-1"), 2, 4),
+        row("right_of_reply.received", example_data("right_of_reply.received", reply_id="H-2"), 3, 5),
     ]
     doc = build_case("K-2026-0007", rows)
     assert [(f["organization_id"], f["status"]) for f in doc["follow_ups"]] == [
@@ -85,12 +83,15 @@ def test_case_keeps_the_latest_follow_up_per_organization_and_every_reply():
         ("O-2", "in_progress"),
     ]
     assert [r["reply_id"] for r in doc["replies"]] == ["H-1", "H-2"]
-    assert doc["status"] is None  # no kasus.diperbarui yet: case fields stay empty, not invented
+    assert doc["status"] is None  # no case.updated yet: case fields stay empty, not invented
 
 
 def test_finding_shows_validators_only_as_role_label_regency_tier_and_decision():
     ready = row(
-        "temuan.siap_validasi", example_data("temuan.siap_validasi", parties_mentioned=[PERSON]), 0, 1
+        "finding.ready_for_validation",
+        example_data("finding.ready_for_validation", parties_mentioned=[PERSON]),
+        0,
+        1,
     )
     decisions = [
         {
@@ -104,7 +105,7 @@ def test_finding_shows_validators_only_as_role_label_regency_tier_and_decision()
             "regency_name": "Kabupaten Sukamaju (fictional)",
         },
     ]
-    done = row("validasi.selesai", example_data("validasi.selesai", decisions=decisions), 5, 2)
+    done = row("validation.completed", example_data("validation.completed", decisions=decisions), 5, 2)
     doc = build_finding("F-2026-0011", [ready, done])
     assert doc["validation"]["decisions"] == [
         {
@@ -122,25 +123,31 @@ def test_finding_shows_validators_only_as_role_label_regency_tier_and_decision()
 
 def test_finding_text_is_projected_per_language_and_falls_back_without_it():
     both = {"id": "Satu dapur melayani 34 sekolah.", "en": "One kitchen serves 34 schools.", "fr": "x"}
-    ready = row("temuan.siap_validasi", example_data("temuan.siap_validasi", statement_i18n=both), 0, 1)
+    ready = row(
+        "finding.ready_for_validation",
+        example_data("finding.ready_for_validation", statement_i18n=both),
+        0,
+        1,
+    )
     doc = build_finding("F-2026-0011", [ready])
     assert doc["statement_i18n"] == {
         "id": "Satu dapur melayani 34 sekolah.",
         "en": "One kitchen serves 34 schools.",
     }
     plain = build_finding(
-        "F-2026-0012", [row("temuan.siap_validasi", example_data("temuan.siap_validasi"), 0, 2)]
+        "F-2026-0012",
+        [row("finding.ready_for_validation", example_data("finding.ready_for_validation"), 0, 2)],
     )
     assert plain["statement_i18n"] is None
     assert plain["statement"]  # the plain text stays the source of truth
 
 
 def test_audit_report_text_is_projected_per_language():
-    data = example_data("laporan_audit.dibuat")
+    data = example_data("audit_report.created")
     data["summary_i18n"] = {"id": "Ringkasan", "en": "Summary"}
     data["root_causes"][0]["statement_i18n"] = {"id": "Akar masalah"}
     data["recommendations_i18n"] = [{"id": f"Rekomendasi {i}"} for i, _ in enumerate(data["recommendations"])]
-    report = build_case(data["case_id"], [row("laporan_audit.dibuat", data)])["audit_report"]
+    report = build_case(data["case_id"], [row("audit_report.created", data)])["audit_report"]
     assert report["summary_i18n"] == {"id": "Ringkasan", "en": "Summary"}
     assert report["root_causes"][0]["statement_i18n"] == {"id": "Akar masalah"}
     assert [r["id"] for r in report["recommendations_i18n"]] == [
@@ -149,9 +156,9 @@ def test_audit_report_text_is_projected_per_language():
 
 
 def test_recommendations_per_language_are_dropped_when_they_do_not_line_up():
-    data = example_data("laporan_audit.dibuat")
+    data = example_data("audit_report.created")
     data["recommendations_i18n"] = [{"id": "Hanya satu"}] * (len(data["recommendations"]) + 1)
-    report = build_case(data["case_id"], [row("laporan_audit.dibuat", data)])["audit_report"]
+    report = build_case(data["case_id"], [row("audit_report.created", data)])["audit_report"]
     assert report["recommendations_i18n"] is None
     assert report["summary_i18n"] is None
 
@@ -161,14 +168,14 @@ def test_log_entry_projection_keeps_the_hash_link():
         seq=3,
         event_id="e-3",
         decision_id="DEC-3",
-        entry={"decision": example_data("keputusan.dicatat")},
+        entry={"decision": example_data("decision.recorded")},
         prev_hash="a" * 64,
         hash="b" * 64,
         recorded_at=datetime(2026, 10, 14, tzinfo=UTC),
     )
     doc = build_log_entry(entry)
     assert (doc["seq"], doc["prev_hash"], doc["hash"]) == (3, "a" * 64, "b" * 64)
-    assert doc["actor"]["service"] == example_data("keputusan.dicatat")["actor"]["service"]
+    assert doc["actor"]["service"] == example_data("decision.recorded")["actor"]["service"]
 
 
 # --- Push -> Postgres -> store (real Postgres) --------------------------------------------------------
@@ -199,15 +206,15 @@ def sync(client):
 
 def feed(client):
     events = [
-        example("laporan.diterima", fields={"reporter_note": f"saya {PERSON}"}),
-        example("sinyal.diterima"),
-        example("kasus.diperbarui"),
-        example("temuan.siap_validasi", parties_mentioned=[PERSON]),
-        example("validasi.selesai"),
-        example("laporan_audit.dibuat"),
-        example("tindak_lanjut.diperbarui"),
-        example("hak_jawab.diterima"),
-        example("keputusan.dicatat"),
+        example("report.received", fields={"reporter_note": f"saya {PERSON}"}),
+        example("signal.received"),
+        example("case.updated"),
+        example("finding.ready_for_validation", parties_mentioned=[PERSON]),
+        example("validation.completed"),
+        example("audit_report.created"),
+        example("follow_up.updated"),
+        example("right_of_reply.received"),
+        example("decision.recorded"),
     ]
     for event in events:
         assert push(client, event).status_code == 204
@@ -253,7 +260,7 @@ def test_no_private_data_reaches_the_read_model(app_store):
 def test_redelivery_does_not_duplicate_and_rebuild_reproduces_the_same_documents(app_store):
     client, store = app_store
     events = feed(client)
-    assert push(client, events[2]).status_code == 204  # redelivered kasus.diperbarui
+    assert push(client, events[2]).status_code == 204  # redelivered case.updated
     sync(client)
     before = {c: dict(d) for c, d in store.docs.items() if c != "public_stats"}
     result = client.post("/internal/read-model/rebuild").json()
@@ -267,7 +274,7 @@ def test_redelivery_does_not_duplicate_and_rebuild_reproduces_the_same_documents
 @db
 def test_projection_runs_after_commit_without_explicit_sync(app_store):
     client, store = app_store
-    push(client, example("kasus.diperbarui", case_id="K-AFTER-COMMIT"))
+    push(client, example("case.updated", case_id="K-AFTER-COMMIT"))
     client.portal.call(client.app.state.read_model.wait_idle)
     assert "K-AFTER-COMMIT" in store.docs.get("public_cases", {})
 
@@ -288,8 +295,8 @@ async def test_firestore_store_round_trip():
 
 
 def test_region_boundary_is_projected_with_geometry_as_json_text():
-    data = example_data("wilayah.diperbarui")
-    doc = build_region(data["district_code"], [row("wilayah.diperbarui", data)])
+    data = example_data("region.updated")
+    doc = build_region(data["district_code"], [row("region.updated", data)])
     assert doc["district_name"] == data["district_name"]
     assert json.loads(doc["geometry"]) == data["geometry"]  # Firestore has no nested arrays
 
@@ -298,7 +305,7 @@ def test_region_boundary_is_projected_with_geometry_as_json_text():
 def test_region_event_reaches_public_regions(app_store):
     client, store = app_store
     event = new_event(
-        "wilayah.diperbarui", source="ingestion", subject="99.01.01", data=example_data("wilayah.diperbarui")
+        "region.updated", source="ingestion", subject="99.01.01", data=example_data("region.updated")
     )
     assert push(client, event).status_code == 204
     sync(client)

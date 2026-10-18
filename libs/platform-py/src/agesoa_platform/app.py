@@ -222,7 +222,7 @@ def create_app(
         now = utc_now()
         decision_id = f"PROBE-{now:%Y%m%d%H%M%S%f}"
         event = new_event(
-            "keputusan.dicatat",
+            "decision.recorded",
             source=service,
             subject=decision_id,
             data={

@@ -2,7 +2,7 @@
 history) for the organization's admin, the institution API (status + right of reply, API key), and the internal
 endpoints that run webhook attempts (Cloud Tasks) and create fictional audit reports in demo_mode.
 
-Only the admin of a verified agency (learned from `organisasi.terverifikasi`) manages its subscription. Institutions
+Only the admin of a verified agency (learned from `organization.verified`) manages its subscription. Institutions
 can only report on cases AGESOA delivered to them, and never change a finding.
 """
 
@@ -415,7 +415,7 @@ def _institution_decision(
 ):
     decision_id = "INST-" + secrets.token_hex(12)
     return new_event(
-        "keputusan.dicatat",
+        "decision.recorded",
         source=SERVICE,
         subject=decision_id,
         data={
@@ -460,7 +460,7 @@ async def update_status(
         await add_event(
             session,
             new_event(
-                "tindak_lanjut.diperbarui",
+                "follow_up.updated",
                 source=SERVICE,
                 subject=case_id,
                 data={
@@ -516,7 +516,7 @@ async def submit_reply(
         await add_event(
             session,
             new_event(
-                "hak_jawab.diterima",
+                "right_of_reply.received",
                 source=SERVICE,
                 subject=case_id,
                 data={
@@ -650,7 +650,7 @@ async def demo_audit_report(body: DemoAuditReport, request: Request) -> DemoRepo
         await add_event(
             session,
             new_event(
-                "laporan_audit.dibuat",
+                "audit_report.created",
                 source=SERVICE,
                 subject=body.case_id,
                 data={

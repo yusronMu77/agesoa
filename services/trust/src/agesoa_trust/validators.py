@@ -452,7 +452,7 @@ def _decision(validator_id: str, action: str, reason: str, synthetic: bool, now:
         "VREG-" + hashlib.sha256(f"{validator_id}|{action}|{isoformat(now)}".encode()).hexdigest()[:24]
     )
     return new_event(
-        "keputusan.dicatat",
+        "decision.recorded",
         source=SERVICE,
         subject=decision_id,
         data={
@@ -470,7 +470,7 @@ def _decision(validator_id: str, action: str, reason: str, synthetic: bool, now:
 
 def _activated(validator_id: str, row: dict[str, Any], now: datetime) -> dict[str, Any]:
     return new_event(
-        "validator.diaktifkan",
+        "validator.activated",
         source=SERVICE,
         subject=validator_id,
         data={

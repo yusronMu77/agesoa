@@ -33,7 +33,7 @@ audit_reports = Table(
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
 )
 
-# Verified organizations, learned from `organisasi.terverifikasi` (trust owns them). admin_ref = uid of the
+# Verified organizations, learned from `organization.verified` (trust owns them). admin_ref = uid of the
 # organization's admin account; only the hash of the institution API key is stored.
 institutions = Table(
     "institutions",
@@ -49,7 +49,7 @@ institutions = Table(
     Column("verified_at", DateTime(timezone=True), nullable=False),
 )
 
-# Validation of a case's finding (from `validasi.selesai`): public labels only (role + regency, never names).
+# Validation of a case's finding (from `validation.completed`): public labels only (role + regency, never names).
 case_validations = Table(
     "case_validations",
     metadata,

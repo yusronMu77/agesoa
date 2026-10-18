@@ -673,7 +673,7 @@
         "tags": [
           "reports"
         ],
-        "summary": "Confirm the draft; publishes laporan.diterima and a decision-log entry",
+        "summary": "Confirm the draft; publishes report.received and a decision-log entry",
         "operationId": "submit_report_v1_reports__report_id__submit_post",
         "parameters": [
           {
@@ -789,7 +789,7 @@
         "tags": [
           "internal"
         ],
-        "summary": "Publish every district boundary again (wilayah.diperbarui)",
+        "summary": "Publish every district boundary again (region.updated)",
         "operationId": "publish_districts_internal_regions_publish_post",
         "responses": {
           "200": {

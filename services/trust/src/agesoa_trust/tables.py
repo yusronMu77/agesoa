@@ -69,7 +69,7 @@ staff_confirmations = Table(
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
 )
 
-# A finding waiting for human validation (copied from temuan.siap_validasi).
+# A finding waiting for human validation (copied from finding.ready_for_validation).
 validation_requests = Table(
     "validation_requests",
     metadata,

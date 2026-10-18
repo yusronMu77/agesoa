@@ -50,8 +50,8 @@ async def db():
 
 
 def decision():
-    data = json.loads((EXAMPLES / "keputusan.dicatat.json").read_text(encoding="utf-8"))["data"]
-    return new_event("keputusan.dicatat", source="trust", subject="F-1", data=data)
+    data = json.loads((EXAMPLES / "decision.recorded.json").read_text(encoding="utf-8"))["data"]
+    return new_event("decision.recorded", source="trust", subject="F-1", data=data)
 
 
 async def test_outbox_publishes_after_commit_and_retries_failures(db):
@@ -125,8 +125,8 @@ async def test_operator_event_stats_count_types_without_payloads(db):
         1,
     )
     assert {(t.direction, t.event_type, t.count) for t in stats.by_type} == {
-        ("out", "agesoa.keputusan.dicatat", 2),
-        ("in", "agesoa.keputusan.dicatat", 1),
+        ("out", "agesoa.decision.recorded", 2),
+        ("in", "agesoa.decision.recorded", 1),
     }
     assert sorted(r.status for r in stats.recent) == ["failing", "processed", "published"]
     assert "payload" not in stats.model_dump_json() and "decision_id" not in stats.model_dump_json()

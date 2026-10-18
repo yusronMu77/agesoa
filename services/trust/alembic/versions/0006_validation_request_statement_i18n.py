@@ -1,4 +1,4 @@
-"""validation request statement per language (temuan.siap_validasi statement_i18n)
+"""validation request statement per language (finding.ready_for_validation statement_i18n)
 
 Revision ID: 0006
 Revises: 0005

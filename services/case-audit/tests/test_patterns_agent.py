@@ -169,8 +169,11 @@ async def test_bigquery_incidents_are_read_by_one_fixed_parameterised_query_with
     assert (
         names["grp"] == group
         and names["domain"] == "mbg"
-        and names["event_type"] == "agesoa.laporan.diterima"
+        and names["event_type"] == "agesoa.report.received"
+        # reports archived before the catalog names were made English still count
+        and names["legacy_event_type"] == "agesoa.laporan.diterima"
     )
+    assert "IN (@event_type, @legacy_event_type)" in sql
     assert found.store == "bigquery"
     # a report case-audit keeps in a case belongs to it; one it has no case for is a case of its own
     assert [(i.id, i.case_id) for i in found.incidents] == [("R-1", "C-1"), ("R-7", "archive:R-7")]

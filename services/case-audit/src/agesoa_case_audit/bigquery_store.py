@@ -1,6 +1,6 @@
 """Incidents from the BigQuery event archive (`agesoa_events.events`, one row per Pub/Sub message of every topic).
 
-The archive holds every `laporan.diterima` ever published, also those that case-audit no longer keeps a case for, so
+The archive holds every `report.received` ever published, also those that case-audit no longer keeps a case for, so
 "does the same kitchen show up elsewhere" can look further back than the case database. The query is one fixed
 statement: the group value, the domain, the window and the event type are query parameters; the only thing written into
 the text is the report field name, which comes from the domain pack and is checked against a strict pattern. The job
@@ -27,7 +27,9 @@ from agesoa_case_audit.tables import case_sources
 
 TABLE = re.compile(r"[A-Za-z0-9_-]+\.[A-Za-z0-9_]+\.[A-Za-z0-9_]+")  # project.dataset.table
 FIELD = re.compile(r"[a-z][a-z0-9_]{0,63}")
-EVENT_TYPE = "agesoa.laporan.diterima"
+EVENT_TYPE = "agesoa.report.received"
+# The same event as published before the catalog names were made English; the archive keeps those rows.
+LEGACY_EVENT_TYPE = "agesoa.laporan.diterima"
 MAX_ROWS = 500
 MAX_BYTES_BILLED = 200 * 1024 * 1024  # a job that would read more fails instead of billing it
 TIMEOUT_SECONDS = 20
@@ -44,7 +46,7 @@ FROM (
     ) AS latest
   FROM `{table}`
   WHERE publish_time BETWEEN @since AND @until
-    AND JSON_VALUE(attributes, '$."ce-type"') = @event_type
+    AND JSON_VALUE(attributes, '$."ce-type"') IN (@event_type, @legacy_event_type)
     AND JSON_VALUE(data, '$.data.domain') = @domain
     AND LOWER(REGEXP_REPLACE(TRIM(JSON_VALUE(data, '$.data.fields.{field}')), r'\\s+', ' ')) = @grp
 )
@@ -109,6 +111,7 @@ class BigQueryIncidentStore:
             "since": ("TIMESTAMP", since),
             "until": ("TIMESTAMP", until),
             "event_type": ("STRING", EVENT_TYPE),
+            "legacy_event_type": ("STRING", LEGACY_EVENT_TYPE),
             "domain": ("STRING", domain),
             "grp": ("STRING", group),
         }

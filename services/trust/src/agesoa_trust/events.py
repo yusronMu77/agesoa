@@ -42,4 +42,4 @@ async def open_validation(session: AsyncSession, event: dict[str, Any]) -> None:
 
 
 HANDLERS: dict[str, EventHandler] = {event_type: not_handled_yet for event_type in consumed_events(SERVICE)}
-HANDLERS["temuan.siap_validasi"] = open_validation
+HANDLERS["finding.ready_for_validation"] = open_validation

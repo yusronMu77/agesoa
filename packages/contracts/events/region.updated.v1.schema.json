@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agesoa:schema:event:region.updated:v1",
+  "title": "District boundary published",
+  "description": "Public reference data: one administrative district (kecamatan) and its boundary, published when ingestion loads or changes it, so public read models can draw maps without reading another service's database. Never derived from a reporter's position.",
+  "allOf": [
+    {
+      "$ref": "urn:agesoa:schema:cloudevent:v1"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "agesoa.region.updated"
+    },
+    "dataschema": {
+      "const": "urn:agesoa:schema:event:region.updated:v1"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "district_code",
+        "district_name",
+        "regency_code",
+        "regency_name",
+        "geometry",
+        "updated_at",
+        "synthetic"
+      ],
+      "properties": {
+        "district_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "district_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "regency_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "regency_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "geometry": {
+          "type": "object",
+          "description": "GeoJSON Polygon or MultiPolygon in WGS 84 (lon, lat) of the district boundary.",
+          "required": [
+            "type",
+            "coordinates"
+          ],
+          "properties": {
+            "type": {
+              "enum": [
+                "Polygon",
+                "MultiPolygon"
+              ]
+            },
+            "coordinates": {
+              "type": "array",
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "updated_at": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/timestamp"
+        },
+        "synthetic": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/synthetic"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

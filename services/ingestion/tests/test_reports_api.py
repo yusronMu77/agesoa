@@ -50,7 +50,7 @@ async def client(tmp_path):
 
 def report_events(client):
     """Events of the report flow (demo_mode startup also publishes the district boundaries)."""
-    return [e for e in client.app.state.test_publisher.sent if e["type"] != "agesoa.wilayah.diperbarui"]
+    return [e for e in client.app.state.test_publisher.sent if e["type"] != "agesoa.region.updated"]
 
 
 def create(client, headers=ME, **body):
@@ -90,7 +90,7 @@ def test_custom_text_fields_survive_reload_intake_and_submission(client):
     submitted = client.post(f"{path}/submit", headers=ME)
     assert submitted.status_code == 200, submitted.text
     assert submitted.json()["custom_fields"] == fields
-    event = next(event for event in report_events(client) if event["type"] == "agesoa.laporan.diterima")
+    event = next(event for event in report_events(client) if event["type"] == "agesoa.report.received")
     validate_event(event)
     assert event["data"]["custom_fields"] == fields
     assert client.patch(path, json={"custom_fields": []}, headers=ME).status_code == 409
@@ -216,7 +216,7 @@ def test_full_flow_draft_correct_submit(client):
     received, decision = sent
     for event in sent:
         validate_event(event)
-    assert received["type"] == "agesoa.laporan.diterima"
+    assert received["type"] == "agesoa.report.received"
     assert received["data"]["fields"]["affected_count"] == 33
     assert received["data"]["region"]["district_code"] == "99.01.01"
     assert received["data"]["reporter_ref"] != "reporter-1"

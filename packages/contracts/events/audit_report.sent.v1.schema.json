@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agesoa:schema:event:audit_report.sent:v1",
+  "title": "Audit report delivered",
+  "allOf": [
+    {
+      "$ref": "urn:agesoa:schema:cloudevent:v1"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "agesoa.audit_report.sent"
+    },
+    "dataschema": {
+      "const": "urn:agesoa:schema:event:audit_report.sent:v1"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "audit_report_id",
+        "case_id",
+        "organization_id",
+        "delivery_id",
+        "http_status",
+        "attempt",
+        "delivered_at",
+        "synthetic"
+      ],
+      "properties": {
+        "audit_report_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "case_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "organization_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "delivery_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "http_status": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "delivered_at": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/timestamp"
+        },
+        "synthetic": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/synthetic"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

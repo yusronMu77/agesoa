@@ -26,9 +26,9 @@ contents and reporter references are never projected, only counted).
 
 | Collection | From |
 |---|---|
-| `public_cases/{case_id}` | `kasus.diperbarui`, `laporan_audit.dibuat`, `tindak_lanjut.diperbarui`, `hak_jawab.diterima` |
-| `public_findings/{finding_id}` | `temuan.siap_validasi`, `validasi.selesai` |
-| `public_signals/{signal_id}` | `sinyal.diterima` |
+| `public_cases/{case_id}` | `case.updated`, `audit_report.created`, `follow_up.updated`, `right_of_reply.received` |
+| `public_findings/{finding_id}` | `finding.ready_for_validation`, `validation.completed` |
+| `public_signals/{signal_id}` | `signal.received` |
 | `public_log/{seq}` | `decision_log` |
 | `public_stats/summary` | aggregates |
 

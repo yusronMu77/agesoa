@@ -184,25 +184,25 @@ def test_internal_endpoints_require_oidc_outside_local():
 
 def test_new_event_enforces_contract_and_producer():
     event = new_event(
-        "kasus.diperbarui",
+        "case.updated",
         source="case-audit",
         subject="K-1",
-        data=json.loads((EXAMPLES / "kasus.diperbarui.json").read_text(encoding="utf-8"))["data"],
+        data=json.loads((EXAMPLES / "case.updated.json").read_text(encoding="utf-8"))["data"],
     )
-    assert event["type"] == "agesoa.kasus.diperbarui"
+    assert event["type"] == "agesoa.case.updated"
     with pytest.raises(ValueError, match="not the producer"):
-        new_event("kasus.diperbarui", source="trust", subject="K-1", data=event["data"])
+        new_event("case.updated", source="trust", subject="K-1", data=event["data"])
     with pytest.raises(ValueError, match="required property"):
-        new_event("kasus.diperbarui", source="case-audit", subject="K-1", data={})
+        new_event("case.updated", source="case-audit", subject="K-1", data={})
 
 
 def test_handlers_must_match_the_catalog():
-    check_handlers("trust", {"temuan.siap_validasi": not_handled_yet})
+    check_handlers("trust", {"finding.ready_for_validation": not_handled_yet})
     with pytest.raises(RuntimeError, match="missing"):
         check_handlers("trust", {})
     with pytest.raises(RuntimeError, match="not routed here"):
         check_handlers(
-            "trust", {"temuan.siap_validasi": not_handled_yet, "laporan.diterima": not_handled_yet}
+            "trust", {"finding.ready_for_validation": not_handled_yet, "report.received": not_handled_yet}
         )
 
 

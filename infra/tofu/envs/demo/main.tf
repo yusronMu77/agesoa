@@ -21,7 +21,7 @@ locals {
     }
   ]...)
 
-  # Producer "*" (keputusan.dicatat) = every service records decisions.
+  # Producer "*" (decision.recorded) = every service records decisions.
   topic_publishers = merge([
     for e in local.catalog.events : {
       for s in(e.producer == "*" ? keys(local.services) : [e.producer]) : "${s}--${e.type}" => { service = s, type = e.type }

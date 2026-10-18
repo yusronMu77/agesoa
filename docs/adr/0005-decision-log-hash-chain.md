@@ -14,7 +14,7 @@ specified, so an independent implementation (the QA suite, a journalist, an audi
 ## Decision
 
 1. **Single writer.** Only the `transparency` service writes the log. Other services publish a
-   `keputusan.dicatat` event (schema `packages/contracts/events/keputusan.dicatat.v1.schema.json`); the
+   `decision.recorded` event (schema `packages/contracts/events/decision.recorded.v1.schema.json`); the
    service appends it inside the inbox transaction, so a redelivered event is appended once.
 2. **Entry.** Entry `n` is the JSON object
 

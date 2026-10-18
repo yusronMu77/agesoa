@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agesoa:schema:event:decision.recorded:v1",
+  "title": "Decision recorded",
+  "allOf": [
+    {
+      "$ref": "urn:agesoa:schema:cloudevent:v1"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "agesoa.decision.recorded"
+    },
+    "dataschema": {
+      "const": "urn:agesoa:schema:event:decision.recorded:v1"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "decision_id",
+        "actor",
+        "action",
+        "subject",
+        "reason",
+        "evidence_refs",
+        "occurred_at",
+        "synthetic"
+      ],
+      "properties": {
+        "decision_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "actor": {
+          "type": "object",
+          "required": [
+            "kind",
+            "name",
+            "service"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "agent",
+                "rule",
+                "human",
+                "system"
+              ]
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent name, rule id or role label. Never a person's name."
+            },
+            "service": {
+              "enum": [
+                "ingestion",
+                "case-audit",
+                "trust",
+                "delivery",
+                "transparency"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "action": {
+          "type": "string",
+          "pattern": "^[a-z_]+\\.[a-z_]+$",
+          "description": "What was decided, e.g. case.opened, finding.validated."
+        },
+        "subject": {
+          "type": "object",
+          "required": [
+            "kind",
+            "id"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "minLength": 1
+            },
+            "id": {
+              "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+            }
+          },
+          "additionalProperties": false
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/evidence_ref"
+          }
+        },
+        "status_label": {
+          "anyOf": [
+            {
+              "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/finding_status"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "occurred_at": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/timestamp"
+        },
+        "synthetic": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/synthetic"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -32,15 +32,15 @@ def at(event: dict, time: str = NOW) -> dict:
 
 
 def report_event(report_id="R-1", *, fields=None, received_at=NOW, **changes):
-    data = {**example("laporan.diterima"), "report_id": report_id, "received_at": received_at, **changes}
+    data = {**example("report.received"), "report_id": report_id, "received_at": received_at, **changes}
     if fields:
         data["fields"] = {**data["fields"], **fields}
-    return at(new_event("laporan.diterima", source="ingestion", subject=report_id, data=data), received_at)
+    return at(new_event("report.received", source="ingestion", subject=report_id, data=data), received_at)
 
 
 def signal_event(signal_id="S-1", **changes):
-    data = {**example("sinyal.diterima"), "signal_id": signal_id, **changes}
-    return at(new_event("sinyal.diterima", source="ingestion", subject=signal_id, data=data))
+    data = {**example("signal.received"), "signal_id": signal_id, **changes}
+    return at(new_event("signal.received", source="ingestion", subject=signal_id, data=data))
 
 
 @pytest.fixture
@@ -79,21 +79,21 @@ def test_a_first_report_opens_a_case_with_its_evidence_deadline(client):
     assert case["evidence_status"] == "available" and case["max_finding_status"] == "proven"
     assert case["synthetic"] is True
 
-    (update,) = sent(client, "kasus.diperbarui")
+    (update,) = sent(client, "case.updated")
     validate_event(update)
     assert update["data"]["case_id"] == case["id"]
     assert update["data"]["report_ids"] == ["R-1"] and update["data"]["signal_ids"] == []
 
 
 def test_a_matching_report_joins_the_case_and_a_different_one_opens_another(client):
-    """TC-015: match -> added to the existing case; no match -> a new case; kasus.diperbarui for each."""
+    """TC-015: match -> added to the existing case; no match -> a new case; case.updated for each."""
     deliver(client, report_event("R-1"))
     deliver(client, report_event("R-2", fields={"cooked_at": "2026-10-14T01:00:00Z"}))  # 3 h later
     deliver(client, report_event("R-3", region=OTHER_REGENCY))
     deliver(client, report_event("R-4", category="spoiled_food"))
 
     assert len(cases(client)) == 3
-    updates = sent(client, "kasus.diperbarui")
+    updates = sent(client, "case.updated")
     assert len(updates) == 4
     joined = [u for u in updates if u["data"]["case_id"] == updates[0]["data"]["case_id"]]
     assert [u["data"]["report_ids"] for u in joined] == [["R-1"], ["R-1", "R-2"]]
@@ -104,11 +104,11 @@ def test_a_matching_report_joins_the_case_and_a_different_one_opens_another(clie
 def test_a_signal_joins_a_report_case_of_the_same_regency_within_the_window(client):
     deliver(client, report_event("R-1"))
     deliver(
-        client, signal_event("S-1", occurred_on="2026-10-12", region=example("laporan.diterima")["region"])
+        client, signal_event("S-1", occurred_on="2026-10-12", region=example("report.received")["region"])
     )
 
     (case,) = cases(client)
-    last = sent(client, "kasus.diperbarui")[-1]["data"]
+    last = sent(client, "case.updated")[-1]["data"]
     assert last["case_id"] == case["id"]
     assert last["report_ids"] == ["R-1"] and last["signal_ids"] == ["S-1"]
     # the signal's incident day (11 Oct 17:00 UTC + 48 h) is earlier than the report's: the earlier deadline governs
@@ -129,11 +129,9 @@ def test_a_report_after_the_deadline_caps_the_case_at_supported(client):
 
 
 def test_a_report_without_any_incident_time_has_unknown_evidence_status(client):
-    data = example("laporan.diterima")
+    data = example("report.received")
     data["fields"] = {"school": "SDN Contoh (fictional)", "symptoms": ["nausea"]}
-    event = new_event(
-        "laporan.diterima", source="ingestion", subject="R-1", data={**data, "report_id": "R-1"}
-    )
+    event = new_event("report.received", source="ingestion", subject="R-1", data={**data, "report_id": "R-1"})
     deliver(client, at(event))
 
     (case,) = cases(client)
@@ -154,7 +152,7 @@ def test_a_redelivered_event_changes_nothing(client):
     deliver(client, event)
 
     assert len(cases(client)) == 1
-    assert len(sent(client, "kasus.diperbarui")) == 1
+    assert len(sent(client, "case.updated")) == 1
 
 
 def test_a_domain_this_deployment_does_not_have_is_acknowledged_without_a_case(client):
@@ -167,7 +165,7 @@ def test_every_step_reaches_the_decision_log_without_names(client):
     deliver(client, report_event("R-1"))
     deliver(client, report_event("R-2", fields={"cooked_at": "2026-10-14T01:00:00Z"}))
 
-    decisions = sent(client, "keputusan.dicatat")
+    decisions = sent(client, "decision.recorded")
     actions = [d["data"]["action"] for d in decisions]
     interview = ("audit.question_asked", "audit.patterns_tested")
     assert [a for a in actions if a not in interview] == [
@@ -241,7 +239,7 @@ def test_the_ranking_is_written_to_the_decision_log_with_the_same_evidence(clien
     deliver(client, report_event("R-1", fields=SUPPLIER))
 
     ranked = [
-        e for e in sent(client, "keputusan.dicatat") if e["data"]["action"] == "audit.hypotheses_ranked"
+        e for e in sent(client, "decision.recorded") if e["data"]["action"] == "audit.hypotheses_ranked"
     ]
     assert len(ranked) == 1
     validate_event(ranked[0])
@@ -260,14 +258,14 @@ def test_symptoms_alone_stay_alleged_even_when_the_text_gives_orders(client):
 
     steps = hypotheses(client)
     assert steps and {s["status_label"] for s in steps} == {"alleged"}
-    assert len(sent(client, "kasus.diperbarui")) == 1  # no extra case update, no extra delivery
+    assert len(sent(client, "case.updated")) == 1  # no extra case update, no extra delivery
 
 
 def test_a_news_signal_lifts_the_label_to_supported(client):
     deliver(client, report_event("R-1", fields=SUPPLIER))
     deliver(
         client,
-        signal_event("S-1", occurred_on="2026-10-12", region=example("laporan.diterima")["region"]),
+        signal_event("S-1", occurred_on="2026-10-12", region=example("report.received")["region"]),
     )
 
     labels = {s["status_label"] for s in hypotheses(client)}
@@ -306,7 +304,7 @@ def answer(client, question, text="Makanannya sudah dingin dan disimpan di suhu 
 
 
 def actions(client):
-    return [e["data"]["action"] for e in sent(client, "keputusan.dicatat")]
+    return [e["data"]["action"] for e in sent(client, "decision.recorded")]
 
 
 # --- Questions ---
@@ -438,7 +436,7 @@ def test_a_pattern_that_recurs_in_another_case_is_recorded_with_references(clien
         assert {"report:R-1", "report:R-2"} <= set(step["evidence_refs"])
         assert step["actor"] == "pattern_test"
     assert any(s["status_label"] == "supported" for s in recurring)
-    tested = [e for e in sent(client, "keputusan.dicatat") if e["data"]["action"] == "audit.patterns_tested"]
+    tested = [e for e in sent(client, "decision.recorded") if e["data"]["action"] == "audit.patterns_tested"]
     assert tested and all(
         "SPPG" not in e["data"]["reason"] for e in tested
     )  # the public log names no kitchen

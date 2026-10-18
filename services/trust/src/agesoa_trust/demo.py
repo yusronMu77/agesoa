@@ -71,7 +71,7 @@ async def seed_demo_validators(db: Database, path: Path = DEMO_FILE) -> int:
 
 def seeded_organization(row: Any, now: datetime) -> dict[str, Any]:
     return new_event(
-        "organisasi.terverifikasi",
+        "organization.verified",
         source=SERVICE,
         subject=row["id"],
         data={

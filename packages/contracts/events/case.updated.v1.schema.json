@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agesoa:schema:event:case.updated:v1",
+  "title": "Case updated",
+  "allOf": [
+    {
+      "$ref": "urn:agesoa:schema:cloudevent:v1"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "agesoa.case.updated"
+    },
+    "dataschema": {
+      "const": "urn:agesoa:schema:event:case.updated:v1"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "case_id",
+        "domain",
+        "category",
+        "status",
+        "evidence_status",
+        "evidence_deadline_at",
+        "max_finding_status",
+        "region",
+        "report_ids",
+        "signal_ids",
+        "updated_at",
+        "synthetic"
+      ],
+      "properties": {
+        "case_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "domain": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "open",
+            "investigating",
+            "awaiting_validation",
+            "final",
+            "closed"
+          ]
+        },
+        "evidence_status": {
+          "enum": [
+            "available",
+            "likely_lost",
+            "unknown"
+          ]
+        },
+        "evidence_deadline_at": {
+          "anyOf": [
+            {
+              "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_finding_status": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/finding_status"
+        },
+        "region": {
+          "anyOf": [
+            {
+              "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/region"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "report_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+          }
+        },
+        "signal_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+          }
+        },
+        "updated_at": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/timestamp"
+        },
+        "synthetic": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/synthetic"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

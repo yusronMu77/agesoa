@@ -1,0 +1,35 @@
+{
+  "specversion": "1.0",
+  "id": "00000000-0000-0000-0000-000000000004",
+  "source": "//agesoa/case-audit",
+  "type": "agesoa.finding.ready_for_validation",
+  "subject": "K-2026-0007",
+  "time": "2026-10-14T03:15:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "urn:agesoa:schema:event:finding.ready_for_validation:v1",
+  "data": {
+    "finding_id": "F-2026-0011",
+    "case_id": "K-2026-0007",
+    "domain": "mbg",
+    "statement": "One kitchen serves 34 schools; cook-to-meal gap is 6-7 hours.",
+    "status": "supported",
+    "evidence_refs": [
+      "E-12",
+      "E-15"
+    ],
+    "required_roles": [
+      "nutritionist",
+      "journalist"
+    ],
+    "parties_mentioned": [
+      "Badan Gizi Kabupaten Sukamaju (fictional)"
+    ],
+    "region": {
+      "regency_code": null,
+      "regency_name": "Kabupaten Sukamaju (fictional)",
+      "district_code": null,
+      "district_name": "Kecamatan Cibening (fictional)"
+    },
+    "synthetic": true
+  }
+}

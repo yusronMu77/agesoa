@@ -55,7 +55,7 @@ class Receiver:
 def organization_event(org_id, kind, admin):
     return {
         "id": f"ev-{org_id}",
-        "type": "agesoa.organisasi.terverifikasi",
+        "type": "agesoa.organization.verified",
         "data": {
             "organization_id": org_id,
             "name": f"{org_id} (fictional)",
@@ -150,7 +150,7 @@ def test_test_event_is_signed_and_recorded(client, receiver):
         "wrong", request.headers["x-agesoa-timestamp"], request.headers["x-agesoa-signature"], body
     )
     validate_webhook_body(json.loads(body))
-    assert sent(client, "laporan_audit.dikirim") == []  # a test event is not a delivered report
+    assert sent(client, "audit_report.sent") == []  # a test event is not a delivered report
 
 
 @pytest.mark.parametrize("receiver", [Receiver([500, 503])], indirect=False)
@@ -217,7 +217,7 @@ def test_demo_report_carries_its_text_in_both_languages_only_in_the_event(client
     }
     created = client.post("/internal/demo/audit-reports", json=report)
     assert created.status_code == 201, created.text
-    (dibuat,) = [e for e in sent(client, "laporan_audit.dibuat") if e["data"]["case_id"] == "CASE-DEMO-I18N"]
+    (dibuat,) = [e for e in sent(client, "audit_report.created") if e["data"]["case_id"] == "CASE-DEMO-I18N"]
     validate_event(dibuat)
     data = dibuat["data"]
     assert data["summary_i18n"] == {"id": "Ringkasan (fiktif)", "en": "Summary (fictional)"}
@@ -275,9 +275,9 @@ def test_delivered_report_then_follow_up_and_right_of_reply(client, receiver):
     assert body["case"]["validations"] == ["Journalist, Sukamaju", "Nutritionist"]
     assert body["case"]["url"] == "https://portal.example/cases/CASE-DEMO-1"
     assert body["case"]["root_causes"][0]["evidence"] == ["E-1"]
-    (dikirim,) = sent(client, "laporan_audit.dikirim")
+    (dikirim,) = sent(client, "audit_report.sent")
     validate_event(dikirim)
-    actions = [e["data"]["action"] for e in sent(client, "keputusan.dicatat")]
+    actions = [e["data"]["action"] for e in sent(client, "decision.recorded")]
     assert actions == ["audit_report.delivered"]
     assert client.post("/internal/demo/audit-reports", json=REPORT).status_code == 409
 
@@ -295,18 +295,18 @@ def test_delivered_report_then_follow_up_and_right_of_reply(client, receiver):
         ).status_code
         == 404
     )
-    updates = sent(client, "tindak_lanjut.diperbarui")
+    updates = sent(client, "follow_up.updated")
     assert [e["data"]["status"] for e in updates] == ["received", "in_progress", "done"]
 
     reply = client.post(
         f"/api/v1/cases/{REPORT['case_id']}/reply", json={"body": "We replaced the supplier."}, headers=auth
     )
     assert reply.status_code == 202
-    (hak_jawab,) = sent(client, "hak_jawab.diterima")
+    (hak_jawab,) = sent(client, "right_of_reply.received")
     assert hak_jawab["data"]["body"] == "We replaced the supplier."
-    for event in sent(client, "keputusan.dicatat") + updates + [hak_jawab]:
+    for event in sent(client, "decision.recorded") + updates + [hak_jawab]:
         validate_event(event)
-    assert [e["data"]["action"] for e in sent(client, "keputusan.dicatat")] == [
+    assert [e["data"]["action"] for e in sent(client, "decision.recorded")] == [
         "audit_report.delivered",
         "follow_up.updated",
         "follow_up.updated",

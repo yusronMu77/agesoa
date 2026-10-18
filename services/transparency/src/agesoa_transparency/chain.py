@@ -26,7 +26,7 @@ class Appended:
 
 
 async def append_decision(session: AsyncSession, event: dict[str, Any]) -> Appended:
-    """Append a `keputusan.dicatat` event. Call inside the inbox transaction (once per event id)."""
+    """Append a `decision.recorded` event. Call inside the inbox transaction (once per event id)."""
     head = (
         await session.execute(
             select(chain_head.c.seq, chain_head.c.hash).where(chain_head.c.id == 1).with_for_update()

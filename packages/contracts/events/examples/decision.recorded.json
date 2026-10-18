@@ -1,0 +1,30 @@
+{
+  "specversion": "1.0",
+  "id": "00000000-0000-0000-0000-00000000000c",
+  "source": "//agesoa/trust",
+  "type": "agesoa.decision.recorded",
+  "subject": "F-2026-0011",
+  "time": "2026-10-14T03:15:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "urn:agesoa:schema:event:decision.recorded:v1",
+  "data": {
+    "decision_id": "DEC-0001",
+    "actor": {
+      "kind": "rule",
+      "name": "quorum",
+      "service": "trust"
+    },
+    "action": "finding.validated",
+    "subject": {
+      "kind": "finding",
+      "id": "F-2026-0011"
+    },
+    "reason": "2 approvals from different organizations, at least one high tier.",
+    "evidence_refs": [
+      "E-12"
+    ],
+    "status_label": "supported",
+    "occurred_at": "2026-10-14T03:15:00Z",
+    "synthetic": true
+  }
+}

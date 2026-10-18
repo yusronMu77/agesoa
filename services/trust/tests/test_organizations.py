@@ -58,7 +58,7 @@ def sent(client, event_type):
 
 def verified_by_dns(client):
     """Verification events of this flow (demo_mode also announces the seeded demo organizations, method seed)."""
-    return [e for e in sent(client, "organisasi.terverifikasi") if e["data"]["method"] == "dns_txt"]
+    return [e for e in sent(client, "organization.verified") if e["data"]["method"] == "dns_txt"]
 
 
 def register(client, headers=ADMIN, **changes):
@@ -96,7 +96,7 @@ async def test_txt_record_verifies_the_domain_only_with_the_right_token(client, 
     (verified,) = verified_by_dns(client)
     validate_event(verified)
     assert verified["data"]["method"] == "dns_txt" and verified["data"]["domain"] == "warta.example.org"
-    decisions = sent(client, "keputusan.dicatat")
+    decisions = sent(client, "decision.recorded")
     for d in decisions:
         validate_event(d)
         assert org["txt_record"] not in json.dumps(d)  # the token itself is never published
@@ -166,7 +166,7 @@ def test_seeded_demo_organizations_are_announced_once(client):
     from agesoa_trust.demo import seed_demo_validators
 
     def seeded():
-        return [e for e in sent(client, "organisasi.terverifikasi") if e["data"]["method"] == "seed"]
+        return [e for e in sent(client, "organization.verified") if e["data"]["method"] == "seed"]
 
     client.app.state.test_publisher.sent.clear()
     assert client.post("/internal/demo/reset").status_code == 200  # empties trust and seeds again

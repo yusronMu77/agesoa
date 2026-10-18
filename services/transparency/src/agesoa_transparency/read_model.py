@@ -51,15 +51,15 @@ class Source:
 
 
 SOURCES: dict[str, Source] = {
-    "kasus.diperbarui": Source("case", "case_id", "updated_at"),
-    "laporan_audit.dibuat": Source("case", "case_id", "created_at"),
-    "tindak_lanjut.diperbarui": Source("case", "case_id", "updated_at"),
-    "hak_jawab.diterima": Source("case", "case_id", "received_at"),
-    "temuan.siap_validasi": Source("finding", "finding_id", None),
-    "validasi.selesai": Source("finding", "finding_id", "completed_at"),
-    "sinyal.diterima": Source("signal", "signal_id", None),
-    "laporan.diterima": Source("report", "report_id", "received_at"),
-    "wilayah.diperbarui": Source("region", "district_code", "updated_at"),
+    "case.updated": Source("case", "case_id", "updated_at"),
+    "audit_report.created": Source("case", "case_id", "created_at"),
+    "follow_up.updated": Source("case", "case_id", "updated_at"),
+    "right_of_reply.received": Source("case", "case_id", "received_at"),
+    "finding.ready_for_validation": Source("finding", "finding_id", None),
+    "validation.completed": Source("finding", "finding_id", "completed_at"),
+    "signal.received": Source("signal", "signal_id", None),
+    "report.received": Source("report", "report_id", "received_at"),
+    "region.updated": Source("region", "district_code", "updated_at"),
 }
 
 
@@ -109,8 +109,8 @@ def localized_list(values: Any, length: int) -> list[dict[str, str] | None] | No
 
 
 def build_case(case_id: str, rows: list[Row]) -> dict[str, Any]:
-    update_row = _latest(rows, "kasus.diperbarui")
-    report_row = _latest(rows, "laporan_audit.dibuat")
+    update_row = _latest(rows, "case.updated")
+    report_row = _latest(rows, "audit_report.created")
     doc: dict[str, Any] = {
         "case_id": case_id,
         "synthetic": any(r.data.get("synthetic") for r in rows),
@@ -162,7 +162,7 @@ def build_case(case_id: str, rows: list[Row]) -> dict[str, Any]:
     )
     latest_follow_up: dict[str, Row] = {}
     for r in rows:
-        if r.event_type == "tindak_lanjut.diperbarui":
+        if r.event_type == "follow_up.updated":
             org = r.data["organization_id"]
             if org not in latest_follow_up or (r.occurred_at, r.id) > (
                 latest_follow_up[org].occurred_at,
@@ -186,15 +186,16 @@ def build_case(case_id: str, rows: list[Row]) -> dict[str, Any]:
             "received_at": r.data["received_at"],
         }
         for r in sorted(
-            (r for r in rows if r.event_type == "hak_jawab.diterima"), key=lambda r: (r.occurred_at, r.id)
+            (r for r in rows if r.event_type == "right_of_reply.received"),
+            key=lambda r: (r.occurred_at, r.id),
         )
     ]
     return doc
 
 
 def build_finding(finding_id: str, rows: list[Row]) -> dict[str, Any]:
-    ready = _latest(rows, "temuan.siap_validasi")
-    done = _latest(rows, "validasi.selesai")
+    ready = _latest(rows, "finding.ready_for_validation")
+    done = _latest(rows, "validation.completed")
     doc: dict[str, Any] = {
         "finding_id": finding_id,
         "synthetic": any(r.data.get("synthetic") for r in rows),
@@ -526,9 +527,9 @@ async def compute_stats(session: AsyncSession) -> dict[str, Any]:
         )
         return select(latest.c.value, func.count()).group_by(latest.c.value)
 
-    cases = dict((await session.execute(latest_status("kasus.diperbarui", "status"))).all())
-    findings = dict((await session.execute(latest_status("temuan.siap_validasi", "status"))).all())
-    outcomes = dict((await session.execute(latest_status("validasi.selesai", "outcome"))).all())
+    cases = dict((await session.execute(latest_status("case.updated", "status"))).all())
+    findings = dict((await session.execute(latest_status("finding.ready_for_validation", "status"))).all())
+    outcomes = dict((await session.execute(latest_status("validation.completed", "outcome"))).all())
 
     def distinct_docs(kind: str) -> Any:
         return select(func.count(read_model_events.c.doc_id.distinct())).where(

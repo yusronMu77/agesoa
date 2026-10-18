@@ -1,0 +1,33 @@
+{
+  "specversion": "1.0",
+  "id": "00000000-0000-0000-0000-000000000005",
+  "source": "//agesoa/trust",
+  "type": "agesoa.validation.completed",
+  "subject": "K-2026-0007",
+  "time": "2026-10-14T03:15:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "urn:agesoa:schema:event:validation.completed:v1",
+  "data": {
+    "finding_id": "F-2026-0011",
+    "case_id": "K-2026-0007",
+    "outcome": "approved",
+    "decisions": [
+      {
+        "validator_ref": "V-0001",
+        "organization_ref": "O-0001",
+        "tier": "high",
+        "decision": "approve",
+        "note": "Consistent with tray labels."
+      },
+      {
+        "validator_ref": "V-0002",
+        "organization_ref": null,
+        "tier": "medium",
+        "decision": "approve",
+        "note": ""
+      }
+    ],
+    "completed_at": "2026-10-14T03:15:00Z",
+    "synthetic": true
+  }
+}

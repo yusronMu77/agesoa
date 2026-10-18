@@ -1,7 +1,7 @@
 # Institution webhook contract (v1)
 
 AGESOA pushes audit reports to institutions that subscribed to a region + category (service `delivery`).
-The receiver is the institution's own system; `examples/sim-instansi` is a reference receiver.
+The receiver is the institution's own system; `examples/sim-institution` is a reference receiver.
 
 ## Request
 
@@ -42,7 +42,7 @@ Compare signatures in constant time. Reference implementation: `agesoa_platform.
 - Delivered through Cloud Tasks; any non-2xx or timeout (10 s) is retried **3 times** with increasing delay
   (30 s, 2 min, 10 min), then marked failed in `deliveries`.
 - Every attempt is logged (`deliveries`: event id, HTTP status, attempt number) and the successful one
-  publishes `laporan_audit.dikirim`.
+  publishes `audit_report.sent`.
 
 ## Institution API (institution → AGESOA)
 

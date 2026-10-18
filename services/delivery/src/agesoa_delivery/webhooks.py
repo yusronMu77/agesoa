@@ -176,7 +176,7 @@ def _decision(
 ):
     decision_id = "DLVD-" + uuid.uuid4().hex[:24]
     return new_event(
-        "keputusan.dicatat",
+        "decision.recorded",
         source=SERVICE,
         subject=decision_id,
         data={
@@ -275,7 +275,7 @@ async def attempt(app: FastAPI, delivery_id: str, number: int) -> str:
                 await add_event(
                     session,
                     new_event(
-                        "laporan_audit.dikirim",
+                        "audit_report.sent",
                         source=SERVICE,
                         subject=job["case_id"],
                         data={

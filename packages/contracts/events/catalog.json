@@ -3,92 +3,92 @@
   "version": 1,
   "events": [
     {
-      "type": "laporan.diterima",
-      "schema": "laporan.diterima.v1.schema.json",
+      "type": "report.received",
+      "schema": "report.received.v1.schema.json",
       "producer": "ingestion",
       "consumers": ["case-audit", "transparency"],
       "description": "A citizen report was confirmed by the reporter and stored with hashed evidence, with optional reporter-defined custom text fields separate from domain rule inputs."
     },
     {
-      "type": "sinyal.diterima",
-      "schema": "sinyal.diterima.v1.schema.json",
+      "type": "signal.received",
+      "schema": "signal.received.v1.schema.json",
       "producer": "ingestion",
       "consumers": ["case-audit", "transparency"],
       "description": "A public signal (news, official release, shared social post) was extracted into a structured incident."
     },
     {
-      "type": "kasus.diperbarui",
-      "schema": "kasus.diperbarui.v1.schema.json",
+      "type": "case.updated",
+      "schema": "case.updated.v1.schema.json",
       "producer": "case-audit",
       "consumers": ["transparency"],
       "description": "A case was opened or its status, evidence deadline or linked reports changed."
     },
     {
-      "type": "temuan.siap_validasi",
-      "schema": "temuan.siap_validasi.v1.schema.json",
+      "type": "finding.ready_for_validation",
+      "schema": "finding.ready_for_validation.v1.schema.json",
       "producer": "case-audit",
       "consumers": ["trust", "transparency"],
       "description": "An audit finding is ready for human validation."
     },
     {
-      "type": "validasi.selesai",
-      "schema": "validasi.selesai.v1.schema.json",
+      "type": "validation.completed",
+      "schema": "validation.completed.v1.schema.json",
       "producer": "trust",
       "consumers": ["case-audit", "delivery", "transparency"],
       "description": "Validation of a finding reached quorum (approved) or was rejected."
     },
     {
-      "type": "organisasi.terverifikasi",
-      "schema": "organisasi.terverifikasi.v1.schema.json",
+      "type": "organization.verified",
+      "schema": "organization.verified.v1.schema.json",
       "producer": "trust",
       "consumers": ["delivery"],
       "description": "An organization (newsroom or agency) proved control of its domain."
     },
     {
-      "type": "validator.diaktifkan",
-      "schema": "validator.diaktifkan.v1.schema.json",
+      "type": "validator.activated",
+      "schema": "validator.activated.v1.schema.json",
       "producer": "trust",
       "consumers": [],
       "description": "A validator was activated with a role, field, region and tier."
     },
     {
-      "type": "laporan_audit.dibuat",
-      "schema": "laporan_audit.dibuat.v1.schema.json",
+      "type": "audit_report.created",
+      "schema": "audit_report.created.v1.schema.json",
       "producer": "delivery",
       "consumers": ["transparency"],
       "description": "An audit report was generated from a validated finding."
     },
     {
-      "type": "laporan_audit.dikirim",
-      "schema": "laporan_audit.dikirim.v1.schema.json",
+      "type": "audit_report.sent",
+      "schema": "audit_report.sent.v1.schema.json",
       "producer": "delivery",
       "consumers": [],
       "description": "An audit report was delivered to a subscribed institution's webhook."
     },
     {
-      "type": "tindak_lanjut.diperbarui",
-      "schema": "tindak_lanjut.diperbarui.v1.schema.json",
+      "type": "follow_up.updated",
+      "schema": "follow_up.updated.v1.schema.json",
       "producer": "delivery",
       "consumers": ["transparency"],
       "description": "An institution updated the follow-up status of a case through the institution API."
     },
     {
-      "type": "hak_jawab.diterima",
-      "schema": "hak_jawab.diterima.v1.schema.json",
+      "type": "right_of_reply.received",
+      "schema": "right_of_reply.received.v1.schema.json",
       "producer": "delivery",
       "consumers": ["case-audit", "transparency"],
       "description": "An institution submitted a right of reply for a case."
     },
     {
-      "type": "keputusan.dicatat",
-      "schema": "keputusan.dicatat.v1.schema.json",
+      "type": "decision.recorded",
+      "schema": "decision.recorded.v1.schema.json",
       "producer": "*",
       "consumers": ["transparency"],
       "description": "A decision (agent step, rule result or human action) to append to the public hash-chained log. Any service may publish it; only transparency writes the log."
     },
     {
-      "type": "wilayah.diperbarui",
-      "schema": "wilayah.diperbarui.v1.schema.json",
+      "type": "region.updated",
+      "schema": "region.updated.v1.schema.json",
       "producer": "ingestion",
       "consumers": ["transparency"],
       "description": "District boundaries (public reference data) were loaded or changed; transparency projects them for the public map."

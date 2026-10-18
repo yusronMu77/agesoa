@@ -32,8 +32,8 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest -q
-      - name: examples/sim-instansi (standalone)
-        working-directory: examples/sim-instansi
+      - name: examples/sim-institution (standalone)
+        working-directory: examples/sim-institution
         run: uv run --frozen pytest -q
 
   portal:

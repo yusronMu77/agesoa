@@ -1,0 +1,20 @@
+{
+  "specversion": "1.0",
+  "id": "00000000-0000-0000-0000-000000000009",
+  "source": "//agesoa/delivery",
+  "type": "agesoa.audit_report.sent",
+  "subject": "K-2026-0007",
+  "time": "2026-10-14T03:15:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "urn:agesoa:schema:event:audit_report.sent:v1",
+  "data": {
+    "audit_report_id": "A-2026-0003",
+    "case_id": "K-2026-0007",
+    "organization_id": "O-0002",
+    "delivery_id": "D-0009",
+    "http_status": 200,
+    "attempt": 1,
+    "delivered_at": "2026-10-14T03:15:00Z",
+    "synthetic": true
+  }
+}

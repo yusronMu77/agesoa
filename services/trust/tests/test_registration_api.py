@@ -92,12 +92,12 @@ def test_role_document_is_read_into_structured_fields_and_waits_for_the_newsroom
         "/v1/validators/me", headers={"Authorization": "Bearer dev:cand-journalist:validator"}
     ).json()
     assert (me["tier"], me["probation"], me["path"]) == ("high", True, "org_confirmed")  # TC-123
-    actions = [e["data"]["action"] for e in sent(client, "keputusan.dicatat")]
+    actions = [e["data"]["action"] for e in sent(client, "decision.recorded")]
     assert actions == ["validator.awaiting_confirmation", "validator.confirmed"]
-    (activated,) = sent(client, "validator.diaktifkan")
+    (activated,) = sent(client, "validator.activated")
     validate_event(activated)
     assert activated["data"]["tier"] == "high" and activated["data"]["status"] == "probation"
-    for e in sent(client, "keputusan.dicatat"):
+    for e in sent(client, "decision.recorded"):
         validate_event(e)
         assert "Dewi" not in str(e)  # the name read from the document never leaves trust
 
@@ -108,7 +108,7 @@ def test_self_declared_with_a_good_document_is_medium_on_probation(client):
     assert r.json()["status"] == "probation" and r.json()["tier"] == "medium"
     me = client.get("/v1/validators/me", headers={"Authorization": "Bearer dev:cand-nutri:validator"}).json()
     assert me["probation"] is True and me["status"] == "probation"
-    assert sent(client, "validator.diaktifkan")[0]["data"]["tier"] == "medium"
+    assert sent(client, "validator.activated")[0]["data"]["tier"] == "medium"
 
 
 @pytest.mark.parametrize(
@@ -122,10 +122,10 @@ def test_self_declared_with_a_good_document_is_medium_on_probation(client):
 def test_odd_documents_are_rejected_with_a_reason_code(client, document, organization_id, reason):
     r = register(client, f"cand-{reason}", document, organization_id=organization_id)
     assert r.status_code == 201 and r.json()["status"] == "rejected" and r.json()["reason"] == reason
-    (decision,) = sent(client, "keputusan.dicatat")
+    (decision,) = sent(client, "decision.recorded")
     validate_event(decision)
     assert decision["data"]["action"] == "validator.rejected" and reason in decision["data"]["reason"]
-    assert sent(client, "validator.diaktifkan") == []
+    assert sent(client, "validator.activated") == []
 
 
 def test_unreadable_documents_and_bad_input(client):

@@ -37,16 +37,16 @@ uv run pytest services/delivery
 
 ## Institution webhooks
 
-Contract: `packages/contracts/webhook/README.md`; reference receiver: `examples/sim-instansi`.
+Contract: `packages/contracts/webhook/README.md`; reference receiver: `examples/sim-institution`.
 
-1. trust announces verified organizations (`organisasi.terverifikasi`, with `admin_ref`); delivery keeps them in
+1. trust announces verified organizations (`organization.verified`, with `admin_ref`); delivery keeps them in
    `institutions`. Only the admin of a verified **agency** manages its webhook and API key.
 2. An audit report (until the Report agent exists: `POST /internal/demo/audit-reports`, demo_mode only) becomes one
    `webhook_jobs` row per matching subscription (region + category, null = all), with the validation labels of the case
-   (from `validasi.selesai`: role + regency, never names).
+   (from `validation.completed`: role + regency, never names).
 3. Each attempt signs the stored body and records a `deliveries` row; failures are retried after
    `WEBHOOK_RETRY_DELAYS` (default `30,120,600` s), then marked failed. A delivered report publishes
-   `laporan_audit.dikirim` and logs `audit_report.delivered`.
+   `audit_report.sent` and logs `audit_report.delivered`.
 4. The institution API only accepts cases delivered to that institution (404 otherwise) and never changes a finding.
 
 Settings: `WEBHOOK_QUEUE`, `SELF_URL`, `TASKS_INVOKER_EMAIL` (Cloud Tasks; unset = in-process), `PORTAL_URL` (case

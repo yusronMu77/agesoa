@@ -22,9 +22,9 @@ UNREGISTERED = {"Authorization": "Bearer dev:someone:validator"}
 
 
 def finding(finding_id="F-1", **changes):
-    data = json.loads((EXAMPLES / "temuan.siap_validasi.json").read_text(encoding="utf-8"))["data"]
+    data = json.loads((EXAMPLES / "finding.ready_for_validation.json").read_text(encoding="utf-8"))["data"]
     data = {**data, "finding_id": finding_id, **changes}
-    return new_event("temuan.siap_validasi", source="case-audit", subject=data["case_id"], data=data)
+    return new_event("finding.ready_for_validation", source="case-audit", subject=data["case_id"], data=data)
 
 
 @pytest.fixture
@@ -41,7 +41,7 @@ async def client():
 
 def open_finding(client, finding_id="F-1", **changes):
     event = finding(finding_id, **changes)
-    assert client.post("/events/temuan.siap_validasi", json=push_envelope(event)).status_code == 204
+    assert client.post("/events/finding.ready_for_validation", json=push_envelope(event)).status_code == 204
     return event
 
 
@@ -65,19 +65,19 @@ def test_a_finding_becomes_final_only_after_quorum(client):
     first = decide(client, JOURNALIST, note="Matches the tray labels.")
     assert first.status_code == 201, first.text
     assert first.json()["quorum_reached"] is False
-    assert sent(client, "validasi.selesai") == []
+    assert sent(client, "validation.completed") == []
 
     second = decide(client, NUTRITIONIST).json()
     assert second["quorum_reached"] is True and second["outcome"] == "approved"
     after = client.get("/v1/validation-requests/F-1", headers=JOURNALIST).json()
     assert after["outcome"] == "approved" and after["completed_at"]
 
-    (done,) = sent(client, "validasi.selesai")
+    (done,) = sent(client, "validation.completed")
     validate_event(done)
     assert done["data"]["outcome"] == "approved"
     assert {d["tier"] for d in done["data"]["decisions"]} == {"high", "medium"}
     # every vote and the quorum outcome reach the decision log (through transparency)
-    decisions = sent(client, "keputusan.dicatat")
+    decisions = sent(client, "decision.recorded")
     assert [d["data"]["action"] for d in decisions] == [
         "finding.approved",
         "finding.approved",
@@ -109,9 +109,9 @@ def test_a_rejection_returns_the_finding_to_the_audit(client):
     open_finding(client)
     body = decide(client, JOURNALIST, "reject", note="Timestamps do not match.").json()
     assert body["outcome"] == "rejected"
-    (done,) = sent(client, "validasi.selesai")
+    (done,) = sent(client, "validation.completed")
     assert done["data"]["outcome"] == "rejected"
-    vote, quorum = (d["data"] for d in sent(client, "keputusan.dicatat"))
+    vote, quorum = (d["data"] for d in sent(client, "decision.recorded"))
     assert vote["action"] == "finding.rejected"
     assert (
         vote["reason"].startswith("Validator rejected the finding.")
@@ -128,7 +128,7 @@ def test_decisions_need_a_validator(client):
     assert decide(client, AGENCY).status_code == 403
     assert decide(client, UNREGISTERED).status_code == 403  # validator role but no active registration
     assert client.get("/v1/validation-requests/F-1", headers=JOURNALIST).json()["quorum"]["approvals"] == 0
-    assert sent(client, "keputusan.dicatat") == []
+    assert sent(client, "decision.recorded") == []
 
 
 def test_one_decision_per_validator_and_none_after_closing(client):
@@ -152,12 +152,12 @@ def test_declared_conflict_is_logged_but_not_counted(client):
     body = decide(client, JOURNALIST, conflict=True).json()
     assert body["counted"] is False
     assert decide(client, NUTRITIONIST).json()["quorum_reached"] is False
-    assert "not counted" in sent(client, "keputusan.dicatat")[0]["data"]["reason"]
+    assert "not counted" in sent(client, "decision.recorded")[0]["data"]["reason"]
 
 
 def test_redelivered_finding_is_opened_once(client):
     event = open_finding(client)
-    assert client.post("/events/temuan.siap_validasi", json=push_envelope(event)).status_code == 204
+    assert client.post("/events/finding.ready_for_validation", json=push_envelope(event)).status_code == 204
     assert len(client.get("/v1/validation-requests", headers=JOURNALIST).json()) == 1
 
 
@@ -166,7 +166,7 @@ async def test_demo_validators_only_with_demo_mode():
         settings = Settings(database_url=TEST_DATABASE_URL, db_search_path=schema, environment="test")
         app = build_app(settings)
         with TestClient(app) as client:
-            client.post("/events/temuan.siap_validasi", json=push_envelope(finding()))
+            client.post("/events/finding.ready_for_validation", json=push_envelope(finding()))
             assert decide(client, JOURNALIST).status_code == 403
 
 
@@ -220,7 +220,7 @@ def test_completed_validation_names_roles_and_regency_not_people(client):
     open_finding(client)
     decide(client, JOURNALIST)
     decide(client, NUTRITIONIST)
-    (done,) = sent(client, "validasi.selesai")
+    (done,) = sent(client, "validation.completed")
     validate_event(done)
     assert [(d["role_label"], d["regency_name"]) for d in done["data"]["decisions"]] == [
         ("Journalist", "Kabupaten Sukamaju (fictional)"),

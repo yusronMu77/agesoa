@@ -54,5 +54,5 @@ async def validation_completed(session: AsyncSession, event: dict[str, Any]) -> 
 
 
 HANDLERS: dict[str, EventHandler] = {event_type: not_handled_yet for event_type in consumed_events(SERVICE)}
-HANDLERS["organisasi.terverifikasi"] = organization_verified
-HANDLERS["validasi.selesai"] = validation_completed
+HANDLERS["organization.verified"] = organization_verified
+HANDLERS["validation.completed"] = validation_completed

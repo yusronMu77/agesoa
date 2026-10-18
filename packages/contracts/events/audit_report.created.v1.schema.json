@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agesoa:schema:event:audit_report.created:v1",
+  "title": "Audit report created",
+  "allOf": [
+    {
+      "$ref": "urn:agesoa:schema:cloudevent:v1"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "agesoa.audit_report.created"
+    },
+    "dataschema": {
+      "const": "urn:agesoa:schema:event:audit_report.created:v1"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "audit_report_id",
+        "case_id",
+        "domain",
+        "summary",
+        "root_causes",
+        "recommendations",
+        "region",
+        "created_at",
+        "synthetic"
+      ],
+      "properties": {
+        "audit_report_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "case_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "domain": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary_i18n": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/localized_text",
+          "description": "The summary per portal language; readers fall back to summary."
+        },
+        "root_causes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "statement",
+              "status",
+              "evidence_refs"
+            ],
+            "properties": {
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement_i18n": {
+                "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/localized_text",
+                "description": "The root cause per portal language; readers fall back to statement."
+              },
+              "status": {
+                "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/finding_status"
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/evidence_ref"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "recommendations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "recommendations_i18n": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/localized_text"
+          },
+          "description": "Recommendations per portal language, same order and length as recommendations; readers fall back to recommendations."
+        },
+        "region": {
+          "anyOf": [
+            {
+              "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/region"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/timestamp"
+        },
+        "synthetic": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/synthetic"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agesoa:schema:event:organization.verified:v1",
+  "title": "Organization verified",
+  "allOf": [
+    {
+      "$ref": "urn:agesoa:schema:cloudevent:v1"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "agesoa.organization.verified"
+    },
+    "dataschema": {
+      "const": "urn:agesoa:schema:event:organization.verified:v1"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "organization_id",
+        "name",
+        "kind",
+        "domain",
+        "method",
+        "verified_at",
+        "synthetic"
+      ],
+      "properties": {
+        "organization_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "newsroom",
+            "agency"
+          ]
+        },
+        "domain": {
+          "type": "string",
+          "minLength": 1
+        },
+        "method": {
+          "enum": [
+            "dns_txt",
+            "well_known",
+            "seed"
+          ]
+        },
+        "verified_at": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/timestamp"
+        },
+        "synthetic": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/synthetic"
+        },
+        "admin_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128,
+          "description": "Auth uid of the organization's admin account (manages webhooks and API keys in delivery); never a name."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

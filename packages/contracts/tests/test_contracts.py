@@ -53,7 +53,7 @@ def test_example_event_is_valid(event_type):
 
 
 def test_missing_data_field_is_rejected_with_its_path():
-    event = load(EXAMPLES / "keputusan.dicatat.json")
+    event = load(EXAMPLES / "decision.recorded.json")
     del event["data"]["reason"]
     with pytest.raises(ContractError) as exc:
         validate_event(event)
@@ -61,40 +61,40 @@ def test_missing_data_field_is_rejected_with_its_path():
 
 
 def test_unknown_type_is_rejected():
-    event = load(EXAMPLES / "keputusan.dicatat.json")
+    event = load(EXAMPLES / "decision.recorded.json")
     event["type"] = "agesoa.keputusan.dihapus"
     with pytest.raises(ContractError, match="unknown event type"):
         validate_event(event)
 
 
 def test_dataschema_must_match_the_type():
-    event = load(EXAMPLES / "laporan.diterima.json")
-    event["dataschema"] = "urn:agesoa:schema:event:sinyal.diterima:v1"
+    event = load(EXAMPLES / "report.received.json")
+    event["dataschema"] = "urn:agesoa:schema:event:signal.received:v1"
     with pytest.raises(ContractError, match="dataschema"):
         validate_event(event)
 
 
 def test_report_event_accepts_older_payload_without_custom_fields():
-    event = load(EXAMPLES / "laporan.diterima.json")
+    event = load(EXAMPLES / "report.received.json")
     del event["data"]["custom_fields"]
-    assert validate_event(event).type == "laporan.diterima"
+    assert validate_event(event).type == "report.received"
 
 
 def test_extra_envelope_attribute_is_rejected():
-    event = copy.deepcopy(load(EXAMPLES / "kasus.diperbarui.json"))
+    event = copy.deepcopy(load(EXAMPLES / "case.updated.json"))
     event["reporter_name"] = "should never travel in an envelope"
     with pytest.raises(ContractError):
         validate_event(event)
 
 
 def test_findings_and_audit_reports_may_carry_their_text_in_both_languages():
-    finding = copy.deepcopy(load(EXAMPLES / "temuan.siap_validasi.json"))
+    finding = copy.deepcopy(load(EXAMPLES / "finding.ready_for_validation.json"))
     finding["data"]["statement_i18n"] = {
         "id": "Satu dapur melayani 34 sekolah.",
         "en": "One kitchen serves 34 schools.",
     }
     validate_event(finding)
-    report = copy.deepcopy(load(EXAMPLES / "laporan_audit.dibuat.json"))
+    report = copy.deepcopy(load(EXAMPLES / "audit_report.created.json"))
     data = report["data"]
     data["summary_i18n"] = {"id": "Ringkasan", "en": "Summary"}
     data["root_causes"][0]["statement_i18n"] = {"id": "Akar masalah"}  # one language is enough
@@ -110,14 +110,14 @@ def test_findings_and_audit_reports_may_carry_their_text_in_both_languages():
     ids=["empty", "unknown-language", "empty-text", "not-an-object"],
 )
 def test_localized_text_is_checked(i18n):
-    finding = copy.deepcopy(load(EXAMPLES / "temuan.siap_validasi.json"))
+    finding = copy.deepcopy(load(EXAMPLES / "finding.ready_for_validation.json"))
     finding["data"]["statement_i18n"] = i18n
     with pytest.raises(ContractError):
         validate_event(finding)
 
 
 def test_region_never_carries_coordinates():
-    event = load(EXAMPLES / "laporan.diterima.json")
+    event = load(EXAMPLES / "report.received.json")
     event["data"]["region"]["lat"] = -6.92
     with pytest.raises(ContractError, match="region"):
         validate_event(event)

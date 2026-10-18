@@ -21,7 +21,7 @@ Platform endpoints (from `libs/platform-py`): `GET /healthz`, `GET /readyz` (own
 
 ## Cases and the evidence deadline
 
-`laporan.diterima` and `sinyal.diterima` are grouped into cases by `cases.py` (not by a prompt):
+`report.received` and `signal.received` are grouped into cases by `cases.py` (not by a prompt):
 
 - A source joins an open case when domain, category and regency (code, else normalised name) agree and the
   incidents are at most 7 days apart. An unknown regency never matches; no match opens a new case.
@@ -30,7 +30,7 @@ Platform endpoints (from `libs/platform-py`): `GET /healthz`, `GET /readyz` (own
 - The earliest deadline in a case governs. Within it evidence is `available` and findings may reach `proven`;
   after it evidence is `likely_lost` and findings are capped at the pack's `after_deadline_max_status`.
   No known deadline: `unknown`, no cap. The status is evaluated at the event time.
-- Every change emits `kasus.diperbarui` and decision-log entries (`case.opened` / `case.source_added`,
+- Every change emits `case.updated` and decision-log entries (`case.opened` / `case.source_added`,
   `case.deadline_set`) through the outbox; the log shows the rule name, never a person.
 
 ## Hypotheses
@@ -61,7 +61,7 @@ case's `hypothesis` rows in `audit_trail` (top 3: rank, score, supporting and ag
   answered; the session id is the case id and the user is the agent, never a person. Each round carries the whole
   case, so the model is not shown earlier rounds (`include_contents="none"`). Evals and unit tests run without a
   store, in memory.
-- A hypothesis is not a finding: findings and `temuan.siap_validasi` come with the validation flow (#45).
+- A hypothesis is not a finding: findings and `finding.ready_for_validation` come with the validation flow (#45).
 
 ## Witness interview
 

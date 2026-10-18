@@ -22,14 +22,14 @@ EXAMPLE = (
     / "contracts"
     / "events"
     / "examples"
-    / "keputusan.dicatat.json"
+    / "decision.recorded.json"
 )
 
 
 def decision(source="trust", decision_id="DEC-1"):
     data = json.loads(EXAMPLE.read_text(encoding="utf-8"))["data"]
     data = {**data, "decision_id": decision_id, "actor": {**data["actor"], "service": source}}
-    return new_event("keputusan.dicatat", source=source, subject=decision_id, data=data)
+    return new_event("decision.recorded", source=source, subject=decision_id, data=data)
 
 
 @pytest.fixture
@@ -54,7 +54,7 @@ def client(ctx):
 
 
 def push(client, event):
-    return client.post("/events/keputusan.dicatat", json=push_envelope(event))
+    return client.post("/events/decision.recorded", json=push_envelope(event))
 
 
 async def test_decisions_from_other_services_are_chained(client):
@@ -118,7 +118,7 @@ async def test_probe_goes_through_the_outbox(client):
     body = client.post("/internal/probe").json()
     assert body["published"] == 1
     (sent,) = client.app.state.test_publisher.sent
-    assert sent["type"] == "agesoa.keputusan.dicatat"
+    assert sent["type"] == "agesoa.decision.recorded"
     assert sent["data"]["action"] == "system.probe"
     assert sent["id"] == body["event_id"]
 

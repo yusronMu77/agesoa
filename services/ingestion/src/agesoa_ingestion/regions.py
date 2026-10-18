@@ -4,7 +4,7 @@ never stored or logged; reports keep the district code + name.
 Boundaries come from a GeoJSON FeatureCollection whose features carry `district_code`, `district_name`,
 `regency_code`, `regency_name`. The fictional Kabupaten Sukamaju of the demo scenarios ships in `regions/` and is
 loaded at startup only when demo_mode is on; real boundaries are loaded with the CLI. Every district that is new or
-changed is published as `wilayah.diperbarui` (through the outbox, same transaction) so public read models can draw
+changed is published as `region.updated` (through the outbox, same transaction) so public read models can draw
 the map without reading this database:
 
     uv run python -m agesoa_ingestion.regions path/to/districts.geojson
@@ -122,9 +122,9 @@ async def load(session: AsyncSession, document: dict[str, Any], *, synthetic: bo
 
 
 def boundary_event(props: dict[str, Any], geometry: dict[str, Any], synthetic: bool) -> dict[str, Any]:
-    """`wilayah.diperbarui`: public reference data (codes, names, boundary), never a reporter's position."""
+    """`region.updated`: public reference data (codes, names, boundary), never a reporter's position."""
     return new_event(
-        "wilayah.diperbarui",
+        "region.updated",
         source=SERVICE,
         subject=props["district_code"],
         data={
@@ -164,7 +164,7 @@ class Published(BaseModel):
     published: int
 
 
-@internal_router.post("/publish", summary="Publish every district boundary again (wilayah.diperbarui)")
+@internal_router.post("/publish", summary="Publish every district boundary again (region.updated)")
 async def publish_districts(request: Request, background: BackgroundTasks) -> Published:
     async with request.app.state.db.transaction() as session:
         count = await publish_all(session)

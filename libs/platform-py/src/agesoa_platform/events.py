@@ -19,7 +19,7 @@ def isoformat(value: datetime) -> str:
 
 
 def new_event(event_type: str, *, source: str, subject: str, data: dict[str, Any]) -> dict[str, Any]:
-    """Return a validated structured CloudEvent. `event_type` is the catalog name, e.g. "keputusan.dicatat"."""
+    """Return a validated structured CloudEvent. `event_type` is the catalog name, e.g. "decision.recorded"."""
     spec = event_spec(event_type)
     if spec.producer not in ("*", source):
         raise ValueError(

@@ -1,4 +1,4 @@
-"""District boundaries are published as wilayah.diperbarui (real Postgres + PostGIS, TEST_DATABASE_URL)."""
+"""District boundaries are published as region.updated (real Postgres + PostGIS, TEST_DATABASE_URL)."""
 
 from pathlib import Path
 
@@ -16,7 +16,7 @@ DISTRICTS = len(regions.load_file(regions.DEMO_REGIONS)["features"])
 
 
 def boundary_events(app):
-    return [e for e in app.state.test_publisher.sent if e["type"] == "agesoa.wilayah.diperbarui"]
+    return [e for e in app.state.test_publisher.sent if e["type"] == "agesoa.region.updated"]
 
 
 def wait_for_startup_publish(client):

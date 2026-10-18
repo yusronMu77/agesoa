@@ -3,7 +3,7 @@ become validators or receive reports (P1b, SCR-060).
 
 Registration returns a token; the organization publishes `agesoa-verify=<token>` as a TXT record of its domain
 and asks for a check. Only an exact match verifies it; the result goes to the decision log and, once verified,
-to the other domains as `organisasi.terverifikasi`.
+to the other domains as `organization.verified`.
 """
 
 from __future__ import annotations
@@ -224,7 +224,7 @@ async def _mine(session: Any, organization_id: str, uid: str) -> Any:
 
 def _verified(row: Any, now: datetime) -> dict[str, Any]:
     return new_event(
-        "organisasi.terverifikasi",
+        "organization.verified",
         source=SERVICE,
         subject=row["id"],
         data={
@@ -244,7 +244,7 @@ def _check_decision(row: Any, result: str, now: datetime) -> dict[str, Any]:
     verified = result == "verified"
     decision_id = "ORGV-" + hashlib.sha256(f"{row['id']}|{isoformat(now)}".encode()).hexdigest()[:24]
     return new_event(
-        "keputusan.dicatat",
+        "decision.recorded",
         source=SERVICE,
         subject=decision_id,
         data={

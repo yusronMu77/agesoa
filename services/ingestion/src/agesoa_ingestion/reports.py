@@ -3,7 +3,7 @@
 Reporters are anonymous: the bearer token gives an anonymous uid, stored only as a pseudonymous `reporter_ref`
 (SHA-256 of the uid). Nothing identifying is asked for or stored; a report is visible only to the device that
 created it. Location arrives as approximate coordinates, is turned into a district and dropped. Submitting
-publishes `laporan.diterima` and a public decision-log entry through the outbox in the same transaction.
+publishes `report.received` and a public decision-log entry through the outbox in the same transaction.
 """
 
 from __future__ import annotations
@@ -557,7 +557,7 @@ async def run_intake(report_id: str, request: Request, reporter: Reporter) -> Re
 
 @router.post(
     "/reports/{report_id}/submit",
-    summary="Confirm the draft; publishes laporan.diterima and a decision-log entry",
+    summary="Confirm the draft; publishes report.received and a decision-log entry",
     responses={
         **NOT_FOUND,
         **DRAFT_ONLY,
@@ -596,7 +596,7 @@ async def submit_report(
         await add_event(
             session,
             new_event(
-                "laporan.diterima",
+                "report.received",
                 source=SERVICE,
                 subject=report_id,
                 data={
@@ -634,7 +634,7 @@ def _received_decision(row, results, ev, evidence_list, now) -> dict[str, Any]:
     )
     decision_id = f"RPT-{row.id[:12]}-received"
     return new_event(
-        "keputusan.dicatat",
+        "decision.recorded",
         source=SERVICE,
         subject=decision_id,
         data={
