@@ -14,8 +14,10 @@ export function LanguagePicker({ tone = "light" }: { tone?: "light" | "ink" }) {
   const back = query ? `${pathname}?${query}` : pathname;
   return (
     <details className={`lang-picker lang-picker--${tone}`} data-testid="language-picker">
-      <summary aria-label={t("common.language.current", { lang: t(`common.language.${lang}`) })}>
+      {/* The accessible name contains the visible code (WCAG 2.5.3): "Bahasa ID" / "Language EN". */}
+      <summary title={t("common.language.current", { lang: t(`common.language.${lang}`) })}>
         <Globe aria-hidden size={18} strokeWidth={2} />
+        <span className="sr-only">{t("common.language.picker")} </span>
         <span>{lang.toUpperCase()}</span>
         <ChevronDown aria-hidden size={16} strokeWidth={2} />
       </summary>
