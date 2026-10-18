@@ -30,8 +30,10 @@ locals {
 
   pubsub_agent = "serviceAccount:service-${data.google_project.this.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
   # Deterministic Cloud Run URL, known before the portal exists (services need it for CORS, the portal needs them).
-  portal_host  = "agesoa-portal-${data.google_project.this.number}.${var.region}.run.app"
-  cors_origins = concat(["https://${local.portal_host}"], var.extra_cors_origins)
+  portal_host = "agesoa-portal-${data.google_project.this.number}.${var.region}.run.app"
+  # Pull-request preview of the portal (portal.tf); only sign-in needs to know it.
+  portal_preview_host = "agesoa-portal-preview-${data.google_project.this.number}.${var.region}.run.app"
+  cors_origins        = concat(["https://${local.portal_host}"], var.extra_cors_origins)
 }
 
 resource "google_project_service" "apis" {

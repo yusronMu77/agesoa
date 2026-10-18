@@ -1,0 +1,90 @@
+# Deploys the portal of a pull request to the preview service (agesoa-portal-preview, infra/tofu/envs/demo/portal.tf)
+# so E2E can run against Cloud Run before the merge. The preview reads and calls the demo services like the public
+# portal; the public portal itself is never touched. One preview slot: the latest push of any pull request wins.
+# E2E: TARGET_ENV=demo BASE_URL_PORTAL=<preview URL from the job summary>.
+name: preview
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - apps/portal/**
+      - packages/ui/**
+      - package.json
+      - bun.lock
+      - .github/workflows/preview.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-portal
+  cancel-in-progress: true
+
+jobs:
+  portal:
+    if: vars.DEPLOY_ENABLED == 'true' && vars.GCP_PROJECT_ID != '' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      REGION: ${{ vars.GCP_REGION }}
+      RUN_SERVICE: agesoa-portal-preview
+      # The pull request's own commit (not the merge ref), so /api/healthz reports the commit under test.
+      SHA: ${{ github.event.pull_request.head.sha }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/portal/Dockerfile
+          build-args: RELEASE=${{ env.SHA }}
+          tags: ${{ vars.GCP_ARTIFACT_REPOSITORY }}/portal:pr-${{ env.PR }}-${{ env.SHA }}
+          push: true
+          cache-from: type=gha,scope=portal
+          cache-to: type=gha,mode=max,scope=portal-preview
+      - name: Deploy preview revision
+        id: deploy
+        env:
+          IMAGE: ${{ vars.GCP_ARTIFACT_REPOSITORY }}/portal:pr-${{ env.PR }}-${{ env.SHA }}
+        run: |
+          set -eu
+          gcloud run deploy "$RUN_SERVICE" --region "$REGION" --image "$IMAGE" \
+            --update-labels "commit-sha=${SHA},pr=${PR}" --quiet
+          gcloud run services update-traffic "$RUN_SERVICE" --region "$REGION" --to-latest --quiet
+          url=$(gcloud run services describe "$RUN_SERVICE" --region "$REGION" --format 'value(metadata.annotations."run.googleapis.com/urls")' | jq -r '.[] | select(test("[0-9]+\\.[a-z0-9-]+\\.run\\.app$"))' | head -n1)
+          [ -n "$url" ] || url=$(gcloud run services describe "$RUN_SERVICE" --region "$REGION" --format 'value(status.url)')
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Check readiness
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -u
+          for i in 1 2 3 4 5 6; do
+            body=$(curl -fsS --max-time 10 "$URL/api/healthz") &&
+              echo "$body" | jq -e --arg sha "$SHA" '.status == "ok" and .release == $sha' >/dev/null && {
+              echo "$body" | jq -c '{service, status, release, environment}'
+              {
+                echo "### Portal preview for #$PR"
+                echo
+                echo "$URL (commit \`${SHA:0:7}\`)"
+                echo
+                echo "E2E: \`TARGET_ENV=demo BASE_URL_PORTAL=$URL\`"
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            }
+            sleep 10
+          done
+          echo "::error::$RUN_SERVICE is not ready on $SHA"
+          exit 1

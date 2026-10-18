@@ -26,8 +26,8 @@ envs/demo/         the demo environment (everything below)
 | Storage | private media bucket `<project>-agesoa-media` (written only by ingestion after EXIF removal; no browser access) |
 | Read models | Firestore `(default)` in `asia-southeast2` |
 | Identity | Firebase project, web apps (portal, Witness), Identity Platform (anonymous + e-mail). Role claims (`validator`, `org_admin`, `operator`) are set only by trust (`roles/firebaseauth.admin`); with `demo_mode` trust creates the demo validator, organization admin and operator accounts at startup |
-| Portal | Cloud Run `agesoa-portal` (Next.js standalone, server-side calls to the five services). Not on Firebase App Hosting: its buildpacks support npm/yarn/pnpm only (this repository uses bun) and it is not offered in `asia-southeast2` |
-| Deploy | Artifact Registry `agesoa`, deployer SA reachable only from GitHub Actions on `main` of this repository (Workload Identity Federation, no keys) |
+| Portal | Cloud Run `agesoa-portal` (Next.js standalone, server-side calls to the five services). Not on Firebase App Hosting: its buildpacks support npm/yarn/pnpm only (this repository uses bun) and it is not offered in `asia-southeast2`. `agesoa-portal-preview` is the same app for pull requests (`.github/workflows/preview.yml`, one slot, latest push wins): E2E runs against it before a merge, and pull-request code never becomes a revision of the public portal |
+| Deploy | Artifact Registry `agesoa`, deployer SA reachable only from GitHub Actions of this repository: pushes to `main` and pull requests into `main` (Workload Identity Federation, no keys; fork pull requests get no OIDC token) |
 | Ops | `agesoa-ops` SA that operators impersonate to call `/internal/*`; monthly budget with alerts at 50/90/100 % |
 
 Cloud Run services (and the portal) start from a placeholder image; the deploy workflow (`.github/workflows/deploy.yml`) owns

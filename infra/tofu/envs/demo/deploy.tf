@@ -9,13 +9,18 @@ resource "google_iam_workload_identity_pool" "github" {
 resource "google_iam_workload_identity_pool_provider" "github" {
   workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
   workload_identity_pool_provider_id = "agesoa-prototype"
-  display_name                       = "agesoa-prototype main"
+  display_name                       = "agesoa-prototype main + PRs"
   attribute_mapping = {
     "google.subject"       = "assertion.sub"
     "attribute.repository" = "assertion.repository"
     "attribute.ref"        = "assertion.ref"
   }
-  attribute_condition = "assertion.repository == \"${var.github_repository}\" && assertion.ref == \"refs/heads/main\""
+  # main deploys the demo (deploy.yml); pull requests into main deploy only the portal preview (preview.yml). Fork pull
+  # requests get no OIDC token from GitHub, so only branches of this repository can use it.
+  attribute_condition = join(" && ", [
+    "assertion.repository == \"${var.github_repository}\"",
+    "(assertion.ref == \"refs/heads/main\" || (assertion.event_name == \"pull_request\" && assertion.base_ref == \"main\"))",
+  ])
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"
   }

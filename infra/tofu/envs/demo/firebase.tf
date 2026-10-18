@@ -27,6 +27,7 @@ resource "google_identity_platform_config" "auth" {
     "${var.project_id}.firebaseapp.com",
     "${var.project_id}.web.app",
     local.portal_host,
+    local.portal_preview_host,
   ]
 
   sign_in {

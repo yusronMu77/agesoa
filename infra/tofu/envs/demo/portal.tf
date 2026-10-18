@@ -1,4 +1,14 @@
 # Public portal (Next.js standalone on Cloud Run). Server-side only calls to the services; no database.
+# `portal-preview` is the same app with the same settings, deployed from pull requests (preview.yml) so E2E can run
+# against Cloud Run before a merge. It is a separate service on purpose: a pull request never creates a revision of
+# the public portal, so a later `tofu apply` or env change can never put pull-request code live.
+
+locals {
+  portals = {
+    portal         = { name = "agesoa-portal", max_instances = 2 }
+    portal-preview = { name = "agesoa-portal-preview", max_instances = 1 }
+  }
+}
 
 resource "google_service_account" "portal" {
   account_id   = "agesoa-run-portal"
@@ -14,7 +24,8 @@ resource "google_project_iam_member" "portal" {
 }
 
 resource "google_cloud_run_v2_service" "portal" {
-  name                 = "agesoa-portal"
+  for_each             = local.portals
+  name                 = each.value.name
   location             = var.region
   ingress              = "INGRESS_TRAFFIC_ALL"
   deletion_protection  = var.deletion_protection
@@ -23,7 +34,7 @@ resource "google_cloud_run_v2_service" "portal" {
   labels = {
     app     = "agesoa"
     env     = var.environment
-    service = "portal"
+    service = each.key
   }
 
   template {
@@ -33,7 +44,7 @@ resource "google_cloud_run_v2_service" "portal" {
 
     scaling {
       min_instance_count = 0
-      max_instance_count = 2
+      max_instance_count = each.value.max_instances
     }
 
     containers {
@@ -85,9 +96,16 @@ resource "google_cloud_run_v2_service" "portal" {
   depends_on = [google_project_iam_member.portal]
 }
 
+moved {
+  from = google_cloud_run_v2_service.portal
+  to   = google_cloud_run_v2_service.portal["portal"]
+}
+
 check "portal_url_is_deterministic" {
   assert {
-    condition     = contains(google_cloud_run_v2_service.portal.urls, "https://${local.portal_host}")
+    condition = contains(google_cloud_run_v2_service.portal["portal"].urls, "https://${local.portal_host}") && contains(
+      google_cloud_run_v2_service.portal["portal-preview"].urls, "https://${local.portal_preview_host}"
+    )
     error_message = "Cloud Run URL format changed; update local.portal_host (used for CORS and auth domains)."
   }
 }

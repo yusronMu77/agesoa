@@ -7,7 +7,12 @@ output "service_audiences" {
 }
 
 output "portal_url" {
-  value = google_cloud_run_v2_service.portal.uri
+  value = google_cloud_run_v2_service.portal["portal"].uri
+}
+
+output "portal_preview_url" {
+  value       = "https://${local.portal_preview_host}"
+  description = "Pull-request preview of the portal (preview.yml); E2E: BASE_URL_PORTAL=<this>"
 }
 
 output "ops_service_account" {
