@@ -29,4 +29,27 @@ function AiMarker({
   )
 }
 
-export { AiMarker }
+/** A full-width AI box (Penpot `AI marker` above a draft): the marker title with the instruction under it. */
+function AiCallout({
+  title,
+  className,
+  children,
+  ...props
+}: HTMLAttributes<HTMLDivElement> & { title: string }) {
+  return (
+    <div
+      data-slot="ai-callout"
+      className={cn(
+        "grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 rounded-md bg-[var(--ag-color-ai-bg)] p-4 text-[var(--ag-color-ai-fg)]",
+        className
+      )}
+      {...props}
+    >
+      <CpuIcon aria-hidden="true" className="mt-0.5 size-5" />
+      <p className="m-0 text-sm font-medium">{title}</p>
+      {children && <div className="col-start-2 text-base text-foreground">{children}</div>}
+    </div>
+  )
+}
+
+export { AiCallout, AiMarker }

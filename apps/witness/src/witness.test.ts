@@ -7,7 +7,7 @@ import { T, t } from "./copy";
 import { EmptyRecording, LocationUnavailable, locationError, PermissionDenied, recordingResult } from "./device";
 import { appendDictated, dictationSupported, startDictation } from "./dictation";
 import { errorText } from "./errors";
-import { lastReportId, rememberReport } from "./reports";
+import { lastReportId, rememberReport, reportIds } from "./reports";
 import {
   canonicalWord,
   fieldInError,
@@ -304,12 +304,24 @@ describe("SCR-006 voice answers by dictation + report status (#49)", () => {
     expect(ended).toBe("network");
   });
 
-  test("the device remembers only the id of its last report", () => {
+  test("the device remembers only the ids of its reports, newest first", () => {
     const store = memory();
     expect(lastReportId(store)).toBeNull();
     rememberReport("0b8c1d2e3f40", store);
+    rememberReport("1c9d2e3f4051", store);
+    rememberReport("0b8c1d2e3f40", store); // seen again: moves to the front, not listed twice
+    expect(reportIds(store)).toEqual(["0b8c1d2e3f40", "1c9d2e3f4051"]);
     expect(lastReportId(store)).toBe("0b8c1d2e3f40");
+    // A tampered value is ignored, never used as a path.
     store.setItem("agesoa.witness.last-report", "../etc/passwd");
+    store.setItem("agesoa.witness.reports", JSON.stringify(["../etc/passwd", 42]));
+    expect(reportIds(store)).toEqual([]);
     expect(lastReportId(store)).toBeNull();
+  });
+
+  test("a report id kept by an earlier version is still listed", () => {
+    const store = memory();
+    store.setItem("agesoa.witness.last-report", "0b8c1d2e3f40");
+    expect(reportIds(store)).toEqual(["0b8c1d2e3f40"]);
   });
 });

@@ -10,9 +10,10 @@ const alertVariants = cva(
     variants: {
       variant: {
         default: "border-[var(--ag-color-border-strong)]",
-        info: "border-[var(--ag-color-feedback-info)] bg-[var(--ag-color-status-info-bg)]",
-        warning: "border-[var(--ag-color-feedback-warning)] bg-[var(--ag-color-status-warning-bg)]",
-        destructive: "border-destructive text-foreground *:[svg]:text-destructive",
+        info: "border-[var(--ag-color-feedback-info)] bg-[var(--ag-color-status-info-bg)] *:[svg]:text-[var(--ag-color-feedback-info)] [&_[data-slot=alert-title]]:text-[var(--ag-color-feedback-info)]",
+        warning: "border-[var(--ag-color-feedback-warning)] bg-[var(--ag-color-status-warning-bg)] *:[svg]:text-[var(--ag-color-text-accent)] [&_[data-slot=alert-title]]:text-[var(--ag-color-text-accent)]",
+        success: "border-[var(--ag-color-feedback-success)] bg-[var(--ag-color-status-success-bg)] *:[svg]:text-[var(--ag-color-feedback-success)] [&_[data-slot=alert-title]]:text-[var(--ag-color-feedback-success)]",
+        destructive: "border-destructive bg-[var(--ag-color-status-danger-bg)] text-foreground *:[svg]:text-destructive [&_[data-slot=alert-title]]:text-destructive",
       },
     },
     defaultVariants: {

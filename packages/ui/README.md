@@ -13,7 +13,12 @@ from this folder and adjusted to the Penpot variants of the design repository (`
 |---|---|---|
 | `button` | `Button` | `default` (Primer), `secondary` (Sekunder), `outline`, `ghost`, `destructive` (Bahaya), `link`; sizes `default` 40 px (desktop), `touch` 48 px (Witness), `sm`, `icon`, `icon-touch` |
 | `badge` | `Badge`, `Badge status bukti` | `neutral`, `success`, `warning`, `destructive`, evidence `alleged` / `supported` / `proven` |
-| `alert` | `Callout` | `default`, `info`, `warning`, `destructive`; no default `role` (pass `status` or `alert`) |
+| `alert` | `Callout` | `default`, `info`, `warning`, `destructive`, `success` (tinted background, icon and title in the tone colour); no default `role` (pass `status` or `alert`) |
+| `ai-marker` (`AiMarker`, `AiCallout`) | `Penanda hasil AI` | text label with a neutral chip icon (no sparkles); `AiCallout` = title + text on the AI background |
+| `stepper` | `Stepper` | steps `done` (check), `current` (`aria-current="step"`), `upcoming`; 32 px circles with connectors |
+| `bottom-nav` (`BottomNav`, `BottomNavItem`) | `Tab bar` | `nav` landmark, 48 px items, active pill from `aria-current="page"`, optional count badge; `render` for links |
+| `attachment-row` | `Lampiran` | tile (icon or preview) + title + hint + one action; children below |
+| `evidence-badge`, `hash-text`, `logo`, `role-chip`, `simulation-band`, `nav-item`, `quorum` | `Badge status bukti`, `Hash`, `Logo`, `Chip peran`, `Pita SIMULASI`, `Nav item`, `Kuorum` | AGESOA components shared by the portal and Witness |
 | `input`, `textarea`, `native-select`, `checkbox`, `radio-group`, `switch`, `label`, `field` | `Input`, `Textarea`, `Select`, `Checkbox`, `Radio`, `Switch` | 40 px controls, `border.strong` outline (3:1 on the canvas) |
 | `dialog`, `toast`, `tabs`, `skeleton`, `empty`, `card`, `table`, `separator`, `spinner` | `Dialog`, `Toast`, `Tab`, `Skeleton`, `Empty state` | shadcn defaults on the AGESOA theme |
 

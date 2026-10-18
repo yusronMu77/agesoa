@@ -5,17 +5,19 @@ import { cn } from "@agesoa/ui/lib/utils";
 
 /** Class names of the shared @agesoa/ui components for Witness markup (buttons, labels styled as buttons, pills). */
 
-type ButtonKind = "primary" | "neutral" | "danger" | "link";
+type ButtonKind = "primary" | "neutral" | "danger" | "link" | "ghost";
 
-const BUTTON_VARIANT = { primary: "default", neutral: "outline", danger: "destructive", link: "link" } as const;
+const BUTTON_VARIANT = { primary: "default", neutral: "outline", danger: "destructive", link: "link", ghost: "ghost" } as const;
 
-/** A Witness button: always the 48 px touch target; `wide` fills the row, `small` uses the small text size. */
-export function button(kind: ButtonKind = "neutral", opts: { wide?: boolean; small?: boolean } = {}): string {
+/** A Witness button: always the 48 px touch target; `wide` fills the row, `small` uses the small text size, `start` aligns icon and text to the left (Penpot action rows). */
+export function button(kind: ButtonKind = "neutral", opts: { wide?: boolean; small?: boolean; start?: boolean } = {}): string {
   return cn(
     buttonVariants({ variant: BUTTON_VARIANT[kind], size: kind === "link" ? "default" : "touch" }),
     kind === "link" && "justify-start",
+    kind === "ghost" && "text-primary",
     opts.wide && "w-full whitespace-normal",
     opts.small && "text-sm",
+    opts.start && "justify-start",
   );
 }
 

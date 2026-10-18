@@ -1,4 +1,11 @@
-import { button, pill } from "../ui";
+import { AttachmentRow } from "@agesoa/ui/components/attachment-row";
+import { AiMarker } from "@agesoa/ui/components/ai-marker";
+import { Input } from "@agesoa/ui/components/input";
+import { NativeSelect } from "@agesoa/ui/components/native-select";
+import { Textarea } from "@agesoa/ui/components/textarea";
+import { cn } from "@agesoa/ui/lib/utils";
+import { ImageIcon, LinkIcon, MicIcon } from "lucide-react";
+import { button } from "../ui";
 /**
  * SCR-004 Review the Agen Intake draft: every field can be corrected, the rule check is computed by the service
  * (code, not the model), then the reporter submits.
@@ -19,6 +26,8 @@ const INPUT_TYPE: Record<PackField["type"], string> = {
   integer: "number",
   enum: "text",
 };
+
+const EVIDENCE_ICON = { photo: ImageIcon, audio: MicIcon, screenshot: ImageIcon } as const;
 
 function inputsOf(pack: PackDocument, report: Report): Record<string, string> {
   return Object.fromEntries(
@@ -109,6 +118,16 @@ export function DraftReview({
 
   const corrected = (id: string) =>
     !!report.intake && id in report.fields && !sameValue(report.fields[id], report.intake.fields[id]);
+  const proposed = (id: string) => !!report.intake && id in report.intake.fields;
+
+  const hintOf = (f: PackField): string | null => {
+    if (f.type === "string_list") return T["TXT-WIT-086"];
+    if (f.hint) return f.hint.id;
+    return proposed(f.id) ? T["TXT-WIT-226"] : null;
+  };
+
+  const evidenceHint = (e: Report["evidence"][number]): string | null =>
+    e.kind === "photo" && e.metadata_removed ? T["TXT-WIT-213"] : e.kind === "screenshot" ? T["TXT-WIT-214"] : null;
 
   return (
     <main className="screen" data-screen="SCR-004">
@@ -118,18 +137,16 @@ export function DraftReview({
       ) : !report.intake ? (
         <p className="lead">{T["TXT-WIT-189"]}</p>
       ) : (
-        <AiResultLabel>{T["TXT-WIT-081"]}</AiResultLabel>
+        <AiResultLabel title={T["TXT-WIT-081"]}>{T["TXT-WIT-224"]}</AiResultLabel>
       )}
       {report.region && <RegionName region={report.region} synthetic={report.synthetic} />}
-      {report.intake?.transcript && (
-        <section>
-          <h2>{T["TXT-WIT-096"]}</h2>
-          <blockquote className="narrative">{report.intake.transcript}</blockquote>
-        </section>
-      )}
 
-      <p role="status" className={status ? "field-hint" : "visually-hidden"}>{status}</p>
-      <form aria-busy={busy}
+      <p role="status" className={status ? "field-hint" : "visually-hidden"}>
+        {status}
+      </p>
+      <form
+        noValidate
+        aria-busy={busy}
         onSubmit={(event) => {
           event.preventDefault();
           void run(true);
@@ -138,52 +155,95 @@ export function DraftReview({
         <fieldset className="draft-fields" disabled={busy}>
           <legend>{T["TXT-WIT-185"]}</legend>
           <p className="field-hint">{T["TXT-WIT-186"]}</p>
-          <label className="field">
-            <span className="field-label">{T["TXT-WIT-188"]}</span>
-            <textarea rows={4} maxLength={5000} value={narrative}
-              onChange={(event) => setNarrative(event.target.value)} />
-          </label>
-          <label className="field">
-            <span className="field-label">
+          <div className="field">
+            <label className="field-label" htmlFor="draft-narrative">
+              {T["TXT-WIT-188"]}
+            </label>
+            <Textarea
+              id="draft-narrative"
+              rows={4}
+              maxLength={5000}
+              value={narrative}
+              onChange={(event) => setNarrative(event.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="draft-category">
               {T["TXT-WIT-083"]} <span className="required">({T["TXT-WIT-085"]})</span>
-            </span>
-            <select value={category} required onChange={(event) => setCategory(event.target.value)}>
+            </label>
+            <NativeSelect
+              id="draft-category"
+              className="w-full"
+              value={category}
+              required
+              aria-describedby={report.intake?.category ? "draft-category-hint" : undefined}
+              onChange={(event) => setCategory(event.target.value)}
+            >
               <option value="">{T["TXT-WIT-084"]}</option>
               {pack.categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.label.id}
                 </option>
               ))}
-            </select>
-          </label>
+            </NativeSelect>
+            {report.intake?.category && (
+              <p className="field-hint" id="draft-category-hint">
+                {T["TXT-WIT-225"]}
+              </p>
+            )}
+          </div>
 
-          {pack.report_fields.map((f) => (
-            <label className="field" key={f.id}>
-              <span className="field-label">
-                {f.label.id}
-                {f.required && <span className="required"> ({T["TXT-WIT-193"]})</span>}
-                {corrected(f.id) && <span className="tag">{T["TXT-WIT-097"]}</span>}
-              </span>
-              {(f.hint || f.type === "string_list") && (
-                <span className="field-hint">{f.type === "string_list" ? T["TXT-WIT-086"] : f.hint?.id}</span>
-              )}
-              {f.type === "enum" ? (
-                <select name={f.id} value={inputs[f.id] ?? ""} aria-invalid={badField === f.id}
-                  onChange={(event) => setInputs((current) => ({ ...current, [f.id]: event.target.value }))}>
-                  <option value="">—</option>
-                  {f.options?.map((option) => <option key={option} value={option}>{option}</option>)}
-                </select>
-              ) : <input
-                name={f.id}
-                type={INPUT_TYPE[f.type]}
-                min={f.type === "integer" ? 0 : undefined}
-                inputMode={f.type === "integer" ? "numeric" : undefined}
-                value={inputs[f.id] ?? ""}
-                aria-invalid={badField === f.id}
-                onChange={(event) => setInputs((current) => ({ ...current, [f.id]: event.target.value }))}
-              />}
-            </label>
-          ))}
+          {pack.report_fields.map((f) => {
+            const hint = hintOf(f);
+            const was = report.intake?.fields[f.id];
+            return (
+              <div className="field" key={f.id}>
+                <label className="field-label" htmlFor={`field-${f.id}`}>
+                  {f.label.id}
+                  {f.required && <span className="required"> ({T["TXT-WIT-193"]})</span>}
+                </label>
+                {f.type === "enum" ? (
+                  <NativeSelect
+                    id={`field-${f.id}`}
+                    name={f.id}
+                    className="w-full"
+                    value={inputs[f.id] ?? ""}
+                    aria-invalid={badField === f.id}
+                    onChange={(event) => setInputs((current) => ({ ...current, [f.id]: event.target.value }))}
+                  >
+                    <option value="">—</option>
+                    {f.options?.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                ) : (
+                  <Input
+                    id={`field-${f.id}`}
+                    name={f.id}
+                    type={INPUT_TYPE[f.type]}
+                    min={f.type === "integer" ? 0 : undefined}
+                    inputMode={f.type === "integer" ? "numeric" : undefined}
+                    className={cn("h-12", corrected(f.id) && "border-2 border-primary")}
+                    value={inputs[f.id] ?? ""}
+                    aria-invalid={badField === f.id}
+                    aria-describedby={hint || corrected(f.id) ? `hint-${f.id}` : undefined}
+                    onChange={(event) => setInputs((current) => ({ ...current, [f.id]: event.target.value }))}
+                  />
+                )}
+                {(hint || corrected(f.id)) && (
+                  <p className="field-hint" id={`hint-${f.id}`}>
+                    {corrected(f.id)
+                      ? was === undefined
+                        ? T["TXT-WIT-097"]
+                        : t("TXT-WIT-227", { nilai: String(was) })
+                      : hint}
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </fieldset>
 
         {report.missing_required.length > 0 && (
@@ -192,56 +252,77 @@ export function DraftReview({
           </Notice>
         )}
 
-        {pack.rules.length > 0 && <section aria-labelledby="rules-heading" className="card">
-          <h2 id="rules-heading">{T["TXT-WIT-087"]}</h2>
-          <p className="field-hint">{T["TXT-WIT-088"]}</p>
-          <ul className="plain">
-            {report.rule_results.map((r) => {
-              const rule = pack.rules.find((x) => x.id === r.rule_id);
-              const [mark, text, tone] =
-                r.violated === null
-                  ? ["○", T["TXT-WIT-091"], "neutral"]
-                  : r.violated
-                    ? ["✕", T["TXT-WIT-089"], "error"]
-                    : ["●", T["TXT-WIT-090"], "ok"];
-              return (
-                <li key={r.rule_id} data-testid={`rule-${r.rule_id}`} data-violated={String(r.violated)}>
-                  <span className="rule-name">{rule?.label.id ?? r.rule_id}</span>
-                  <span className={pill(tone as "ok" | "error" | "neutral")}>
-                    <span aria-hidden="true">{mark}</span>
-                    {text}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>}
-
-        {report.evidence.length > 0 && (
-          <section aria-labelledby="evidence-heading">
-            <h2 id="evidence-heading">{T["TXT-WIT-092"]}</h2>
-            <ul className="plain">
-              {report.evidence.map((e) => (
-                <li key={e.evidence_id}>
-                  {EVIDENCE_KIND[e.kind]} · <span className="mono">{e.sha256.slice(0, 16)}…</span>
-                </li>
-              ))}
+        {pack.rules.length > 0 && (
+          <section aria-labelledby="rules-heading">
+            <h2 id="rules-heading">{T["TXT-WIT-087"]}</h2>
+            <p className="field-hint">{T["TXT-WIT-088"]}</p>
+            <ul className="stack">
+              {report.rule_results.map((r) => {
+                const rule = pack.rules.find((x) => x.id === r.rule_id);
+                const [tone, text] =
+                  r.violated === null
+                    ? (["info", T["TXT-WIT-091"]] as const)
+                    : r.violated
+                      ? (["error", T["TXT-WIT-089"]] as const)
+                      : (["success", T["TXT-WIT-090"]] as const);
+                return (
+                  <li key={r.rule_id} data-testid={`rule-${r.rule_id}`} data-violated={String(r.violated)}>
+                    <Notice tone={tone} title={text}>
+                      {rule?.label.id ?? r.rule_id}
+                      {r.violated && r.detail ? ` · ${r.detail}` : ""}
+                    </Notice>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         )}
-        {report.shared_post && (
-          <p className="attached">
-            {T["TXT-WIT-069"]}: <span className="mono">{report.shared_post.url}</span>
-          </p>
+
+        {(report.evidence.length > 0 || report.shared_post) && (
+          <section aria-labelledby="evidence-heading">
+            <h2 id="evidence-heading">{T["TXT-WIT-092"]}</h2>
+            <ul className="stack">
+              {report.evidence.map((e) => {
+                const Icon = EVIDENCE_ICON[e.kind];
+                return (
+                  <li key={e.evidence_id}>
+                    <AttachmentRow tile={<Icon aria-hidden="true" />} title={EVIDENCE_KIND[e.kind]} hint={evidenceHint(e)} />
+                  </li>
+                );
+              })}
+              {report.shared_post && (
+                <li>
+                  <AttachmentRow
+                    tile={<LinkIcon aria-hidden="true" />}
+                    title={T["TXT-WIT-069"]}
+                    hint={<span className="mono">{report.shared_post.url}</span>}
+                  />
+                </li>
+              )}
+            </ul>
+          </section>
+        )}
+
+        {report.intake?.transcript && (
+          <section aria-labelledby="transcript-heading">
+            <h2 id="transcript-heading">{T["TXT-WIT-252"]}</h2>
+            <AiMarker className="self-start">{T["TXT-WIT-096"]}</AiMarker>
+            <blockquote className="narrative">{report.intake.transcript}</blockquote>
+          </section>
         )}
 
         <div className="actions">
           {error && <Notice tone="error">{error}</Notice>}
-          <button type="button" className={button("neutral", { wide: true })} disabled={busy} onClick={() => void run(false)}>
-            {T["TXT-WIT-093"]}
-          </button>
           <button type="submit" className={button("primary", { wide: true })} disabled={busy}>
             {T["TXT-WIT-094"]}
+          </button>
+          <button
+            type="button"
+            className={button("neutral", { wide: true })}
+            disabled={busy}
+            onClick={() => void run(false)}
+          >
+            {T["TXT-WIT-093"]}
           </button>
         </div>
       </form>

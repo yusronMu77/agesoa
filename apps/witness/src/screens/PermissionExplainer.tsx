@@ -1,14 +1,16 @@
+import { CameraIcon, MapPinIcon, MicIcon } from "lucide-react";
 import { button } from "../ui";
 /** SCR-002 Permission explainer, shown before the browser/phone permission prompt. */
 
 import { useEffect, useRef } from "react";
+import { Notice } from "../components";
 import { T } from "../copy";
 import type { Capability } from "../device";
 
 const TEXT = {
-  camera: [T["TXT-WIT-040"], T["TXT-WIT-041"]],
-  microphone: [T["TXT-WIT-042"], T["TXT-WIT-043"]],
-  geolocation: [T["TXT-WIT-044"], T["TXT-WIT-045"]],
+  camera: { icon: CameraIcon, title: T["TXT-WIT-040"], body: T["TXT-WIT-041"], fallback: T["TXT-WIT-217"] },
+  microphone: { icon: MicIcon, title: T["TXT-WIT-042"], body: T["TXT-WIT-043"], fallback: T["TXT-WIT-218"] },
+  geolocation: { icon: MapPinIcon, title: T["TXT-WIT-044"], body: T["TXT-WIT-045"], fallback: T["TXT-WIT-219"] },
 } as const;
 
 export function PermissionExplainer({
@@ -26,7 +28,7 @@ export function PermissionExplainer({
     if (element && !element.open) element.showModal();
     return () => element?.close();
   }, []);
-  const [title, body] = TEXT[kind];
+  const { icon: Icon, title, body, fallback } = TEXT[kind];
   return (
     <dialog
       ref={dialog}
@@ -38,13 +40,21 @@ export function PermissionExplainer({
         onSkip();
       }}
     >
-      <h2 id="permission-title">{title}</h2>
-      <p>{body}</p>
+      <div className="sheet-body">
+        <span className="sheet-icon" aria-hidden="true">
+          <Icon />
+        </span>
+        <h2 id="permission-title">{title}</h2>
+        <p className="lead">{body}</p>
+        <Notice tone="info" title={T["TXT-WIT-216"]}>
+          {fallback}
+        </Notice>
+      </div>
       <div className="actions">
         <button type="button" className={button("primary", { wide: true })} onClick={onAllow} autoFocus>
           {T["TXT-WIT-046"]}
         </button>
-        <button type="button" className={button("neutral", { wide: true })} onClick={onSkip}>
+        <button type="button" className={button("ghost", { wide: true })} onClick={onSkip}>
           {T["TXT-WIT-047"]}
         </button>
       </div>

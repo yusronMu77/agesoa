@@ -1,25 +1,52 @@
-import { AiMarker } from "@agesoa/ui/components/ai-marker";
+import { Alert, AlertDescription, AlertTitle } from "@agesoa/ui/components/alert";
+import { AiCallout } from "@agesoa/ui/components/ai-marker";
 import { SimulationBand as SharedSimulationBand } from "@agesoa/ui/components/simulation-band";
-import { notice } from "./ui";
+import { CircleCheckIcon, InfoIcon, TriangleAlertIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import type { District } from "./api";
 import { T } from "./copy";
 
-export function Notice({ tone, children, testId }: { tone: "info" | "error"; children: ReactNode; testId?: string }) {
+/**
+ * A callout (Penpot `Callout`): icon, optional title in the tone colour, then the text. Errors are announced
+ * (`role="alert"`), the rest is a status.
+ */
+export function Notice({
+  tone,
+  title,
+  children,
+  testId,
+}: {
+  tone: "info" | "warning" | "success" | "error";
+  title?: ReactNode;
+  children?: ReactNode;
+  testId?: string;
+}) {
+  const Icon = tone === "info" ? InfoIcon : tone === "success" ? CircleCheckIcon : TriangleAlertIcon;
   return (
-    <p className={notice(tone)} role={tone === "error" ? "alert" : "status"} data-testid={testId}>
-      <span aria-hidden="true">{tone === "error" ? "!" : "i"}</span>
-      {children}
-    </p>
+    <Alert
+      variant={tone === "error" ? "destructive" : tone}
+      role={tone === "error" ? "alert" : "status"}
+      data-testid={testId}
+    >
+      <Icon aria-hidden="true" />
+      {title && <AlertTitle>{title}</AlertTitle>}
+      {children && <AlertDescription className="text-base text-foreground">{children}</AlertDescription>}
+    </Alert>
   );
 }
 
+/** A sentence "Title. Rest." as the callout title and text; one sentence is the text alone. */
+export function splitSentence(text: string): { title?: string; rest: string } {
+  const at = text.indexOf(". ");
+  return at === -1 ? { rest: text } : { title: text.slice(0, at), rest: text.slice(at + 2) };
+}
+
 /** Marks agent output. Text label and a neutral icon (no sparkles); the reporter can always correct it. */
-export function AiResultLabel({ children }: { children: ReactNode }) {
+export function AiResultLabel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <AiMarker as="p" block data-testid="ai-result-label">
+    <AiCallout title={title} data-testid="ai-result-label">
       {children}
-    </AiMarker>
+    </AiCallout>
   );
 }
 

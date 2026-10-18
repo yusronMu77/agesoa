@@ -1,3 +1,7 @@
+import { AttachmentRow } from "@agesoa/ui/components/attachment-row";
+import { Input } from "@agesoa/ui/components/input";
+import { Textarea } from "@agesoa/ui/components/textarea";
+import { UploadIcon } from "lucide-react";
 import { button } from "../ui";
 /** SCR-003 Paste a social post link and/or upload screenshots as extra evidence. */
 
@@ -37,15 +41,17 @@ export function SharedPost({
   return (
     <main className="screen" data-screen="SCR-003">
       <h1>{T["TXT-WIT-060"]}</h1>
-      <label className="field">
-        <span className="field-label">{T["TXT-WIT-061"]}</span>
-        <span className="field-hint" id="post-link-hint">
-          {T["TXT-WIT-062"]}
-        </span>
-        <input
+      <div className="field">
+        <label className="field-label" htmlFor="post-link">
+          {T["TXT-WIT-061"]}
+        </label>
+        <Input
+          id="post-link"
           type="url"
           inputMode="url"
           autoComplete="off"
+          className="h-12"
+          placeholder={T["TXT-WIT-222"]}
           value={url}
           aria-invalid={invalid}
           aria-describedby={invalid ? "post-link-error" : "post-link-hint"}
@@ -54,19 +60,35 @@ export function SharedPost({
             setInvalid(false);
           }}
         />
-      </label>
-      {invalid && (
-        <p className="field-error" id="post-link-error" role="alert">
-          {T["TXT-WIT-065"]}
+        <p className="field-hint" id="post-link-hint">
+          {T["TXT-WIT-062"]}
         </p>
-      )}
-      <label className="field">
-        <span className="field-label">{T["TXT-WIT-063"]}</span>
-        <textarea rows={3} maxLength={1000} value={excerpt} onChange={(event) => setExcerpt(event.target.value)} />
-      </label>
-      <Notice tone="info">{T["TXT-WIT-064"]}</Notice>
+        {invalid && (
+          <p className="field-error" id="post-link-error" role="alert">
+            {T["TXT-WIT-065"]}
+          </p>
+        )}
+      </div>
+      <div className="field">
+        <label className="field-label" htmlFor="post-excerpt">
+          {T["TXT-WIT-063"]}
+        </label>
+        <Textarea
+          id="post-excerpt"
+          rows={4}
+          maxLength={1000}
+          placeholder={T["TXT-WIT-223"]}
+          aria-describedby="post-excerpt-hint"
+          value={excerpt}
+          onChange={(event) => setExcerpt(event.target.value)}
+        />
+        <p className="field-hint" id="post-excerpt-hint">
+          {T["TXT-WIT-064"]}
+        </p>
+      </div>
 
-      <label className={button()}>
+      <label className={button("neutral", { wide: true })}>
+        <UploadIcon aria-hidden="true" data-icon="inline-start" />
         {T["TXT-WIT-066"]}
         <input
           type="file"
@@ -81,28 +103,38 @@ export function SharedPost({
         />
       </label>
       {shots.length > 0 && (
-        <ul className="thumbs" aria-label={T["TXT-WIT-066"]}>
+        <ul className="stack" aria-label={T["TXT-WIT-066"]}>
           {shots.map((item, index) => (
             <li key={item.key}>
-              <img src={item.previewUrl} alt={`Screenshot ${index + 1}`} />
-              <button
-                type="button"
-                className={button("neutral", { small: true })}
-                aria-label={`${T["TXT-WIT-016"]} screenshot ${index + 1}`}
-                onClick={() => setShots((list) => list.filter((s) => s.key !== item.key))}
-              >
-                {T["TXT-WIT-016"]}
-              </button>
+              <AttachmentRow
+                tile={<img src={item.previewUrl} alt={`Screenshot ${index + 1}`} className="size-full object-cover" />}
+                title={item.name || `Screenshot ${index + 1}`}
+                hint={T["TXT-WIT-214"]}
+                action={
+                  <button
+                    type="button"
+                    className={button("link")}
+                    aria-label={`${T["TXT-WIT-016"]} screenshot ${index + 1}`}
+                    onClick={() => setShots((list) => list.filter((s) => s.key !== item.key))}
+                  >
+                    {T["TXT-WIT-016"]}
+                  </button>
+                }
+              />
             </li>
           ))}
         </ul>
       )}
 
+      <Notice tone="info" title={T["TXT-WIT-220"]}>
+        {T["TXT-WIT-221"]}
+      </Notice>
+
       <div className="actions">
         <button type="button" className={button("primary", { wide: true })} onClick={save}>
           {T["TXT-WIT-067"]}
         </button>
-        <button type="button" className={button("neutral", { wide: true })} onClick={onBack}>
+        <button type="button" className={button("ghost", { wide: true })} onClick={onBack}>
           {T["TXT-WIT-068"]}
         </button>
       </div>

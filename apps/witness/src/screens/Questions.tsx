@@ -1,15 +1,19 @@
 import { EvidenceBadge } from "@agesoa/ui/components/evidence-badge";
+import { AiMarker } from "@agesoa/ui/components/ai-marker";
+import { Textarea } from "@agesoa/ui/components/textarea";
+import { MicIcon } from "lucide-react";
 import { button } from "../ui";
 /**
- * SCR-006 Answer audit questions: the status of the reporter's last report and the questions Agen Audit puts to this
- * reporter, answered in text or by voice (dictation into the text field; only text is sent).
+ * SCR-006 Answer audit questions: the status of the last report of this device and the question Agen Audit puts
+ * to the reporter, answered in text or by voice (dictation into the text field; only text is sent). One question
+ * at a time.
  */
 
 import { useEffect, useRef, useState } from "react";
 import type { Report, WitnessQuestion } from "../api";
 import { ApiError } from "../api";
 import { Notice } from "../components";
-import { T } from "../copy";
+import { T, t } from "../copy";
 import type { Dictation } from "../dictation";
 import { appendDictated, dictationSupported, startDictation } from "../dictation";
 import { formatWib } from "../fields";
@@ -51,23 +55,23 @@ export function Questions({
   questions,
   report,
   onAnswer,
-  onBack,
 }: {
   questions: WitnessQuestion[];
   /** The last report this device submitted, when known. */
   report?: Report | null;
   /** Sends one answer; resolves when it is stored. A rejected promise is shown under the question. */
   onAnswer: (question: WitnessQuestion, answer: string) => Promise<void>;
-  onBack: () => void;
 }) {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [sending, setSending] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
+  const [answered, setAnswered] = useState(0);
   const [listening, setListening] = useState<string | null>(null);
   const dictation = useRef<Dictation | null>(null);
   const canDictate = dictationSupported();
   useEffect(() => () => dictation.current?.stop(), []);
+
+  const setError = (id: string, text: string) => setErrors((current) => ({ ...current, [id]: text }));
 
   const toggleDictation = (id: string) => {
     if (listening === id) {
@@ -87,8 +91,6 @@ export function Questions({
     setListening(dictation.current ? id : null);
   };
 
-  const setError = (id: string, text: string) => setErrors((current) => ({ ...current, [id]: text }));
-
   const send = async (question: WitnessQuestion) => {
     const id = question.question_id;
     const answer = (drafts[id] ?? "").trim();
@@ -100,7 +102,7 @@ export function Questions({
     setError(id, "");
     try {
       await onAnswer(question, answer);
-      setSent(true);
+      setAnswered((n) => n + 1);
     } catch (err) {
       setError(id, answerError(err));
     } finally {
@@ -108,73 +110,82 @@ export function Questions({
     }
   };
 
+  const question = questions[0];
+  const total = answered + questions.length;
+  const id = question?.question_id ?? "";
   return (
     <main className="screen" data-screen="SCR-006">
       <h1>{T["TXT-WIT-140"]}</h1>
-      <p className="field-hint">{T["TXT-WIT-141"]}</p>
+      <Notice tone="info" title={T["TXT-WIT-229"]}>
+        {T["TXT-WIT-141"]}
+      </Notice>
       {report && <ReportStatus report={report} />}
-      {sent && (
-        <Notice tone="info" testId="answer-sent">
+      {answered > 0 && (
+        <Notice tone="success" testId="answer-sent">
           {T["TXT-WIT-145"]}
         </Notice>
       )}
-      {questions.length === 0 && <p data-testid="no-questions">{T["TXT-WIT-146"]}</p>}
-      <ul className="plain" aria-label={T["TXT-WIT-140"]}>
-        {questions.map((question) => {
-          const id = question.question_id;
-          const error = errors[id];
-          return (
-            <li key={id} className="card question" data-testid="audit-question">
-              <p className="question-text">{question.text.id || question.text.en}</p>
-              <div className="field">
-                <label className="field-label" htmlFor={`answer-${id}`}>
-                  {T["TXT-WIT-142"]}
-                </label>
-                <textarea
-                  id={`answer-${id}`}
-                  rows={3}
-                  maxLength={4000}
-                  value={drafts[id] ?? ""}
-                  aria-invalid={error ? true : undefined}
-                  onChange={(event) => setDrafts((current) => ({ ...current, [id]: event.target.value }))}
-                />
-                {canDictate && (
-                  <>
-                    <button
-                      type="button"
-                      className={button("neutral", { wide: true })}
-                      aria-pressed={listening === id}
-                      data-testid="dictate-answer"
-                      onClick={() => toggleDictation(id)}
-                    >
-                      {listening === id ? T["TXT-WIT-174"] : T["TXT-WIT-173"]}
-                    </button>
-                    <p className="field-hint">{T["TXT-WIT-175"]}</p>
-                  </>
-                )}
-                {error && (
-                  <p className="field-error" role="alert">
-                    {error}
-                  </p>
-                )}
-              </div>
+      {!question && <p data-testid="no-questions">{T["TXT-WIT-146"]}</p>}
+      {question && (
+        <>
+          <section className="card question" data-testid="audit-question" aria-label={T["TXT-WIT-140"]}>
+            <div className="question-head">
+              <span>{t("TXT-WIT-230", { nomor: answered + 1, jumlah: total, kasus: question.case_id.slice(0, 8) })}</span>
+              <AiMarker>{T["TXT-WIT-231"]}</AiMarker>
+            </div>
+            <p className="question-text">{question.text.id || question.text.en}</p>
+            <p className="field-hint">{T["TXT-WIT-232"]}</p>
+          </section>
+          <div className="field">
+            <label className="field-label" htmlFor={`answer-${id}`}>
+              {T["TXT-WIT-142"]}
+            </label>
+            <Textarea
+              id={`answer-${id}`}
+              rows={5}
+              maxLength={4000}
+              placeholder={T["TXT-WIT-251"]}
+              aria-describedby={`answer-hint-${id}`}
+              aria-invalid={errors[id] ? true : undefined}
+              value={drafts[id] ?? ""}
+              onChange={(event) => setDrafts((current) => ({ ...current, [id]: event.target.value }))}
+            />
+            <p className="field-hint" id={`answer-hint-${id}`}>
+              {T["TXT-WIT-233"]}
+            </p>
+            {errors[id] && (
+              <p className="field-error" role="alert">
+                {errors[id]}
+              </p>
+            )}
+          </div>
+          {canDictate && (
+            <div className="field">
               <button
                 type="button"
-                className={button("primary", { wide: true })}
-                disabled={sending !== null}
-                onClick={() => void send(question)}
+                className={button("neutral", { wide: true })}
+                aria-pressed={listening === id}
+                data-testid="dictate-answer"
+                onClick={() => toggleDictation(id)}
               >
-                {T["TXT-WIT-143"]}
+                <MicIcon aria-hidden="true" data-icon="inline-start" />
+                {listening === id ? T["TXT-WIT-174"] : T["TXT-WIT-173"]}
               </button>
-            </li>
-          );
-        })}
-      </ul>
-      <div className="actions">
-        <button type="button" className={button("neutral", { wide: true })} onClick={onBack}>
-          {T["TXT-WIT-068"]}
-        </button>
-      </div>
+              <p className="field-hint">{T["TXT-WIT-175"]}</p>
+            </div>
+          )}
+          <div className="actions">
+            <button
+              type="button"
+              className={button("primary", { wide: true })}
+              disabled={sending !== null}
+              onClick={() => void send(question)}
+            >
+              {T["TXT-WIT-143"]}
+            </button>
+          </div>
+        </>
+      )}
     </main>
   );
 }
