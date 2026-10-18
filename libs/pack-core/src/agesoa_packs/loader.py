@@ -38,7 +38,7 @@ class DomainPack:
         return self.document["rules"]
 
     @property
-    def evidence_deadline(self) -> dict[str, Any]:
+    def evidence_deadline(self) -> dict[str, Any] | None:
         return self.document["evidence_deadline"]
 
     @property
@@ -162,10 +162,13 @@ def _cross_reference_errors(doc: dict[str, Any]) -> list[str]:
         ]
 
     deadline = doc["evidence_deadline"]
-    need("evidence_deadline/anchor_field", deadline["anchor_field"], ("datetime",))
-    need(
-        "evidence_deadline/fallback_anchor_field", deadline.get("fallback_anchor_field"), ("date", "datetime")
-    )
+    if deadline is not None:
+        need("evidence_deadline/anchor_field", deadline["anchor_field"], ("datetime",))
+        need(
+            "evidence_deadline/fallback_anchor_field",
+            deadline.get("fallback_anchor_field"),
+            ("date", "datetime"),
+        )
 
     hints = doc.get("intake_hints", {})
     categories = {c["id"] for c in doc["categories"]}

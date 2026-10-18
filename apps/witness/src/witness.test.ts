@@ -33,8 +33,13 @@ describe("config", () => {
       demoMode: false,
       ingestionUrl: "http://localhost:8001",
       caseAuditUrl: "http://localhost:8002",
-      domain: "mbg",
+      domain: "general",
     });
+  });
+
+  test("a legacy domain preset cannot replace the general public reporting fields", () => {
+    expect(loadConfig({ VITE_DOMAIN: "mbg" }).domain).toBe("general");
+    expect(loadConfig({ VITE_DOMAIN: "unavailable" }).domain).toBe("general");
   });
 
   test("demo mode is refused in prod", () => {

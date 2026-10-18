@@ -17,6 +17,7 @@ const INPUT_TYPE: Record<PackField["type"], string> = {
   datetime: "datetime-local",
   date: "date",
   integer: "number",
+  enum: "text",
 };
 
 function inputsOf(pack: PackDocument, report: Report): Record<string, string> {
@@ -39,11 +40,13 @@ export function DraftReview({
   onSubmitted: (report: Report) => void;
 }) {
   const [report, setReport] = useState(initial);
+  const [narrative, setNarrative] = useState(initial.narrative ?? initial.intake?.transcript ?? "");
   const [category, setCategory] = useState(initial.category ?? "");
   const [inputs, setInputs] = useState(() => inputsOf(pack, initial));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [badField, setBadField] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
   const label = (id: string) => pack.report_fields.find((f) => f.id === id)?.label.id ?? id;
 
@@ -56,6 +59,7 @@ export function DraftReview({
     const patch: ReportPatch = {};
     if (Object.keys(fields).length) patch.fields = fields;
     if ((category || null) !== report.category) patch.category = category || null;
+    if ((narrative.trim() || null) !== report.narrative) patch.narrative = narrative.trim() || null;
     return patch;
   };
 
@@ -77,11 +81,15 @@ export function DraftReview({
     const saved = await client.patchReport(report.id, patch);
     setReport(saved);
     setInputs(inputsOf(pack, saved));
+    setCategory(saved.category ?? "");
+    setNarrative(saved.narrative ?? "");
     return saved;
   };
 
   const run = async (submit: boolean) => {
+    if (busy) return;
     setError(null);
+    setStatus(null);
     setBadField(null);
     if (submit && !category) {
       setError(T["TXT-WIT-095"]);
@@ -91,6 +99,7 @@ export function DraftReview({
     try {
       const saved = await save();
       if (submit && saved) onSubmitted(await client.submit(saved.id));
+      else setStatus(T["TXT-WIT-190"]);
     } catch (err) {
       fail(err);
     } finally {
@@ -104,13 +113,14 @@ export function DraftReview({
   return (
     <main className="screen" data-screen="SCR-004">
       <h1>{T["TXT-WIT-080"]}</h1>
-      {intakeFailed || !report.intake ? (
+      {intakeFailed && report.domain === initial.domain ? (
         <Notice tone="info">{T["TXT-WIT-082"]}</Notice>
+      ) : !report.intake ? (
+        <p className="lead">{T["TXT-WIT-189"]}</p>
       ) : (
         <AiResultLabel>{T["TXT-WIT-081"]}</AiResultLabel>
       )}
       {report.region && <RegionName region={report.region} synthetic={report.synthetic} />}
-      {report.narrative && <blockquote className="narrative">{report.narrative}</blockquote>}
       {report.intake?.transcript && (
         <section>
           <h2>{T["TXT-WIT-096"]}</h2>
@@ -118,47 +128,63 @@ export function DraftReview({
         </section>
       )}
 
-      <form
+      <p role="status" className={status ? "field-hint" : "visually-hidden"}>{status}</p>
+      <form aria-busy={busy}
         onSubmit={(event) => {
           event.preventDefault();
           void run(true);
         }}
       >
-        <label className="field">
-          <span className="field-label">
-            {T["TXT-WIT-083"]} <span className="required">({T["TXT-WIT-085"]})</span>
-          </span>
-          <select value={category} onChange={(event) => setCategory(event.target.value)}>
-            <option value="">{T["TXT-WIT-084"]}</option>
-            {pack.categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label.id}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {pack.report_fields.map((f) => (
-          <label className="field" key={f.id}>
-            <span className="field-label">
-              {f.label.id}
-              {f.required && <span className="required"> ({T["TXT-WIT-085"]})</span>}
-              {corrected(f.id) && <span className="tag">{T["TXT-WIT-097"]}</span>}
-            </span>
-            {(f.hint || f.type === "string_list") && (
-              <span className="field-hint">{f.type === "string_list" ? T["TXT-WIT-086"] : f.hint?.id}</span>
-            )}
-            <input
-              name={f.id}
-              type={INPUT_TYPE[f.type]}
-              min={f.type === "integer" ? 0 : undefined}
-              inputMode={f.type === "integer" ? "numeric" : undefined}
-              value={inputs[f.id] ?? ""}
-              aria-invalid={badField === f.id}
-              onChange={(event) => setInputs((current) => ({ ...current, [f.id]: event.target.value }))}
-            />
+        <fieldset className="draft-fields" disabled={busy}>
+          <legend>{T["TXT-WIT-185"]}</legend>
+          <p className="field-hint">{T["TXT-WIT-186"]}</p>
+          <label className="field">
+            <span className="field-label">{T["TXT-WIT-188"]}</span>
+            <textarea rows={4} maxLength={5000} value={narrative}
+              onChange={(event) => setNarrative(event.target.value)} />
           </label>
-        ))}
+          <label className="field">
+            <span className="field-label">
+              {T["TXT-WIT-083"]} <span className="required">({T["TXT-WIT-085"]})</span>
+            </span>
+            <select value={category} required onChange={(event) => setCategory(event.target.value)}>
+              <option value="">{T["TXT-WIT-084"]}</option>
+              {pack.categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label.id}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {pack.report_fields.map((f) => (
+            <label className="field" key={f.id}>
+              <span className="field-label">
+                {f.label.id}
+                {f.required && <span className="required"> ({T["TXT-WIT-193"]})</span>}
+                {corrected(f.id) && <span className="tag">{T["TXT-WIT-097"]}</span>}
+              </span>
+              {(f.hint || f.type === "string_list") && (
+                <span className="field-hint">{f.type === "string_list" ? T["TXT-WIT-086"] : f.hint?.id}</span>
+              )}
+              {f.type === "enum" ? (
+                <select name={f.id} value={inputs[f.id] ?? ""} aria-invalid={badField === f.id}
+                  onChange={(event) => setInputs((current) => ({ ...current, [f.id]: event.target.value }))}>
+                  <option value="">—</option>
+                  {f.options?.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+              ) : <input
+                name={f.id}
+                type={INPUT_TYPE[f.type]}
+                min={f.type === "integer" ? 0 : undefined}
+                inputMode={f.type === "integer" ? "numeric" : undefined}
+                value={inputs[f.id] ?? ""}
+                aria-invalid={badField === f.id}
+                onChange={(event) => setInputs((current) => ({ ...current, [f.id]: event.target.value }))}
+              />}
+            </label>
+          ))}
+        </fieldset>
 
         {report.missing_required.length > 0 && (
           <Notice tone="info" testId="missing-required">
@@ -166,7 +192,7 @@ export function DraftReview({
           </Notice>
         )}
 
-        <section aria-labelledby="rules-heading" className="card">
+        {pack.rules.length > 0 && <section aria-labelledby="rules-heading" className="card">
           <h2 id="rules-heading">{T["TXT-WIT-087"]}</h2>
           <p className="field-hint">{T["TXT-WIT-088"]}</p>
           <ul className="plain">
@@ -189,7 +215,7 @@ export function DraftReview({
               );
             })}
           </ul>
-        </section>
+        </section>}
 
         {report.evidence.length > 0 && (
           <section aria-labelledby="evidence-heading">

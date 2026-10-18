@@ -90,7 +90,7 @@ def source_from_signal(pack: DomainPack, data: dict[str, Any]) -> Source:
 
 
 def _deadline(pack: DomainPack, anchor: datetime | None) -> datetime | None:
-    if anchor is None:
+    if anchor is None or pack.evidence_deadline is None:
         return None
     return (anchor + timedelta(hours=pack.evidence_deadline["hours"])).astimezone(UTC)
 
@@ -134,7 +134,7 @@ def case_evidence(pack: DomainPack, deadlines: list[datetime | None], at: dateti
     window has closed, a later report does not bring the physical evidence back. Findings are capped by
     `max_finding_status`; with no deadline known the status is "unknown" and nothing caps the finding."""
     known = [d for d in deadlines if d is not None]
-    if not known:
+    if not known or pack.evidence_deadline is None:
         return EvidenceStatus("unknown", None, "proven")
     deadline = min(known)
     if at <= deadline:

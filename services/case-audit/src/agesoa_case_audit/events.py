@@ -171,6 +171,8 @@ async def attach_source(
 
 def _deadline_reason(pack: DomainPack, evidence: Any) -> str:
     cfg = pack.evidence_deadline
+    if cfg is None:
+        return "This domain defines no physical-evidence deadline; evidence must be assessed by validators."
     if evidence.deadline_at is None:
         return "No incident time known, so no evidence deadline could be computed."
     when = isoformat(evidence.deadline_at)

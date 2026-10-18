@@ -6,11 +6,30 @@ def client():
     return TestClient(offline_app())
 
 
-def test_lists_the_mbg_pack():
+def test_lists_general_and_specialised_packs():
     with client() as c:
         packs = c.get("/v1/domain-packs").json()
-    assert [p["id"] for p in packs] == ["mbg"]
-    assert "consume_within_4h" in packs[0]["rules"]
+    by_id = {p["id"]: p for p in packs}
+    assert {"general", "mbg"} <= by_id.keys()
+    assert "consume_within_4h" in by_id["mbg"]["rules"]
+    assert by_id["general"]["rules"] == []
+
+
+def test_general_form_has_no_food_fields_rules_or_expiry():
+    with client() as c:
+        pack = c.get("/v1/domain-packs/general").json()
+        result = c.post(
+            "/v1/domain-packs/general/evaluate",
+            json={
+                "fields": {"occurred_at": "2000-01-01T00:00:00+07:00"},
+                "received_at": "2026-10-18T12:00:00+07:00",
+            },
+        ).json()
+    assert {"place", "occurred_at", "impact", "affected_count"} == {f["id"] for f in pack["report_fields"]}
+    assert "other" in {c["id"] for c in pack["categories"]}
+    assert result["rule_results"] == []
+    assert result["evidence"] == {"status": "unknown", "deadline_at": None, "max_finding_status": "proven"}
+    assert result["missing_required"] == []
 
 
 def test_unknown_pack_is_404():

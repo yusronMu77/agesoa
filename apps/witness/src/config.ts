@@ -8,6 +8,7 @@ export type AppEnv = (typeof APP_ENVS)[number];
 
 export const DEFAULT_INGESTION_URL = "http://localhost:8001";
 export const DEFAULT_CASE_AUDIT_URL = "http://localhost:8002";
+export const PUBLIC_REPORT_DOMAIN = "general";
 
 export interface WitnessConfig {
   appEnv: AppEnv;
@@ -15,7 +16,7 @@ export interface WitnessConfig {
   ingestionUrl: string;
   /** case-audit: the audit questions put to the reporter (SCR-006). */
   caseAuditUrl: string;
-  /** Domain pack the reports belong to. */
+  /** Public reporting always uses neutral incident fields, regardless of legacy deployment presets. */
   domain: string;
 }
 
@@ -68,6 +69,6 @@ export function loadConfig(env: Env = import.meta.env): WitnessConfig {
   }
   const ingestionUrl = parseUrl("VITE_INGESTION_URL", read(env, "VITE_INGESTION_URL") ?? DEFAULT_INGESTION_URL);
   const caseAuditUrl = parseUrl("VITE_CASE_AUDIT_URL", read(env, "VITE_CASE_AUDIT_URL") ?? DEFAULT_CASE_AUDIT_URL);
-  const domain = read(env, "VITE_DOMAIN") ?? "mbg";
+  const domain = PUBLIC_REPORT_DOMAIN;
   return { appEnv, demoMode, ingestionUrl, caseAuditUrl, domain };
 }

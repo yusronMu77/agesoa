@@ -79,6 +79,11 @@ class ReportCreate(BaseModel):
 
 
 class ReportPatch(BaseModel):
+    domain: str | None = Field(
+        None,
+        min_length=1,
+        description="Switch a draft to another installed domain pack. Clears its category, fields and Intake proposal; preserves narrative, region and evidence.",
+    )
     category: str | None = Field(
         None, min_length=1, description="Category id of the domain pack of the report"
     )
@@ -352,9 +357,14 @@ async def patch_report(report_id: str, body: ReportPatch, request: Request, repo
     async with request.app.state.db.transaction() as session:
         row = await _load(session, report_id, reporter, lock=True)
         _require_draft(row)
-        pack = _pack(request, row.domain)
         values: dict[str, Any] = {"updated_at": func.now()}
         sent = body.model_fields_set
+        if "domain" in sent and body.domain is None:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "domain cannot be null")
+        pack = _pack(request, body.domain or row.domain)
+        changing_domain = pack.id != row.domain
+        if changing_domain:
+            values.update(domain=pack.id, category=None, fields={}, intake=None, rule_results=[])
         if "category" in sent:
             if body.category is not None and body.category not in pack.category_ids:
                 raise HTTPException(
@@ -362,7 +372,7 @@ async def patch_report(report_id: str, body: ReportPatch, request: Request, repo
                 )
             values["category"] = body.category
         if body.fields is not None:
-            merged = {**row.fields, **body.fields}
+            merged = {**({} if changing_domain else row.fields), **body.fields}
             try:
                 values["fields"] = coerce_fields(pack, merged, strict=True)
             except ValueError as exc:
@@ -485,6 +495,7 @@ async def run_intake(report_id: str, request: Request, reporter: Reporter) -> Re
         _require_draft(row)
         files = (await session.execute(select(evidence).where(evidence.c.report_id == report_id))).all()
     agent = request.app.state.intake[row.domain]
+    intake_domain = row.domain
     # Photos and at most one voice note go to the model (one audio per prompt).
     media, audio_seen = [], False
     for f in files:
@@ -501,6 +512,8 @@ async def run_intake(report_id: str, request: Request, reporter: Reporter) -> Re
     async with request.app.state.db.transaction() as session:
         row = await _load(session, report_id, reporter, lock=True)
         _require_draft(row)
+        if row.domain != intake_domain:
+            raise HTTPException(status.HTTP_409_CONFLICT, "report form changed; run Intake again")
         await session.execute(
             update(reports)
             .where(reports.c.id == report_id)

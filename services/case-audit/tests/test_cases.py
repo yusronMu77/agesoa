@@ -43,6 +43,26 @@ def source(**changes) -> Source:
     return Source(**{**base, **changes})
 
 
+def test_general_report_has_no_food_evidence_deadline():
+    pack = load_pack(Path(__file__).resolve().parents[3] / "domain-packs" / "general")
+    report = {
+        "report_id": "qa-general",
+        "domain": "general",
+        "category": "infrastructure",
+        "received_at": DAY0.isoformat(),
+        "region": SUKAMAJU,
+        "fields": {"occurred_at": "2000-01-01T00:00:00Z"},
+        "synthetic": True,
+    }
+    item = source_from_report(pack, report)
+    assert item.domain == "general"
+    assert item.deadline_at is None
+    evidence = case_evidence(pack, [item.deadline_at], DAY0 + timedelta(days=100))
+    assert evidence.status == "unknown"
+    assert evidence.deadline_at is None
+    assert evidence.max_finding_status == "proven"
+
+
 def case(**changes) -> OpenCase:
     base = {
         "id": "CASE-1",

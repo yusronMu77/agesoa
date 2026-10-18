@@ -160,6 +160,91 @@ def test_corrections_are_validated(client):
     assert client.patch(url, json={"fields": {"verdict": "x"}}, headers=ME).status_code == 422
 
 
+def test_change_form_preserves_evidence_region_and_narrative_and_can_submit(client):
+    report = create(client)
+    url = f"/v1/reports/{report['id']}"
+    uploaded = upload(client, report["id"]).json()
+    client.post(f"{url}/intake", headers=ME)
+    changed = client.patch(url, json={"domain": "general"}, headers=ME)
+    assert changed.status_code == 200, changed.text
+    body = changed.json()
+    assert body["domain"] == "general"
+    assert body["category"] is None
+    assert body["fields"] == {}
+    assert body["intake"] is None
+    assert body["rule_results"] == []
+    assert body["narrative"] == report["narrative"]
+    assert body["region"] == report["region"]
+    assert body["evidence"][0]["sha256"] == uploaded["sha256"]
+    assert body["evidence_status"]["deadline_at"] is None
+    corrected = client.patch(
+        url,
+        json={
+            "category": "infrastructure",
+            "narrative": "qa-general: damaged public road (fictional)",
+            "fields": {"place": "qa-general public square (fictional)", "impact": "Access interrupted"},
+        },
+        headers=ME,
+    )
+    assert corrected.status_code == 200, corrected.text
+    submitted = client.post(f"{url}/submit", headers=ME)
+    assert submitted.status_code == 200, submitted.text
+    assert submitted.json()["domain"] == "general"
+    received, _ = report_events(client)
+    validate_event(received)
+    assert received["data"]["domain"] == "general"
+    assert received["data"]["rule_results"] == []
+    assert client.patch(url, json={"domain": "mbg"}, headers=ME).status_code == 409
+
+
+def test_a_general_report_can_start_with_intake_and_submit_without_food_details(client):
+    report = create(client, domain="general", narrative="qa-general: jalan rusak mengganggu 12 warga.")
+    url = f"/v1/reports/{report['id']}"
+    response = client.post(f"{url}/intake", headers=ME)
+    assert response.status_code == 200, response.text
+    drafted = response.json()
+    assert drafted["domain"] == "general"
+    assert drafted["category"] == "infrastructure"
+    assert drafted["fields"] == {"affected_count": 12}
+    assert drafted["missing_required"] == []
+    assert drafted["rule_results"] == []
+    submitted = client.post(f"{url}/submit", headers=ME)
+    assert submitted.status_code == 200, submitted.text
+    assert submitted.json()["status"] == "submitted"
+    received, _ = report_events(client)
+    validate_event(received)
+    assert received["data"]["domain"] == "general"
+
+
+def test_form_changes_are_validated_and_owned_by_the_reporter(client):
+    report = create(client)
+    url = f"/v1/reports/{report['id']}"
+    for domain in [None, "", "missing"]:
+        assert client.patch(url, json={"domain": domain}, headers=ME).status_code == 422
+    assert client.patch(url, json={"domain": "general"}, headers=OTHER).status_code == 404
+    assert (
+        client.patch(url, json={"domain": "general", "category": "poisoning"}, headers=ME).status_code == 422
+    )
+    assert (
+        client.patch(
+            url, json={"domain": "general", "fields": {"cooked_at": "2026-10-18T00:00:00Z"}}, headers=ME
+        ).status_code
+        == 422
+    )
+    assert client.get(url, headers=ME).json()["domain"] == "mbg"
+
+
+def test_reselecting_the_same_form_keeps_corrections(client):
+    report = create(client)
+    url = f"/v1/reports/{report['id']}"
+    saved = client.patch(
+        url, json={"category": "poisoning", "fields": {"school": "qa-school (fictional)"}}, headers=ME
+    ).json()
+    again = client.patch(url, json={"domain": "mbg"}, headers=ME).json()
+    assert again["category"] == saved["category"]
+    assert again["fields"] == saved["fields"]
+
+
 @pytest.mark.parametrize(
     "coordinates", [{"lat": 0.0, "lon": False}, {"lat": True, "lon": 1.0}, {"lat": "1.5", "lon": 1.0}]
 )

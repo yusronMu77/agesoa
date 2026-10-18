@@ -1699,6 +1699,19 @@
       },
       "ReportPatch": {
         "properties": {
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain",
+            "description": "Switch a draft to another installed domain pack. Clears its category, fields and Intake proposal; preserves narrative, region and evidence."
+          },
           "category": {
             "anyOf": [
               {

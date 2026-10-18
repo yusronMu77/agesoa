@@ -8,7 +8,7 @@ export interface Label {
   id: string;
 }
 
-export type FieldType = "string" | "string_list" | "datetime" | "date" | "integer";
+export type FieldType = "string" | "string_list" | "datetime" | "date" | "integer" | "enum";
 
 export interface PackField {
   id: string;
@@ -16,6 +16,12 @@ export interface PackField {
   required: boolean;
   label: Label;
   hint?: Label;
+  options?: string[];
+}
+
+export interface PackSummary {
+  id: string;
+  name: Label;
 }
 
 export interface PackDocument {
@@ -93,6 +99,7 @@ export interface ReportCreate {
 }
 
 export interface ReportPatch {
+  domain?: string;
   category?: string | null;
   fields?: Record<string, FieldValue | null>;
   narrative?: string | null;
@@ -154,6 +161,10 @@ export class IngestionClient extends ServiceClient {
 
   pack(id: string) {
     return this.request<PackDocument>("GET", `/v1/domain-packs/${encodeURIComponent(id)}`);
+  }
+
+  packs() {
+    return this.request<PackSummary[]>("GET", "/v1/domain-packs");
   }
 
   districts() {

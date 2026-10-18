@@ -57,6 +57,8 @@ export default function App({ config }: { config: WitnessConfig }) {
   const [screen, setScreen] = useState<Screen>({ name: "capture" });
   const [capture, setCapture] = useState<CaptureState>(EMPTY_CAPTURE);
   const [pack, setPack] = useState<PackDocument | null>(null);
+  const [packLoading, setPackLoading] = useState(true);
+  const [packAttempt, setPackAttempt] = useState(0);
   const [explained, setExplained] = useState<Capability[]>([]);
   const [pending, setPending] = useState<PendingPermission | null>(null);
   const [busy, setBusy] = useState(false);
@@ -87,8 +89,25 @@ export default function App({ config }: { config: WitnessConfig }) {
   };
 
   useEffect(() => {
-    client.pack(config.domain).then(setPack, (err) => setError(messageFor(err)));
-  }, [client, config.domain]);
+    let live = true;
+    setPackLoading(true);
+    setError(null);
+    void client.pack(config.domain)
+      .then((document) => {
+        if (live) {
+          setPack(document);
+        }
+      })
+      .catch((err) => {
+        if (live) setError(err instanceof ApiError && err.status === 404 ? T["TXT-WIT-191"] : messageFor(err));
+      })
+      .finally(() => {
+        if (live) setPackLoading(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, [client, config.domain, packAttempt]);
 
   const update = (change: Partial<CaptureState>) => setCapture((current) => ({ ...current, ...change }));
 
@@ -100,6 +119,7 @@ export default function App({ config }: { config: WitnessConfig }) {
   };
 
   const toDraft = async () => {
+    if (!pack) return;
     setError(null);
     if (!hasContent(capture)) {
       setError(T["TXT-WIT-031"]);
@@ -110,7 +130,7 @@ export default function App({ config }: { config: WitnessConfig }) {
       let reportId = capture.reportId;
       if (!reportId) {
         const created = await client.createReport({
-          domain: config.domain,
+          domain: pack.id,
           narrative: capture.narrative.trim() || null,
           district_code: capture.district?.district_code ?? null,
           shared_post: capture.sharedPost,
@@ -186,9 +206,14 @@ export default function App({ config }: { config: WitnessConfig }) {
           withPermission={withPermission}
           onSocial={() => setScreen({ name: "social" })}
           onContinue={() => void toDraft()}
-          busy={busy || !pack}
+          busy={busy || packLoading || !pack}
           error={error}
         />
+      )}
+      {!pack && !packLoading && (
+        <button type="button" className={button("neutral")} onClick={() => setPackAttempt((n) => n + 1)}>
+          {T["TXT-WIT-192"]}
+        </button>
       )}
       {screen.name === "social" && (
         <SharedPost

@@ -71,7 +71,8 @@
       }
     },
     "evidence_deadline": {
-      "type": "object",
+      "type": ["object", "null"],
+      "description": "Null when this domain has no established physical-evidence expiry window.",
       "required": ["anchor_field", "hours", "after_deadline_max_status"],
       "properties": {
         "anchor_field": { "$ref": "#/$defs/slug", "description": "Datetime field the deadline counts from (not the report time)." },

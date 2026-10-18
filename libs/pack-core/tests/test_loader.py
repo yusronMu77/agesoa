@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 import pytest
-from agesoa_packs import PackError, evaluate_rules, load_pack, load_packs, parse_pack
+from agesoa_packs import PackError, evaluate_rules, evidence_status, load_pack, load_packs, parse_pack
 
 MINIMAL = {
     "schema_version": 1,
@@ -75,6 +75,20 @@ def test_second_domain_loads_without_core_changes():
         pack, {"reported_at": "2026-10-01T08:00:00+07:00", "fixed_at": "2026-10-09T08:00:00+07:00"}
     )
     assert result.violated is True
+
+
+def test_a_domain_can_explicitly_have_no_evidence_expiry():
+    from agesoa_packs.engine import evidence_anchor
+
+    doc = copy.deepcopy(MINIMAL)
+    doc["evidence_deadline"] = None
+    pack = parse_pack(doc)
+    fields = {"reported_at": "2000-01-01T00:00:00Z"}
+    result = evidence_status(pack, fields, "2026-10-18T00:00:00Z")
+    assert result.status == "unknown"
+    assert result.deadline_at is None
+    assert result.max_finding_status == "proven"
+    assert evidence_anchor(pack, fields) is None
 
 
 @pytest.mark.parametrize(

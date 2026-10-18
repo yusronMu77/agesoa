@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "id": "general",
+  "version": "1.0.0",
+  "name": { "en": "General issues", "id": "Masalah umum" },
+  "description": {
+    "en": "Citizen reports about public services, infrastructure, the environment and other community issues without a specialised domain pack.",
+    "id": "Laporan tentang layanan publik, infrastruktur, lingkungan, dan masalah warga lainnya yang belum memiliki formulir khusus."
+  },
+  "categories": [
+    { "id": "infrastructure", "label": { "en": "Roads and public facilities", "id": "Jalan dan fasilitas umum" } },
+    { "id": "public_services", "label": { "en": "Public services", "id": "Pelayanan publik" } },
+    { "id": "environment", "label": { "en": "Environment and sanitation", "id": "Lingkungan dan kebersihan" } },
+    { "id": "health", "label": { "en": "Health services", "id": "Layanan kesehatan" } },
+    { "id": "education", "label": { "en": "Education services", "id": "Layanan pendidikan" } },
+    { "id": "other", "label": { "en": "Other / unsure", "id": "Lainnya / belum tahu" } }
+  ],
+  "report_fields": [
+    {
+      "id": "place", "type": "string", "required": false,
+      "label": { "en": "Incident location", "id": "Lokasi kejadian" },
+      "hint": { "en": "A public place or landmark; do not enter a private home address.", "id": "Nama tempat umum atau patokan. Tidak perlu alamat rumah pribadi." },
+      "sources": ["text", "voice", "photo", "shared_post"]
+    },
+    {
+      "id": "occurred_at", "type": "datetime", "required": false,
+      "label": { "en": "Incident time (WIB)", "id": "Waktu kejadian (WIB)" },
+      "hint": { "en": "Leave blank if you do not know the time.", "id": "Boleh dikosongkan jika waktunya belum diketahui." },
+      "sources": ["text", "voice", "shared_post"]
+    },
+    {
+      "id": "impact", "type": "string", "required": false,
+      "label": { "en": "Observed impact", "id": "Dampak yang Anda lihat" },
+      "hint": { "en": "Describe what was affected without naming individuals.", "id": "Ceritakan apa yang terganggu, tanpa menyebut nama orang." },
+      "sources": ["text", "voice", "photo", "shared_post"]
+    },
+    {
+      "id": "affected_count", "type": "integer", "required": false,
+      "label": { "en": "People affected", "id": "Jumlah orang terdampak" },
+      "hint": { "en": "Leave blank if unknown; do not guess.", "id": "Kosongkan jika belum diketahui. Tidak perlu menebak." },
+      "sources": ["text", "voice", "shared_post"]
+    }
+  ],
+  "rules": [],
+  "evidence_deadline": null,
+  "evidence_ladder": [
+    { "status": "proven", "evidence": [{ "en": "Verified evidence and human validator agreement", "id": "Bukti terverifikasi dan kesepakatan validator manusia" }] },
+    { "status": "supported", "evidence": [{ "en": "Corroborating documents, photos or independent witnesses", "id": "Dokumen, foto, atau kesaksian independen yang saling mendukung" }] },
+    { "status": "alleged", "evidence": [{ "en": "An unverified citizen report", "id": "Laporan warga yang belum diverifikasi" }] }
+  ],
+  "cause_framework": {
+    "method": "five_whys",
+    "branches": [
+      {
+        "id": "process", "label": { "en": "Service process", "id": "Proses layanan" },
+        "examples": [{ "en": "A recurring interruption or an unclear reporting process", "id": "Gangguan berulang atau alur pengaduan yang tidak jelas" }],
+        "witness_questions": [{ "en": "Has this happened before, and what response did you receive?", "id": "Apakah masalah ini pernah terjadi sebelumnya, dan bagaimana tanggapannya?" }]
+      },
+      {
+        "id": "maintenance", "label": { "en": "Maintenance and oversight", "id": "Pemeliharaan dan pengawasan" },
+        "examples": [{ "en": "An unresolved maintenance need or repeated failure to follow up", "id": "Kebutuhan perbaikan yang belum ditangani atau tindak lanjut yang berulang kali terhenti" }],
+        "witness_questions": [{ "en": "What changes have you observed at the location?", "id": "Perubahan apa yang Anda lihat di tempat kejadian?" }]
+      }
+    ]
+  },
+  "pattern_metrics": [],
+  "validator_roles": [
+    { "id": "community_observer", "label": { "en": "Community observer", "id": "Pemantau layanan warga" } },
+    { "id": "journalist", "label": { "en": "Journalist", "id": "Jurnalis" } }
+  ],
+  "signal_sources": {
+    "keywords": ["layanan publik", "jalan rusak", "sampah menumpuk", "air bersih"],
+    "source_kinds": ["news", "official", "social_shared"],
+    "official_publishers": []
+  },
+  "evidence_tips": [
+    { "en": "Keep original photos and documents without editing their contents.", "id": "Simpan foto dan dokumen asli tanpa mengubah isinya." },
+    { "en": "Record the time and public location if known; do not collect personal identities.", "id": "Catat waktu dan tempat umum jika diketahui, tanpa mengumpulkan identitas pribadi." }
+  ],
+  "intake_hints": {
+    "categories": {
+      "infrastructure": ["jalan rusak", "jalan berlubang", "jembatan", "lampu jalan"],
+      "public_services": ["pelayanan", "antrean", "antrian", "administrasi"],
+      "environment": ["sampah", "limbah", "pencemaran", "banjir", "air bersih"],
+      "health": ["puskesmas", "rumah sakit", "layanan kesehatan"],
+      "education": ["sekolah", "layanan pendidikan"]
+    },
+    "fields": { "affected_count": { "number_before": ["orang", "warga", "korban"] } }
+  }
+}

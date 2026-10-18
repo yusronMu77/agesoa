@@ -69,6 +69,8 @@ def evidence_status(
 ) -> EvidenceStatus:
     """Physical evidence is assumed available until `hours` after the anchor, the deadline itself included."""
     cfg = pack.evidence_deadline
+    if cfg is None:
+        return EvidenceStatus("unknown", None, "proven")
     anchor = _anchor(fields, cfg, tz)
     if anchor is None:
         return EvidenceStatus("unknown", None, "proven")
@@ -80,7 +82,7 @@ def evidence_status(
 
 def evidence_anchor(pack: DomainPack, fields: dict[str, Any], tz: ZoneInfo = DEFAULT_TZ) -> datetime | None:
     """When the incident happened as far as the evidence deadline is concerned (anchor field, else the fallback)."""
-    return _anchor(fields, pack.evidence_deadline, tz)
+    return _anchor(fields, pack.evidence_deadline, tz) if pack.evidence_deadline is not None else None
 
 
 def _anchor(fields: dict[str, Any], cfg: dict[str, Any], tz: ZoneInfo) -> datetime | None:

@@ -250,6 +250,32 @@
     gap: var(--ag-space-4);
   }
 
+  .draft-fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ag-space-4);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .draft-fields legend {
+    margin-bottom: var(--ag-space-3);
+    font-size: var(--ag-font-size-lg);
+    font-weight: var(--ag-font-weight-bold);
+  }
+
+  .draft-fields:disabled {
+    opacity: 0.6;
+  }
+
+  .field input,
+  .field select {
+    width: 100%;
+    min-width: 0;
+  }
+
   .card {
     padding: var(--ag-space-4);
     border: 1px solid var(--ag-color-border-default);
