@@ -14,10 +14,15 @@ export interface NavItem {
   label: string;
 }
 
+/** Public sections of the header (Penpot SCR-040 header: Findings, Decision log, About). */
 export const MAIN_NAV: readonly NavItem[] = [
-  { href: ROUTES.home, label: "Home" },
-  { href: ROUTES.dashboard, label: "Dashboard" },
+  { href: ROUTES.dashboard, label: "Findings" },
   { href: ROUTES.log, label: "Decision log" },
+  { href: ROUTES.home, label: "About" },
+];
+
+/** Pages for validators, organizations and operators, behind the role menu on the right of the header. */
+export const ACCOUNT_NAV: readonly NavItem[] = [
   { href: ROUTES.validate, label: "Validation" },
   { href: ROUTES.organizations, label: "Organizations" },
   { href: ROUTES.status, label: "Service status" },

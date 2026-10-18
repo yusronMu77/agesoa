@@ -34,7 +34,7 @@
   }
 
   body.has-sim-band {
-    --band-height: 40px;
+    --band-height: 34px;
     padding-top: var(--band-height);
   }
 
@@ -125,21 +125,37 @@
   .site-main,
   .site-footer__inner {
     width: 100%;
-    max-width: 1280px;
+    max-width: calc(1280px + 2 * var(--ag-space-6));
     margin: 0 auto;
     padding-left: var(--ag-space-4);
     padding-right: var(--ag-space-4);
   }
 
+  /* Penpot header: 72px ink bar; brand + Findings / Decision log / About left (gap 32, links 24 apart), language
+     pill and role menu right (gap 12). Wraps under 768px. */
   .site-header__inner {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    column-gap: var(--ag-space-8);
-    row-gap: var(--ag-space-1);
-    padding-top: var(--ag-space-2);
-    padding-bottom: var(--ag-space-2);
+    gap: var(--ag-space-2) var(--ag-space-8);
+    min-height: 72px;
+    padding-top: var(--ag-space-4);
+    padding-bottom: var(--ag-space-4);
+  }
+
+  .site-header__start {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ag-space-2) var(--ag-space-8);
+    min-width: 0;
+  }
+
+  .site-header__end {
+    display: flex;
+    align-items: center;
+    gap: var(--ag-space-3);
   }
 
   .brand {
@@ -156,25 +172,122 @@
     outline-color: var(--ag-color-text-on-ink);
   }
 
-  /* On narrow screens the navigation takes its own row under the logo instead of a one-link column. */
-  .nav {
-    flex: 1 1 100%;
-    min-width: 0;
-  }
-
-  @media (min-width: 768px) {
-    .nav {
-      flex-basis: 0;
-    }
-  }
-
   .nav ul {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--ag-space-1);
+    gap: var(--ag-space-6);
     list-style: none;
     margin: 0;
     padding: 0;
+  }
+
+  .nav-link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    font-size: var(--ag-font-size-md);
+    font-weight: var(--ag-font-weight-regular);
+    line-height: 1.5;
+    color: var(--ag-color-text-on-ink-muted);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .nav-link:hover,
+  .nav-link[aria-current="page"] {
+    color: var(--ag-color-text-on-ink);
+  }
+
+  .nav-link[aria-current="page"] {
+    font-weight: 600;
+  }
+
+  .nav-link[aria-current="page"]::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 2px;
+    height: 2px;
+    background: var(--ag-color-brand-accent);
+  }
+
+  .lang-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ag-space-2);
+    min-height: 40px;
+    padding: var(--ag-space-2) var(--ag-space-3);
+    border: 1px solid var(--ag-color-border-on-ink);
+    border-radius: var(--ag-radius-pill);
+    color: var(--ag-color-text-on-ink);
+    font-size: var(--ag-font-size-sm);
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  .role-menu {
+    position: relative;
+  }
+
+  .role-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ag-space-1);
+    padding: var(--ag-space-1) var(--ag-space-2);
+    border-radius: var(--ag-radius-pill);
+    background: var(--ag-color-role-publik);
+    color: var(--ag-color-text-primary);
+    font-size: var(--ag-font-size-xs);
+    font-weight: 600;
+    line-height: 1.5;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .role-chip::-webkit-details-marker {
+    display: none;
+  }
+
+  .role-chip svg:first-child {
+    color: var(--ag-color-role-publik-stroke);
+  }
+
+  .role-menu nav {
+    position: absolute;
+    right: 0;
+    top: calc(100% + var(--ag-space-2));
+    z-index: 50;
+    min-width: 220px;
+    padding: var(--ag-space-2);
+    background: var(--ag-color-bg-surface);
+    border: 1px solid var(--ag-color-border-default);
+    border-radius: var(--ag-radius-md);
+    box-shadow: var(--ag-elevation-2);
+  }
+
+  .role-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .role-menu a {
+    display: block;
+    padding: var(--ag-space-2) var(--ag-space-3);
+    border-radius: var(--ag-radius-sm);
+    color: var(--ag-color-text-primary);
+    font-size: var(--ag-font-size-sm);
+    text-decoration: none;
+  }
+
+  .role-menu a:hover {
+    background: var(--ag-color-bg-sunken);
+  }
+
+  .role-menu a:focus-visible {
+    outline-color: var(--ag-color-focus-ring);
   }
 
   .site-main {
@@ -387,119 +500,273 @@
 
   /* --- Public dashboard (SCR-040), case page (SCR-042), validation (SCR-020) ------------------------------ */
 
-  /* SCR-040 hero: intro and KPIs left, map card right (spanning the table row), district table under the KPIs.
-     DOM order stays intro, map, table so the map heading comes before its table. */
+  /* SCR-040 (Penpot "SCR-040 Dasbor publik - EN"): sections 32 apart; hero 660 | 588 with a 32 gap; findings 848 |
+     latest log 400. Values come from the board; colours, type and spacing from the tokens. */
+  .dash {
+    display: grid;
+    gap: var(--ag-space-8);
+  }
+
+  .dash h1 {
+    font-size: var(--ag-font-size-2xl);
+    line-height: 1.15;
+    margin: 0;
+  }
+
+  .dash-context {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--ag-space-4);
+  }
+  .context-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ag-space-4);
+  }
+  .context-picker {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+    max-width: 100%;
+    padding: var(--ag-space-2) calc(var(--ag-space-4) + 16px + var(--ag-space-3)) var(--ag-space-2) var(--ag-space-4);
+    background: var(--ag-color-bg-surface);
+    border: 1px solid var(--ag-color-border-default);
+    border-radius: var(--ag-radius-md);
+    cursor: pointer;
+  }
+  .context-picker:focus-within {
+    outline: 3px solid var(--ag-color-focus-ring);
+    outline-offset: 2px;
+  }
+  .context-picker__label {
+    font-size: var(--ag-font-size-xs);
+    line-height: 1.5;
+    color: var(--ag-color-text-secondary);
+  }
+  .context-picker select {
+    appearance: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    font: inherit;
+    font-size: var(--ag-font-size-md);
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--ag-color-text-primary);
+    cursor: pointer;
+    outline: none;
+    width: 100%;
+    text-overflow: ellipsis;
+  }
+  .context-picker__chevron {
+    position: absolute;
+    right: var(--ag-space-4);
+    top: 50%;
+    translate: 0 -50%;
+    color: var(--ag-color-text-secondary);
+    pointer-events: none;
+  }
+  .context-form__apply {
+    min-height: 48px;
+    padding: 0 var(--ag-space-4);
+  }
+  .dash-context__note {
+    margin: 0;
+    font-size: var(--ag-font-size-xs);
+    line-height: 1.5;
+    color: var(--ag-color-text-secondary);
+  }
+
   .dash-hero {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: var(--ag-space-6);
-    margin-bottom: var(--ag-space-12);
+    gap: var(--ag-space-8);
+    align-items: start;
   }
   @media (min-width: 1024px) {
     .dash-hero {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      grid-template-areas:
-        "intro map"
-        "table map";
-      grid-template-rows: auto 1fr;
-      column-gap: var(--ag-space-8);
-      align-items: start;
-    }
-    .dash-hero__intro {
-      grid-area: intro;
-    }
-    .dash-hero .map-card {
-      grid-area: map;
-    }
-    .dash-hero .district-table {
-      grid-area: table;
+      grid-template-columns: minmax(0, 660fr) minmax(0, 588fr);
     }
   }
-  .dash-hero .page-header {
-    margin-bottom: var(--ag-space-6);
-  }
-  .dash-hero .lead {
-    font-size: var(--ag-font-size-md);
-  }
-  .district-table p {
-    margin: var(--ag-space-2) 0 0;
-  }
-
-  .stat-grid {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  .dash-hero__intro {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: var(--ag-space-6);
+    min-width: 0;
+  }
+  .dash-hero__title {
+    display: grid;
     gap: var(--ag-space-3);
   }
-  .stat-grid .card {
+  .dash-hero__lead {
+    margin: 0;
+    font-size: var(--ag-font-size-lg);
+    line-height: 1.5;
+    color: var(--ag-color-text-secondary);
+  }
+
+  .kpi-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--ag-space-4);
+  }
+  .kpi-tile {
     display: flex;
     flex-direction: column;
     gap: var(--ag-space-1);
     padding: var(--ag-space-4);
+    background: var(--ag-color-bg-surface);
+    border: 1px solid var(--ag-color-border-default);
+    border-radius: var(--ag-radius-lg);
   }
-  /* Label above the number, as in the mockup; the DOM keeps "value label" for screen readers. */
-  .stat-grid .card .muted {
-    order: -1;
+  .kpi-tile__label {
     font-size: var(--ag-font-size-sm);
-    line-height: var(--ag-font-line-height-heading);
+    font-weight: var(--ag-font-weight-medium);
+    line-height: 1.25;
+    color: var(--ag-color-text-secondary);
   }
-  .stat-grid .stat-value {
-    margin-top: auto;
-  }
-  .stat-value {
+  .kpi-tile__value {
     font-family: var(--ag-font-family-display);
     font-size: var(--ag-font-size-2xl);
-    font-weight: var(--ag-font-weight-medium);
-    line-height: var(--ag-font-line-height-heading);
+    font-weight: var(--ag-font-weight-bold);
+    line-height: 1.15;
     font-variant-numeric: tabular-nums;
   }
-  .stat-grid .card:nth-child(2) .stat-value {
+  .kpi-tile:nth-child(2) .kpi-tile__value {
     color: var(--ag-color-text-accent);
   }
+  .kpi-tile__caption {
+    font-size: var(--ag-font-size-xs);
+    line-height: 1.5;
+    color: var(--ag-color-text-secondary);
+  }
 
+  .evidence-callout {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ag-space-3);
+    padding: var(--ag-space-3) var(--ag-space-4);
+    background: var(--ag-color-status-info-bg);
+    border-radius: var(--ag-radius-md);
+    font-size: var(--ag-font-size-sm);
+    line-height: 1.5;
+  }
+  .evidence-callout svg {
+    flex: none;
+    color: var(--ag-color-status-info);
+  }
+  .evidence-callout p {
+    margin: 0;
+  }
+  .evidence-callout .evidence-callout__title {
+    margin-bottom: var(--ag-space-1);
+    font-weight: 600;
+    color: var(--ag-color-status-info);
+  }
+
+  /* Map card: title row, the choropleth, legend, then the table folded away. */
+  .map-card {
+    display: grid;
+    gap: var(--ag-space-4);
+    padding: var(--ag-space-6);
+    background: var(--ag-color-bg-surface);
+    border: 1px solid var(--ag-color-border-default);
+    border-radius: var(--ag-radius-lg);
+    min-width: 0;
+  }
+  .map-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ag-space-3);
+  }
   .map-card h2 {
     font-size: var(--ag-font-size-lg);
-    margin-bottom: var(--ag-space-1);
+    font-weight: 600;
+    line-height: 1.25;
+    margin: 0;
+  }
+  .map-card__note {
+    font-size: var(--ag-font-size-xs);
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--ag-color-text-accent);
   }
   .district-map {
-    margin: var(--ag-space-4) 0 0;
+    margin: 0;
+    display: grid;
+    gap: var(--ag-space-4);
   }
   .district-map svg {
     width: 100%;
-    max-width: 640px;
     height: auto;
     display: block;
-    margin: 0 auto;
+  }
+  .map-regency {
+    filter: drop-shadow(0 1px 2px rgb(43 10 13 / 0.18));
   }
   .district {
-    stroke: var(--ag-color-bg-surface);
+    stroke: var(--ag-color-bg-canvas);
     stroke-width: 3;
     stroke-linejoin: round;
+    transition: filter 120ms ease;
+  }
+  .district:hover {
+    filter: brightness(0.94);
   }
   .district--0 { fill: var(--ag-color-heat-0); }
   .district--1 { fill: var(--ag-color-heat-1); }
   .district--2 { fill: var(--ag-color-heat-2); }
   .district--3 { fill: var(--ag-color-heat-3); }
   .district--4 { fill: var(--ag-color-heat-4); }
-  .district-count {
+  .district-label {
     font-family: var(--ag-font-family-sans);
-    font-size: var(--ag-font-size-lg);
-    font-weight: var(--ag-font-weight-bold);
     fill: var(--ag-color-text-primary);
+    pointer-events: none;
   }
-  .district-count--on-dark {
+  .district-label--on-dark {
     fill: var(--ag-color-text-on-primary);
+  }
+  .district-name {
+    font-size: 13px;
+  }
+  .district-count {
+    font-size: 15px;
+    font-weight: var(--ag-font-weight-medium);
+  }
+  .map-north path {
+    fill: var(--ag-color-text-secondary);
+  }
+  .map-north text,
+  .map-scale text {
+    font-family: var(--ag-font-family-sans);
+    font-size: 11px;
+    fill: var(--ag-color-text-secondary);
+  }
+  .map-north text {
+    font-weight: 600;
+  }
+  .map-scale path {
+    fill: none;
+    stroke: var(--ag-color-text-secondary);
+    stroke-width: 1.5;
   }
   .map-legend {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--ag-space-2) var(--ag-space-4);
-    margin: var(--ag-space-4) 0 var(--ag-space-2);
     font-size: var(--ag-font-size-xs);
+    line-height: 1.5;
     color: var(--ag-color-text-secondary);
+  }
+  .map-legend > span {
+    font-weight: 600;
   }
   .map-legend ul {
     display: flex;
@@ -516,8 +783,8 @@
   }
   .map-swatch {
     display: inline-block;
-    width: 16px;
-    height: 10px;
+    width: 20px;
+    height: 12px;
     border-radius: var(--ag-radius-sm);
     border: 1px solid var(--ag-color-border-default);
   }
@@ -529,11 +796,241 @@
   .district-map figcaption {
     margin: 0;
   }
-
-  /* SCR-040 finding cards: badges on top, the statement as the title, district and case link below. */
-  .dash-findings > h2 {
-    margin-bottom: var(--ag-space-1);
+  .district-table summary {
+    cursor: pointer;
+    font-size: var(--ag-font-size-sm);
+    font-weight: var(--ag-font-weight-medium);
+    color: var(--ag-color-text-link);
   }
+  .district-table[open] summary {
+    margin-bottom: var(--ag-space-3);
+  }
+  .district-table p {
+    margin: var(--ag-space-2) 0 0;
+  }
+
+  /* Evidence status chips and the number of findings shown. */
+  .status-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ag-space-3);
+  }
+  .status-filter__chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ag-space-2);
+  }
+  .status-filter__chips > span {
+    margin-right: var(--ag-space-1);
+    font-size: var(--ag-font-size-sm);
+    font-weight: var(--ag-font-weight-medium);
+    line-height: 1.25;
+    color: var(--ag-color-text-secondary);
+  }
+  .status-filter__chips ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ag-space-2);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ag-space-1);
+    min-height: 40px;
+    padding: var(--ag-space-2) var(--ag-space-3);
+    background: var(--ag-color-bg-surface);
+    border: 1px solid var(--ag-color-text-secondary);
+    border-radius: var(--ag-radius-pill);
+    color: var(--ag-color-text-primary);
+    font-size: var(--ag-font-size-sm);
+    font-weight: var(--ag-font-weight-medium);
+    line-height: 1.25;
+    text-decoration: none;
+  }
+  .chip:hover {
+    background: var(--ag-color-bg-sunken);
+    color: var(--ag-color-text-primary);
+  }
+  .chip[aria-current="true"] {
+    background: var(--ag-color-brand-primary-subtle);
+    border-color: var(--ag-color-brand-primary);
+    color: var(--ag-color-brand-primary);
+  }
+  .status-filter__count {
+    margin: 0;
+    font-size: var(--ag-font-size-sm);
+    line-height: 1.5;
+    color: var(--ag-color-text-secondary);
+  }
+
+  .dash-findings {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--ag-space-8);
+    align-items: start;
+  }
+  @media (min-width: 1024px) {
+    .dash-findings {
+      grid-template-columns: minmax(0, 848fr) minmax(0, 400fr);
+    }
+  }
+  .dash .finding-list {
+    gap: var(--ag-space-4);
+    margin: 0;
+  }
+
+  /* Penpot `Card temuan`. */
+  .dash .finding-card {
+    display: grid;
+    gap: var(--ag-space-3);
+    padding: var(--ag-space-4) var(--ag-space-6);
+    background: var(--ag-color-bg-surface);
+    border: 1px solid var(--ag-color-border-default);
+    border-radius: var(--ag-radius-lg);
+  }
+  .finding-card__top,
+  .finding-card__foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ag-space-2) var(--ag-space-3);
+  }
+  .finding-card__case {
+    font-size: var(--ag-font-size-xs);
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--ag-color-text-secondary);
+  }
+  .finding-card__body {
+    display: grid;
+    gap: var(--ag-space-1);
+  }
+  .dash .finding-card .finding-statement {
+    margin: 0;
+    font-family: var(--ag-font-family-display);
+    font-size: var(--ag-font-size-lg);
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  .finding-card__body p {
+    margin: 0;
+    font-size: var(--ag-font-size-sm);
+    line-height: 1.5;
+    color: var(--ag-color-text-secondary);
+  }
+  .finding-card__where {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ag-space-1);
+    font-size: var(--ag-font-size-xs);
+    line-height: 1.5;
+    color: var(--ag-color-text-secondary);
+  }
+  .finding-card__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ag-space-1);
+    font-size: var(--ag-font-size-sm);
+    font-weight: var(--ag-font-weight-medium);
+    line-height: 1.25;
+    text-decoration: none;
+  }
+  .finding-card__link:hover {
+    text-decoration: underline;
+  }
+
+  /* Penpot `Log terbaru`: ink panel, raised entries, mono numbers and hashes. */
+  .latest-log {
+    display: grid;
+    gap: var(--ag-space-4);
+    padding: var(--ag-space-6);
+    background: var(--ag-color-bg-ink);
+    border-radius: var(--ag-radius-lg);
+    color: var(--ag-color-text-on-ink);
+  }
+  .latest-log :focus-visible {
+    outline-color: var(--ag-color-text-on-ink);
+  }
+  .latest-log__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .latest-log h2 {
+    margin: 0;
+    font-size: var(--ag-font-size-lg);
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  .latest-log__head a {
+    font-size: var(--ag-font-size-sm);
+    font-weight: 600;
+    color: var(--ag-color-text-on-ink);
+    text-decoration: none;
+  }
+  .latest-log__head a:hover {
+    color: var(--ag-color-text-on-ink);
+    text-decoration: underline;
+  }
+  .latest-log ol {
+    display: grid;
+    gap: var(--ag-space-4);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .latest-log__entry {
+    display: grid;
+    gap: var(--ag-space-1);
+    padding: var(--ag-space-3);
+    background: var(--ag-color-bg-ink-raised);
+    border-radius: var(--ag-radius-md);
+    color: var(--ag-color-text-on-ink);
+    text-decoration: none;
+  }
+  .latest-log__entry:hover {
+    color: var(--ag-color-text-on-ink);
+    outline: 1px solid var(--ag-color-border-on-ink);
+  }
+  .latest-log__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ag-space-2);
+    font-size: var(--ag-font-size-xs);
+    line-height: 1.5;
+    color: var(--ag-color-text-on-ink-muted);
+  }
+  .latest-log__seq {
+    font-family: var(--ag-font-family-mono);
+    font-size: var(--ag-font-size-sm);
+    font-weight: var(--ag-font-weight-medium);
+    color: var(--ag-color-text-on-ink);
+  }
+  .latest-log__decision {
+    font-size: var(--ag-font-size-sm);
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .latest-log__hash {
+    font-family: var(--ag-font-family-mono);
+    font-size: var(--ag-font-size-xs);
+    line-height: 1.5;
+    color: var(--ag-color-text-on-ink-muted);
+  }
+  .latest-log__empty {
+    margin: 0;
+    color: var(--ag-color-text-on-ink-muted);
+  }
+
+  /* Finding cards on the case page. */
   .finding-card {
     padding: var(--ag-space-4) var(--ag-space-6);
   }
@@ -544,18 +1041,6 @@
   }
   .finding-card p:last-child {
     margin-bottom: 0;
-  }
-  .finding-meta__icon {
-    display: inline-block;
-    vertical-align: -3px;
-    margin-right: var(--ag-space-1);
-  }
-  .finding-meta a {
-    font-weight: var(--ag-font-weight-medium);
-    text-decoration: none;
-  }
-  .finding-meta a:hover {
-    text-decoration: underline;
   }
 
   .finding-list,

@@ -11,7 +11,7 @@ function SimulationBand({ className, children, ...props }: HTMLAttributes<HTMLDi
     <div
       data-slot="simulation-band"
       className={cn(
-        "flex items-center justify-center gap-2 bg-[var(--ag-color-simulation-band)] px-4 py-2 text-center text-sm font-bold tracking-[0.02em] text-[var(--ag-color-simulation-on-band)] [&>svg]:size-4 [&>svg]:shrink-0",
+        "flex min-h-[34px] items-center justify-center gap-2 bg-[var(--ag-color-simulation-band)] px-4 py-2 text-center text-sm leading-[1.25] font-medium text-[var(--ag-color-simulation-on-band)] [&>svg]:size-4 [&>svg]:shrink-0",
         className
       )}
       {...props}

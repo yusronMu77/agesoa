@@ -13,7 +13,7 @@ export interface Geometry {
 export interface Projected {
   key: string;
   path: string;
-  /** Label anchor (centre of the largest ring's bounding box). */
+  /** Label anchor (area centroid of the largest ring). */
   cx: number;
   cy: number;
 }
@@ -22,15 +22,16 @@ function polygons(geometry: Geometry): Ring[][] {
   return geometry.type === "Polygon" ? [geometry.coordinates as Ring[]] : (geometry.coordinates as Ring[][]);
 }
 
-/** Projects every shape into a width × height box (y grows downwards) with a margin. */
-export function projectShapes(
-  shapes: { key: string; geometry: Geometry }[],
-  width: number,
-  height: number,
-  margin = 8,
-): Projected[] {
+interface Fit {
+  scale: number;
+  x: (lon: number) => number;
+  y: (lat: number) => number;
+}
+
+/** Bounding box fit of every shape into width × height (y grows downwards); null when there is nothing to draw. */
+function fit(shapes: { geometry: Geometry }[], width: number, height: number, margin: number): Fit | null {
   const points = shapes.flatMap((s) => polygons(s.geometry).flat(2));
-  if (points.length === 0) return [];
+  if (points.length === 0) return null;
   const lons = points.map((p) => p[0]);
   const lats = points.map((p) => p[1]);
   const [minLon, maxLon, minLat, maxLat] = [Math.min(...lons), Math.max(...lons), Math.min(...lats), Math.max(...lats)];
@@ -40,25 +41,79 @@ export function projectShapes(
   const scale = Math.min((width - 2 * margin) / spanX, (height - 2 * margin) / spanY);
   const offsetX = (width - spanX * scale) / 2;
   const offsetY = (height - spanY * scale) / 2;
-  const x = (lon: number) => offsetX + (lon - minLon) * kx * scale;
-  const y = (lat: number) => offsetY + (maxLat - lat) * scale;
+  return {
+    scale,
+    x: (lon: number) => offsetX + (lon - minLon) * kx * scale,
+    y: (lat: number) => offsetY + (maxLat - lat) * scale,
+  };
+}
+
+/** Projects every shape into a width × height box (y grows downwards) with a margin. */
+export function projectShapes(
+  shapes: { key: string; geometry: Geometry }[],
+  width: number,
+  height: number,
+  margin = 8,
+): Projected[] {
+  const f = fit(shapes, width, height, margin);
+  if (!f) return [];
   const round = (n: number) => Math.round(n * 10) / 10;
 
   return shapes.map(({ key, geometry }) => {
     const rings = polygons(geometry).flat();
     const path = rings
-      .map((ring) => ring.map(([lon, lat], i) => `${i === 0 ? "M" : "L"}${round(x(lon))},${round(y(lat))}`).join("") + "Z")
+      .map((ring) => ring.map(([lon, lat], i) => `${i === 0 ? "M" : "L"}${round(f.x(lon))},${round(f.y(lat))}`).join("") + "Z")
       .join("");
-    const largest = rings.reduce((a, b) => (b.length > a.length ? b : a), rings[0]);
-    const xs = largest.map((p) => x(p[0]));
-    const ys = largest.map((p) => y(p[1]));
-    return {
-      key,
-      path,
-      cx: round((Math.min(...xs) + Math.max(...xs)) / 2),
-      cy: round((Math.min(...ys) + Math.max(...ys)) / 2),
-    };
+    const projected = rings.map((ring) => ring.map(([lon, lat]) => [f.x(lon), f.y(lat)] as [number, number]));
+    const largest = projected.reduce((a, b) => (Math.abs(ringArea(b)) > Math.abs(ringArea(a)) ? b : a), projected[0]);
+    const [cx, cy] = centroid(largest);
+    return { key, path, cx: round(cx), cy: round(cy) };
   });
+}
+
+/** Signed area of a ring (shoelace). */
+function ringArea(ring: [number, number][]): number {
+  let sum = 0;
+  for (let i = 0; i < ring.length - 1; i++) sum += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
+  return sum / 2;
+}
+
+/** Area centroid of a ring (label anchor); the mean of its points when the area is zero. */
+function centroid(ring: [number, number][]): [number, number] {
+  const a = ringArea(ring);
+  if (Math.abs(a) < 1e-9) {
+    const n = ring.length || 1;
+    return [ring.reduce((s, p) => s + p[0], 0) / n, ring.reduce((s, p) => s + p[1], 0) / n];
+  }
+  let x = 0;
+  let y = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const cross = ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
+    x += (ring[i][0] + ring[i + 1][0]) * cross;
+    y += (ring[i][1] + ring[i + 1][1]) * cross;
+  }
+  return [x / (6 * a), y / (6 * a)];
+}
+
+/** Kilometres per degree of latitude (mean). */
+const KM_PER_DEGREE = 111.32;
+
+/**
+ * Scale bar of the map: a round distance (1, 2, 5, 10, 20 or 50 km) no longer than `maxUnits` drawing units, with
+ * its length in units. Null when there is nothing to draw.
+ */
+export function scaleBar(
+  shapes: { geometry: Geometry }[],
+  width: number,
+  height: number,
+  maxUnits = 120,
+  margin = 8,
+): { km: number; units: number } | null {
+  const f = fit(shapes, width, height, margin);
+  if (!f) return null;
+  const unitsPerKm = f.scale / KM_PER_DEGREE;
+  const km = [50, 20, 10, 5, 2, 1].find((d) => d * unitsPerKm <= maxUnits) ?? 1;
+  return { km, units: Math.round(km * unitsPerKm * 10) / 10 };
 }
 
 /**

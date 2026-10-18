@@ -2,15 +2,14 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { NavItem } from "@agesoa/ui/components/nav-item";
 import { useActivePath } from "@/hooks/use-active-path.hook";
 
-/** Navigation link that marks itself with aria-current when its section is open. */
+/** Header link (Penpot `Tautan nav`): marked with aria-current when its section is open; the underline repeats it. */
 export function NavLink({ href, children }: { href: string; children: ReactNode }) {
   const current = useActivePath(href);
   return (
-    <NavItem tone="ink" render={<Link href={href} aria-current={current ? "page" : undefined} />}>
+    <Link href={href} className="nav-link" aria-current={current ? "page" : undefined}>
       {children}
-    </NavItem>
+    </Link>
   );
 }
