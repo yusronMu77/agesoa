@@ -11,14 +11,17 @@ import type { LogPageData } from "../server/load-log";
 /** SCR-042: public, append-only decision log. */
 export function LogListView({ after, page, verification, headSeq, nextAfter, prevAfter }: LogPageData) {
   return (
-    <>
-      <PageHeader aside={<ChainBadge result={verification} />}>
+    <div className="ink-page">
+      <PageHeader>
         <h1>Decision log</h1>
-        <p className="muted">
+        <p className="lead">
           Public, append-only record of decisions. Each entry stores the hash of the entry before it, so any
           change to history breaks the chain.
         </p>
       </PageHeader>
+      <div className="chain-panel">
+        <ChainBadge result={verification} />
+      </div>
 
       {!page.ok ? (
         <Notice id="log-error" tone="error" title="The decision log is temporarily unavailable">
@@ -38,6 +41,6 @@ export function LogListView({ after, page, verification, headSeq, nextAfter, pre
           />
         </>
       )}
-    </>
+    </div>
   );
 }

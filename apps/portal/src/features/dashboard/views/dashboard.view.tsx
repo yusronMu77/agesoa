@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { Notice } from "@/components/ui/callout";
 import { formatTime } from "@/lib/format";
-import { DistrictMapSection } from "../components/district-map";
+import { DistrictMapSection, DistrictTable } from "../components/district-map";
 import { PublicFindingList } from "../components/public-finding-list";
 import { StatGrid } from "../components/stat-grid";
 import type { DashboardData } from "../server/load-dashboard";
@@ -22,18 +22,22 @@ export function DashboardUnavailableView() {
 export function DashboardView({ caseCount, findings, summary, map }: DashboardData) {
   return (
     <>
-      <PageHeader>
-        <h1>Public dashboard</h1>
-        <p className="muted">
-          Cases and audit findings by district. Locations are shown as districts only, never as coordinates, and no
-          person is named. Data from the public read model{summary ? `, updated ${formatTime(summary.updated_at)}` : ""}.
-        </p>
-      </PageHeader>
+      <div className="dash-hero">
+        <div className="dash-hero__intro">
+          <PageHeader>
+            <h1>Public dashboard</h1>
+            <p className="lead">
+              Cases and audit findings by district. Locations are shown as districts only, never as coordinates, and no
+              person is named. Data from the public read model{summary ? `, updated ${formatTime(summary.updated_at)}` : ""}.
+            </p>
+          </PageHeader>
+          <StatGrid caseCount={caseCount} findingCount={findings.length} summary={summary} />
+        </div>
+        <DistrictMapSection map={map} />
+        <DistrictTable map={map} />
+      </div>
 
-      <StatGrid caseCount={caseCount} findingCount={findings.length} summary={summary} />
-      <DistrictMapSection map={map} />
-
-      <section aria-labelledby="findings-heading">
+      <section aria-labelledby="findings-heading" className="dash-findings">
         <h2 id="findings-heading">Audit findings</h2>
         <p className="muted">AI drafts findings; a finding is final only after a quorum of human validators approved it.</p>
         <PublicFindingList findings={findings} />

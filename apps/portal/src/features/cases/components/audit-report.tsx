@@ -20,7 +20,7 @@ export function RootCauses({ causes }: { causes: PublicRootCause[] }) {
   return (
     <section className="card" aria-labelledby="why-heading">
       <h2 id="why-heading">Why it keeps happening</h2>
-      <p className="muted">
+      <p className="muted cause-intro">
         Root causes found by the audit, each with the status of its evidence. <AiLabel />
       </p>
       <ol className="cause-chain">
@@ -51,7 +51,7 @@ export function Recommendations({ items }: { items: string[] }) {
       {items.length === 0 ? (
         <p className="muted">No recommendation in this report.</p>
       ) : (
-        <ul>
+        <ul className="check-list">
           {items.map((r) => (
             <li key={r} data-testid="recommendation">
               {r}
@@ -88,13 +88,13 @@ export function ReportLog({ caseId, log }: { caseId: string; log: FetchResult<Lo
       ) : log.data.length === 0 ? (
         <p className="muted">No log entry for this case yet.</p>
       ) : (
-        <ul className="plain">
+        <ul className="report-log-list">
           {log.data.map((e) => (
             <li key={e.seq}>
               <Link href={ROUTES.logEntry(e.seq)} data-testid="report-log-entry">
                 #{e.seq} {e.action}
               </Link>{" "}
-              <code className="muted">{shortHash(e.hash)}</code>
+              <code className="muted hash">{shortHash(e.hash)}</code>
             </li>
           ))}
         </ul>

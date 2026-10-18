@@ -7,7 +7,7 @@ export function DecisionForm({ findingId }: { findingId: string }) {
   return (
     <form action={submitDecision} className="card form" data-testid="decision-form">
       <input type="hidden" name="finding_id" value={findingId} />
-      <fieldset>
+      <fieldset className="decision-options">
         <legend>Decision</legend>
         <label>
           <input type="radio" name="decision" value="approve" required /> Approve: the evidence supports this finding
@@ -30,10 +30,10 @@ export function DecisionForm({ findingId }: { findingId: string }) {
           ))}
         </select>
       </label>
-      <label>
+      <label className="decision-conflict">
         <input type="checkbox" name="conflict" /> I have a conflict of interest (recorded, not counted)
       </label>
-      <Button>Submit decision</Button>
+      <Button className="decision-submit w-full">Submit decision</Button>
     </form>
   );
 }

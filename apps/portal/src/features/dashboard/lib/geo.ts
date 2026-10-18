@@ -61,8 +61,21 @@ export function projectShapes(
   });
 }
 
-/** Fill level 0..4 for a count (0 = no case), relative to the busiest district. */
-export function shade(count: number, max: number): number {
-  if (count <= 0 || max <= 0) return 0;
-  return Math.max(1, Math.min(4, Math.ceil((count / max) * 4)));
+/**
+ * Heat legend of the public map: fixed bins, so one case always looks like one case whatever the busiest district
+ * has (a scale relative to the maximum drew every district darkest when each had one case).
+ */
+export const HEAT_BINS: readonly { level: number; label: string; min: number }[] = [
+  { level: 0, label: "0", min: 0 },
+  { level: 1, label: "1", min: 1 },
+  { level: 2, label: "2–3", min: 2 },
+  { level: 3, label: "4–5", min: 4 },
+  { level: 4, label: "6 or more", min: 6 },
+];
+
+/** Fill level 0..4 for a number of cases: 0 / 1 / 2-3 / 4-5 / 6 or more. */
+export function shade(count: number): number {
+  let level = 0;
+  for (const bin of HEAT_BINS) if (count >= bin.min) level = bin.level;
+  return level;
 }

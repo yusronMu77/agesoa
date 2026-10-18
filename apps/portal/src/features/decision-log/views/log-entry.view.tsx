@@ -25,7 +25,7 @@ export function LogEntryView(data: LogEntryData) {
 
   const { item, isGenesis, linkMatches, headSeq, pageAfter } = data;
   return (
-    <>
+    <div className="ink-page">
       <PageHeader aside={<LinkStatusBadge seq={item.seq} isGenesis={isGenesis} linkMatches={linkMatches} />}>
         <BackLink href={ROUTES.logPage(pageAfter)} className="muted">
           Decision log
@@ -33,7 +33,7 @@ export function LogEntryView(data: LogEntryData) {
         <h1>Decision #{item.seq}</h1>
       </PageHeader>
 
-      <dl className="fields">
+      <dl className="fields entry-fields">
         <dt>Recorded</dt>
         <dd>
           <time dateTime={item.recorded_at}>{formatTime(item.recorded_at)}</time>
@@ -84,6 +84,6 @@ export function LogEntryView(data: LogEntryData) {
         prev={item.seq > 1 ? { href: ROUTES.logEntry(item.seq - 1), label: `← Entry #${item.seq - 1}` } : null}
         next={headSeq !== null && item.seq < headSeq ? { href: ROUTES.logEntry(item.seq + 1), label: `Entry #${item.seq + 1} →` } : null}
       />
-    </>
+    </div>
   );
 }

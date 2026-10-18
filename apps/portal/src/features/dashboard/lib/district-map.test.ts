@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { PublicCase, PublicDistrict } from "@/services/read-model/read-model.model";
 import { buildDistrictMap, districtKey, total } from "./district-map";
-import { projectShapes, shade } from "./geo";
+import { HEAT_BINS, projectShapes, shade } from "./geo";
 
 const square = (x: number) => ({
   type: "Polygon" as const,
@@ -21,10 +21,18 @@ describe("map projection", () => {
     }
   });
 
-  test("shade is 0 without cases and 4 for the busiest district", () => {
-    expect(shade(0, 5)).toBe(0);
-    expect(shade(5, 5)).toBe(4);
-    expect(shade(1, 5)).toBe(1);
+  test("shade uses fixed bins 0 / 1 / 2-3 / 4-5 / 6 or more", () => {
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 40].map(shade)).toEqual([0, 1, 2, 2, 3, 3, 4, 4, 4]);
+    expect(shade(-1)).toBe(0);
+  });
+
+  test("one case is the lightest filled shade, not the darkest", () => {
+    expect(shade(1)).toBe(1);
+  });
+
+  test("the legend covers every level once, in order", () => {
+    expect(HEAT_BINS.map((b) => b.level)).toEqual([0, 1, 2, 3, 4]);
+    expect(HEAT_BINS.map((b) => shade(b.min))).toEqual([0, 1, 2, 3, 4]);
   });
 });
 

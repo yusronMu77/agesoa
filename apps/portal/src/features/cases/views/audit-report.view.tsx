@@ -22,7 +22,7 @@ export function AuditReportUnavailableView() {
 export function AuditReportView({ caseId, kase, report, findings, log }: AuditReportData) {
   return (
     <>
-      <nav aria-label="Breadcrumb">
+      <nav aria-label="Breadcrumb" className="breadcrumb">
         <p>
           <Link href={ROUTES.dashboard}>Public dashboard</Link> / <Link href={ROUTES.case(caseId)}>{caseId}</Link> / Audit
           report
@@ -39,11 +39,11 @@ export function AuditReportView({ caseId, kase, report, findings, log }: AuditRe
       ) : (
         <article data-testid="audit-report">
           <PageHeader>
-            <p>
+            <p className="report-kicker">
               <EvidenceBadge status={kase.max_finding_status} /> <span className="muted">{kase.category ?? kase.domain}</span>
             </p>
-            <h1 data-testid="audit-report-summary">{report.summary}</h1>
-            <p className="muted">
+            <h1 className="report-title" data-testid="audit-report-summary">{report.summary}</h1>
+            <p className="muted report-meta">
               {kase.region?.regency_name ?? "Unknown region"} · {kase.report_count} report{kase.report_count === 1 ? "" : "s"} ·
               written {formatTime(report.created_at)}
               {kase.synthetic ? " · synthetic (demo) data" : ""}

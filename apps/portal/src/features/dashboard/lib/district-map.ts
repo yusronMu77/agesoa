@@ -17,7 +17,7 @@ export interface DistrictMap {
   shapes: Projected[];
   districtByCode: Map<string, PublicDistrict>;
   casesPerDistrict: Map<string, number>;
-  /** Cases of the busiest district (scale of the shading). */
+  /** Cases of the busiest district. */
   max: number;
   /** Cases without a matching boundary; listed, never drawn. */
   unmapped: PublicCase[];

@@ -7,7 +7,7 @@ import type { PublicCase, PublicFinding } from "@/services/read-model/read-model
 
 export function CaseFields({ kase }: { kase: PublicCase }) {
   return (
-    <dl className="fields" data-testid="case-fields">
+    <dl className="case-fields" data-testid="case-fields">
       <div>
         <dt>Highest evidence status</dt>
         <dd>
@@ -37,7 +37,7 @@ export function CaseFindings({ findings }: { findings: PublicFinding[] }) {
       ) : (
         <ul className="finding-list">
           {findings.map((f) => (
-            <li key={f.finding_id} className="card" data-testid="finding">
+            <li key={f.finding_id} className="card finding-card" data-testid="finding">
               <div className="finding-head">
                 <EvidenceBadge status={f.status} />
                 <Badge variant="neutral">{validationStatusText(f.validation)}</Badge>
