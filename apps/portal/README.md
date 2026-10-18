@@ -3,11 +3,14 @@
 Public web portal of AGESOA (Next.js 16, App Router, TypeScript). Server-rendered pages read the backend
 services on the server; the browser never talks to a service or a database directly.
 
-## Routes
+## Routes and naming
+
+Use English for documentation, source paths and identifiers. Use **organization** as the shared term for newsrooms
+and government agencies. Public URL segments follow the Indonesian product vocabulary and do not change with the
+selected UI language. Paths are built in `src/lib/routes.ts` (`ROUTES`), never typed as literals.
 
 Four separate surfaces (DESIGN-BRIEF §1 in the design repository), each with its own shell and, for validators and
-institutions, its own sign-in page; a reader never sees another surface's menu. Paths are built in
-`src/lib/routes.ts` (`ROUTES`), never typed as literals.
+institutions, its own sign-in page; a reader never sees another surface's menu.
 
 | Surface | Route | Screen | What it shows |
 |---|---|---|---|
@@ -39,9 +42,35 @@ Dates and times follow the reader's language, always in Western Indonesia Time (
 `16 Okt 2026, 10.42 WIB` / `Oct 16, 2026, 10:42 AM WIB`.
 
 Every page renders when services are down: data sections show an error state instead of failing.
-When `DEMO_MODE=true`, every page shows a fixed `SIMULASI — synthetic data for demonstration` band
-(`role="status"`).
+Simulation bands are localized and carry `role="status"`. Organization surfaces are always labelled as
+simulations in this prototype; other surfaces show the data simulation band when `DEMO_MODE=true`.
 
+## Frontend source layout
+
+```text
+src/
+  app/
+    (public)/                    dashboard, about, cases and decision log
+    (auth)/                      sign-in
+    (validator)/                 validation and validator registration
+    (institution)/organizations/ organization routes and actions
+    (ops)/                       operations and service status
+    api/                         portal route handlers
+  components/
+    shell/                       public, sign-in and console layouts
+    public/                      public dashboard and finding components
+    console/                     reusable console controls
+  lib/
+    i18n/                        request language, dictionaries and translation helpers
+    organizations.ts             organization API calls
+    trust.ts                     validator API calls
+    institutions.ts              agency integration API calls
+    config.ts                    server environment configuration
+  assets/                        application logos
+```
+
+The shared `packages/ui` package supplies design tokens, fonts and the theme. Application components and
+backend API helpers belong to the frontend application.
 ## Run locally
 
 Requires [bun](https://bun.sh) and Node.js 24 (Next.js runs on Node).
@@ -75,7 +104,7 @@ so changing them needs a restart, not a rebuild.
 | Variable | Default | Notes |
 |---|---|---|
 | `APP_ENV` | `local` | `local`, `demo`, `staging` or `prod` |
-| `DEMO_MODE` | `false` | `true` shows the SIMULASI band. **Refused with `APP_ENV=prod`**: the config module throws, pages return 500 and `/api/healthz` reports the error. |
+| `DEMO_MODE` | `false` | `true` shows the localized simulation band. **Refused with `APP_ENV=prod`**: the config module throws, pages return 500 and `/api/healthz` reports the error. |
 | `RELEASE` | `dev` | Release identifier shown in the footer and in `/api/healthz` |
 | `SERVICE_URL_INGESTION` | `http://localhost:8001` | Base URL, no trailing path |
 | `SERVICE_URL_CASE_AUDIT` | `http://localhost:8002` | |
