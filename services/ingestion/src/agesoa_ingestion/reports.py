@@ -30,7 +30,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from pydantic import BaseModel, Field, StrictFloat
+from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StringConstraints, field_validator
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -78,6 +78,16 @@ class ReportCreate(BaseModel):
     shared_post: SharedPostIn | None = None
 
 
+class CustomReportField(BaseModel):
+    """Reporter-authored context; never interpreted as a domain rule or an AI extraction."""
+
+    model_config = ConfigDict(extra="forbid")
+    label: Annotated[str, StringConstraints(strict=True, strip_whitespace=True, min_length=1, max_length=80)]
+    value: Annotated[
+        str, StringConstraints(strict=True, strip_whitespace=True, min_length=1, max_length=2000)
+    ]
+
+
 class ReportPatch(BaseModel):
     domain: str | None = Field(
         None,
@@ -90,10 +100,23 @@ class ReportPatch(BaseModel):
     fields: dict[str, Any] | None = Field(
         None, description="Corrections by field id; null removes a value. Merged into the current fields."
     )
+    custom_fields: list[CustomReportField] = Field(
+        default_factory=list,
+        max_length=20,
+        description="Reporter-defined text labels and values, in display order. Replaces the list; [] removes all. Omit to preserve. Separate from pack rules.",
+    )
     narrative: str | None = Field(None, max_length=5000)
     location: Coordinates | None = None
     district_code: str | None = Field(None, max_length=32)
     shared_post: SharedPostIn | None = None
+
+    @field_validator("custom_fields")
+    @classmethod
+    def unique_custom_labels(cls, fields: list[CustomReportField]) -> list[CustomReportField]:
+        labels = [field.label.casefold() for field in fields]
+        if len(labels) != len(set(labels)):
+            raise ValueError("custom field labels must be unique")
+        return fields
 
 
 class Region(BaseModel):
@@ -142,6 +165,7 @@ class Report(BaseModel):
     category: str | None
     narrative: str | None
     fields: dict[str, Any]
+    custom_fields: list[CustomReportField]
     missing_required: list[str]
     rule_results: list[RuleResultOut]
     evidence_status: EvidenceStatusOut | None
@@ -261,6 +285,7 @@ async def _view(session: AsyncSession, request: Request, row) -> Report:
         category=row.category,
         narrative=row.narrative,
         fields=row.fields,
+        custom_fields=row.custom_fields,
         missing_required=[f for f in pack.required_field_ids() if row.fields.get(f) in (None, "", [])],
         rule_results=[
             RuleResultOut(rule_id=r.rule_id, violated=r.violated, detail=r.detail) for r in results
@@ -379,6 +404,8 @@ async def patch_report(report_id: str, body: ReportPatch, request: Request, repo
                 raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"fields: {exc}") from None
         if "narrative" in sent:
             values["narrative"] = body.narrative
+        if "custom_fields" in sent:
+            values["custom_fields"] = [field.model_dump() for field in body.custom_fields]
         if body.location or body.district_code:
             district = await _district(session, body.location, body.district_code)
             values["region"] = district.region() if district else None
@@ -579,6 +606,7 @@ async def submit_report(
                     "received_at": isoformat(now),
                     "region": row.region,
                     "fields": row.fields,
+                    "custom_fields": row.custom_fields,
                     # Not evaluable (missing field) is not a violation; such rules are left out of the event.
                     "rule_results": [r.as_event() for r in results if r.violated is not None],
                     "evidence": evidence_list,

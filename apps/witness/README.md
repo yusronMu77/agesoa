@@ -25,6 +25,12 @@ ingestion service (`GET /v1/domain-packs/general`). Public reporting always uses
 There is no domain-pack selector in the citizen flow. Legacy deployment presets cannot replace the public
 fields with a specialised schema. Unknown incident details may be left blank.
 
+Reporters may add, rename and remove up to 20 optional custom text fields in SCR-004. Each row has a label
+(80 characters) and a text value (2,000 characters). Both are required for an added row; remove an unused row.
+`PATCH /v1/reports/{id}` replaces `custom_fields` when present and preserves them when omitted. They survive
+Intake, reload and submission, are included in the report event, and remain separate from pack rule inputs.
+Run ingestion's Alembic migration `0004` before using this API version.
+
 Privacy: photos go to the ingestion service, which removes EXIF/GPS before storing them and hashes the stored
 bytes. The approximate position is sent once to `POST /v1/regions/resolve` and never with the report; only the
 district is kept.

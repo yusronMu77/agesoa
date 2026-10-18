@@ -7,7 +7,7 @@
       "schema": "laporan.diterima.v1.schema.json",
       "producer": "ingestion",
       "consumers": ["case-audit", "transparency"],
-      "description": "A citizen report was confirmed by the reporter and stored with hashed evidence."
+      "description": "A citizen report was confirmed by the reporter and stored with hashed evidence, with optional reporter-defined custom text fields separate from domain rule inputs."
     },
     {
       "type": "sinyal.diterima",

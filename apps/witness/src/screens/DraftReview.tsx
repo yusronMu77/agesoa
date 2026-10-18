@@ -11,7 +11,7 @@ import { button } from "../ui";
  * (code, not the model), then the reporter submits.
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { FieldValue, IngestionClient, PackDocument, PackField, Report, ReportPatch } from "../api";
 import { ApiError } from "../api";
 import { AiResultLabel, Notice, RegionName } from "../components";
@@ -56,6 +56,17 @@ export function DraftReview({
   const [error, setError] = useState<string | null>(null);
   const [badField, setBadField] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [customFields, setCustomFields] = useState(() =>
+    (initial.custom_fields ?? []).map((field) => ({ ...field, key: crypto.randomUUID() })),
+  );
+  const [customError, setCustomError] = useState<string | null>(null);
+  const addFieldButton = useRef<HTMLButtonElement>(null);
+
+  const addCustomField = () => {
+    const key = crypto.randomUUID();
+    setCustomFields((current) => [...current, { key, label: "", value: "" }]);
+    requestAnimationFrame(() => document.getElementById(`custom-label-${key}`)?.focus());
+  };
 
   const label = (id: string) => pack.report_fields.find((f) => f.id === id)?.label.id ?? id;
 
@@ -69,6 +80,8 @@ export function DraftReview({
     if (Object.keys(fields).length) patch.fields = fields;
     if ((category || null) !== report.category) patch.category = category || null;
     if ((narrative.trim() || null) !== report.narrative) patch.narrative = narrative.trim() || null;
+    const custom = customFields.map(({ label, value }) => ({ label: label.trim(), value: value.trim() }));
+    if (JSON.stringify(custom) !== JSON.stringify(report.custom_fields ?? [])) patch.custom_fields = custom;
     return patch;
   };
 
@@ -92,6 +105,9 @@ export function DraftReview({
     setInputs(inputsOf(pack, saved));
     setCategory(saved.category ?? "");
     setNarrative(saved.narrative ?? "");
+    setCustomFields((current) => (saved.custom_fields ?? []).map((field, index) => ({
+      ...field, key: current[index]?.key ?? crypto.randomUUID(),
+    })));
     return saved;
   };
 
@@ -100,6 +116,18 @@ export function DraftReview({
     setError(null);
     setStatus(null);
     setBadField(null);
+    setCustomError(null);
+    const seen = new Set<string>();
+    for (const field of customFields) {
+      const normalized = field.label.trim().toLocaleLowerCase();
+      if (!normalized || !field.value.trim() || seen.has(normalized)) {
+        setCustomError(field.key);
+        setError(seen.has(normalized) ? T["TXT-WIT-264"] : T["TXT-WIT-263"]);
+        document.getElementById(`custom-${!normalized || seen.has(normalized) ? "label" : "value"}-${field.key}`)?.focus();
+        return;
+      }
+      seen.add(normalized);
+    }
     if (submit && !category) {
       setError(T["TXT-WIT-095"]);
       return;
@@ -244,6 +272,40 @@ export function DraftReview({
               </div>
             );
           })}
+        </fieldset>
+
+        <fieldset className="draft-fields custom-fields" disabled={busy}>
+          <legend>{T["TXT-WIT-254"]}</legend>
+          <p className="field-hint" id="custom-fields-hint">{T["TXT-WIT-255"]}</p>
+          {customFields.length === 0 && <p className="field-hint">{T["TXT-WIT-256"]}</p>}
+          {customFields.map((field, index) => (
+            <section className="custom-field" key={field.key} aria-labelledby={`custom-heading-${field.key}`}>
+              <h3 id={`custom-heading-${field.key}`}>{t("TXT-WIT-257", { nomor: String(index + 1) })}</h3>
+              <label className="field" htmlFor={`custom-label-${field.key}`}>
+                <span className="field-label">{T["TXT-WIT-258"]}</span>
+                <Input className="h-12" id={`custom-label-${field.key}`} type="text" maxLength={80} required
+                  placeholder={T["TXT-WIT-259"]} value={field.label} aria-invalid={customError === field.key}
+                  aria-describedby="custom-fields-hint"
+                  onChange={(event) => setCustomFields((current) => current.map((item) => item.key === field.key ? { ...item, label: event.target.value } : item))} />
+              </label>
+              <label className="field" htmlFor={`custom-value-${field.key}`}>
+                <span className="field-label">{T["TXT-WIT-260"]}</span>
+                <Textarea id={`custom-value-${field.key}`} rows={2} maxLength={2000} required
+                  placeholder={T["TXT-WIT-261"]} value={field.value} aria-invalid={customError === field.key}
+                  onChange={(event) => setCustomFields((current) => current.map((item) => item.key === field.key ? { ...item, value: event.target.value } : item))} />
+              </label>
+              <button type="button" className={button("neutral")}
+                aria-label={t("TXT-WIT-262", { nomor: String(index + 1) })}
+                onClick={() => {
+                  setCustomFields((current) => current.filter((item) => item.key !== field.key));
+                  setCustomError(null);
+                  requestAnimationFrame(() => addFieldButton.current?.focus());
+                }}>{T["TXT-WIT-266"]}</button>
+            </section>
+          ))}
+          <p className="field-hint" role="status">{customFields.length}/20 {T["TXT-WIT-267"]}</p>
+          <button ref={addFieldButton} type="button" className={button("neutral")}
+            disabled={customFields.length >= 20} onClick={addCustomField}>{T["TXT-WIT-265"]}</button>
         </fieldset>
 
         {report.missing_required.length > 0 && (

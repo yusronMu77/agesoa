@@ -71,6 +71,81 @@ def test_reports_need_a_token(client):
     assert client.get("/v1/regions/districts").status_code == 401
 
 
+def test_custom_text_fields_survive_reload_intake_and_submission(client):
+    report = create(client, domain="general", narrative="qa-custom: Akses jalan fiktif terhalang.")
+    path = f"/v1/reports/{report['id']}"
+    assert report["custom_fields"] == []
+    fields = [
+        {"label": "Kondisi sekitar", "value": "qa-custom: Gelap saat malam."},
+        {"label": "Akses alternatif", "value": "qa-custom: Lewat jalan fiktif di sebelah timur."},
+    ]
+    response = client.patch(path, json={"custom_fields": fields}, headers=ME)
+    assert response.status_code == 200, response.text
+    assert response.json()["custom_fields"] == fields
+    assert response.json()["fields"] == {}  # custom context cannot become a domain rule input
+    assert client.get(path, headers=ME).json()["custom_fields"] == fields
+    assert client.patch(path, json={"custom_fields": []}, headers=OTHER).status_code == 404
+    assert client.post(f"{path}/intake", headers=ME).json()["custom_fields"] == fields
+    assert client.patch(path, json={"category": "other"}, headers=ME).json()["custom_fields"] == fields
+    submitted = client.post(f"{path}/submit", headers=ME)
+    assert submitted.status_code == 200, submitted.text
+    assert submitted.json()["custom_fields"] == fields
+    event = next(event for event in report_events(client) if event["type"] == "agesoa.laporan.diterima")
+    validate_event(event)
+    assert event["data"]["custom_fields"] == fields
+    assert client.patch(path, json={"custom_fields": []}, headers=ME).status_code == 409
+
+
+def test_custom_fields_can_be_edited_removed_and_cleared(client):
+    report = create(client, domain="general")
+    path = f"/v1/reports/{report['id']}"
+    fields = [{"label": " Kondisi ", "value": " qa-custom: Awal "}]
+    expected = [{"label": "Kondisi", "value": "qa-custom: Awal"}]
+    assert client.patch(path, json={"custom_fields": fields}, headers=ME).json()["custom_fields"] == expected
+    expected[0] = {"label": "Kondisi terbaru", "value": "qa-custom: Sudah berubah"}
+    assert (
+        client.patch(path, json={"custom_fields": expected}, headers=ME).json()["custom_fields"] == expected
+    )
+    assert client.patch(path, json={"custom_fields": []}, headers=ME).json()["custom_fields"] == []
+    assert client.get(path, headers=ME).json()["custom_fields"] == []
+
+
+def test_custom_fields_at_limits_survive_domain_switch(client):
+    report = create(client, domain="general")
+    path = f"/v1/reports/{report['id']}"
+    fields = [{"label": f"{i:02d}" + "L" * 78, "value": "V" * 2000} for i in range(20)]
+    saved = client.patch(path, json={"custom_fields": fields}, headers=ME)
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["custom_fields"] == fields
+    switched = client.patch(path, json={"domain": "mbg"}, headers=ME)
+    assert switched.status_code == 200, switched.text
+    assert switched.json()["custom_fields"] == fields
+    assert switched.json()["fields"] == {}
+    assert client.get(path, headers=ME).json()["custom_fields"] == fields
+
+
+def test_custom_fields_reject_non_text_empty_duplicate_and_oversized_values(client):
+    report = create(client, domain="general")
+    path = f"/v1/reports/{report['id']}"
+    for fields in (
+        None,
+        {"label": "Kondisi", "value": "qa-custom"},
+        [{"label": "Kondisi", "value": 42}],
+        [{"label": 42, "value": "qa-custom"}],
+        [{"label": "Kondisi", "value": {"nested": "qa-custom"}}],
+        [{"label": " ", "value": "qa-custom"}],
+        [{"label": "Kondisi", "value": " "}],
+        [{"label": "Kondisi", "value": "qa-custom", "type": "integer"}],
+        [{"label": "A" * 81, "value": "qa-custom"}],
+        [{"label": "Kondisi", "value": "A" * 2001}],
+        [{"label": "Kondisi", "value": "qa-custom"}, {"label": " kondisi ", "value": "qa-custom"}],
+        [{"label": f"Kolom {i}", "value": "qa-custom"} for i in range(21)],
+    ):
+        response = client.patch(path, json={"custom_fields": fields}, headers=ME)
+        assert response.status_code == 422, response.text
+    assert client.get(path, headers=ME).json()["custom_fields"] == []
+
+
 def test_location_becomes_a_district_and_coordinates_are_not_kept(client):
     report = create(client)
     assert report["region"] == {

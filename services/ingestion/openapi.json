@@ -856,6 +856,30 @@
         ],
         "title": "Coordinates"
       },
+      "CustomReportField": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "CustomReportField",
+        "description": "Reporter-authored context; never interpreted as a domain rule or an AI extraction."
+      },
       "DatabaseStatus": {
         "properties": {
           "ok": {
@@ -1522,6 +1546,13 @@
             "type": "object",
             "title": "Fields"
           },
+          "custom_fields": {
+            "items": {
+              "$ref": "#/components/schemas/CustomReportField"
+            },
+            "type": "array",
+            "title": "Custom Fields"
+          },
           "missing_required": {
             "items": {
               "type": "string"
@@ -1625,6 +1656,7 @@
           "category",
           "narrative",
           "fields",
+          "custom_fields",
           "missing_required",
           "rule_results",
           "evidence_status",
@@ -1737,6 +1769,15 @@
             ],
             "title": "Fields",
             "description": "Corrections by field id; null removes a value. Merged into the current fields."
+          },
+          "custom_fields": {
+            "items": {
+              "$ref": "#/components/schemas/CustomReportField"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Custom Fields",
+            "description": "Reporter-defined text labels and values, in display order. Replaces the list; [] removes all. Omit to preserve. Separate from pack rules."
           },
           "narrative": {
             "anyOf": [

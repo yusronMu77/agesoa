@@ -29,6 +29,12 @@
       ],
       "affected_count": 23
     },
+    "custom_fields": [
+      {
+        "label": "Additional context",
+        "value": "qa-example: The fictional school has no shaded waiting area."
+      }
+    ],
     "rule_results": [
       {
         "rule_id": "consume_within_4h",

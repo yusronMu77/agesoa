@@ -57,6 +57,20 @@
           "type": "object",
           "description": "Fields extracted per the domain pack's report_fields (keys = field ids)."
         },
+        "custom_fields": {
+          "type": "array",
+          "maxItems": 20,
+          "description": "Optional reporter-defined text context, separate from pack rules. Older events may omit it.",
+          "items": {
+            "type": "object",
+            "required": ["label", "value"],
+            "properties": {
+              "label": {"type": "string", "minLength": 1, "maxLength": 80},
+              "value": {"type": "string", "minLength": 1, "maxLength": 2000}
+            },
+            "additionalProperties": false
+          }
+        },
         "rule_results": {
           "type": "array",
           "items": {

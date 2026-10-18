@@ -30,6 +30,7 @@ reports = Table(
     Column("category", String(48)),
     Column("narrative", Text),
     Column("fields", JSONB, nullable=False, server_default="{}"),  # per the domain pack's report_fields
+    Column("custom_fields", JSONB, nullable=False, server_default="[]"),  # reporter-defined text pairs
     Column("rule_results", JSONB, nullable=False, server_default="[]"),
     Column("region", JSONB),
     Column("shared_post_id", String(32), ForeignKey("shared_posts.id", ondelete="SET NULL")),

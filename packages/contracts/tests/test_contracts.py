@@ -74,6 +74,12 @@ def test_dataschema_must_match_the_type():
         validate_event(event)
 
 
+def test_report_event_accepts_older_payload_without_custom_fields():
+    event = load(EXAMPLES / "laporan.diterima.json")
+    del event["data"]["custom_fields"]
+    assert validate_event(event).type == "laporan.diterima"
+
+
 def test_extra_envelope_attribute_is_rejected():
     event = copy.deepcopy(load(EXAMPLES / "kasus.diperbarui.json"))
     event["reporter_name"] = "should never travel in an envelope"

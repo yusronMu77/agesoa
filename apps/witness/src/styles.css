@@ -495,6 +495,24 @@
     font-size: var(--ag-font-size-sm);
   }
 
+  .custom-field {
+    display: grid;
+    gap: var(--ag-space-3);
+    min-width: 0;
+    border-top: 1px solid var(--ag-color-border-default);
+    padding-block: var(--ag-space-4);
+  }
+
+  .custom-field h3 {
+    margin: 0;
+    font-size: inherit;
+    font-weight: 600;
+  }
+
+  .custom-field button {
+    justify-self: start;
+  }
+
   /* Bottom action area: stays in reach of the thumb, right above the tab bar when there is one. */
   .actions {
     position: sticky;

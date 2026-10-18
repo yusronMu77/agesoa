@@ -55,6 +55,11 @@ export interface Evidence {
 
 export type FieldValue = string | number | string[];
 
+export interface CustomReportField {
+  label: string;
+  value: string;
+}
+
 export interface Report {
   id: string;
   status: "draft" | "submitted";
@@ -62,6 +67,7 @@ export interface Report {
   category: string | null;
   narrative: string | null;
   fields: Record<string, FieldValue>;
+  custom_fields: CustomReportField[];
   missing_required: string[];
   rule_results: { rule_id: string; violated: boolean | null; detail: string }[];
   evidence_status: {
@@ -102,6 +108,7 @@ export interface ReportPatch {
   domain?: string;
   category?: string | null;
   fields?: Record<string, FieldValue | null>;
+  custom_fields?: CustomReportField[];
   narrative?: string | null;
   district_code?: string | null;
   shared_post?: SharedPostInput | null;
