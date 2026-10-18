@@ -61,59 +61,76 @@ export function InstitutionIntegration({
 }) {
   const { subscription, api_key: apiKey } = institution;
   return (
-    <section aria-labelledby="integration-heading" className="card" data-testid="institution-integration">
-      <h2 id="integration-heading">Institution integration</h2>
-      <p className="muted">
-        Receive final audit reports in your own system: AGESOA sends a signed webhook (HMAC with your secret) for each
-        final report that matches your filters; your system can also call the institution API with an API key to report
-        follow-up and send a right of reply.
-      </p>
-
-      <h3>Webhook</h3>
-      {subscription ? (
-        <p data-testid="webhook-subscription">
-          Current webhook: <code>{subscription.webhook_url}</code> · region {subscription.region_code ?? "all"} · category{" "}
-          {subscription.category ?? "all"} · since {formatTime(subscription.created_at)}
-        </p>
-      ) : (
-        <p className="muted" data-testid="webhook-subscription">
-          No webhook yet.
-        </p>
-      )}
-      <WebhookForm organizationId={organizationId} subscription={subscription} />
-      <TestEventForm organizationId={organizationId} />
-
-      <h3>API key</h3>
-      {apiKey ? (
+    <section aria-labelledby="integration-heading" data-testid="institution-integration">
+      <div className="ws-intro">
+        <h2 id="integration-heading">Institution integration</h2>
         <p>
-          Current key: <code data-testid="api-key-prefix">{apiKey.prefix}</code>… · created {formatTime(apiKey.created_at)}
+          Receive final audit reports in your own system: AGESOA sends a signed webhook (HMAC with your secret) for each
+          final report that matches your filters; your system can also call the institution API with an API key to
+          report follow-up and send a right of reply.
         </p>
-      ) : (
-        <p className="muted">No API key yet.</p>
-      )}
-      <ApiKeyForm organizationId={organizationId} hasKey={apiKey !== null} />
+      </div>
 
-      <PageHeader
-        bare
-        aside={
-          <a href={ROUTES.organization(organizationId)} className={buttonClass("secondary")} data-testid="refresh-deliveries">
-            Refresh
-          </a>
-        }
-      >
-        <h3 id="deliveries-heading">Delivery history</h3>
-      </PageHeader>
-      {deliveries?.ok ? (
-        deliveries.data.length > 0 ? (
-          <DeliveryTable deliveries={deliveries.data} />
-        ) : (
-          <p className="muted" data-testid="deliveries-empty">
-            No deliveries yet.
-          </p>
-        )
-      ) : (
-        <Callout tone="error">The delivery history could not be loaded ({deliveries?.error}).</Callout>
-      )}
+      <div className="ws-grid ws-grid--wide-side">
+        <div className="ws-stack">
+          <div className="ws-subcard">
+            <h3>Webhook</h3>
+            {subscription ? (
+              <p className="ws-strip" data-testid="webhook-subscription">
+                Current webhook: <code>{subscription.webhook_url}</code> · region {subscription.region_code ?? "all"} ·
+                category {subscription.category ?? "all"} · since {formatTime(subscription.created_at)}
+              </p>
+            ) : (
+              <p className="muted" data-testid="webhook-subscription">
+                No webhook yet.
+              </p>
+            )}
+            <WebhookForm organizationId={organizationId} subscription={subscription} />
+            <TestEventForm organizationId={organizationId} />
+          </div>
+
+          <div className="ws-subcard">
+            <h3>API key</h3>
+            {apiKey ? (
+              <p className="ws-strip">
+                Current key: <code data-testid="api-key-prefix">{apiKey.prefix}</code>… · created{" "}
+                {formatTime(apiKey.created_at)}
+              </p>
+            ) : (
+              <p className="muted">No API key yet.</p>
+            )}
+            <ApiKeyForm organizationId={organizationId} hasKey={apiKey !== null} />
+          </div>
+        </div>
+
+        <div className="ws-subcard ws-table ws-table--compact">
+          <PageHeader
+            bare
+            aside={
+              <a
+                href={ROUTES.organization(organizationId)}
+                className={buttonClass("secondary")}
+                data-testid="refresh-deliveries"
+              >
+                Refresh
+              </a>
+            }
+          >
+            <h3 id="deliveries-heading">Delivery history</h3>
+          </PageHeader>
+          {deliveries?.ok ? (
+            deliveries.data.length > 0 ? (
+              <DeliveryTable deliveries={deliveries.data} />
+            ) : (
+              <p className="muted" data-testid="deliveries-empty">
+                No deliveries yet.
+              </p>
+            )
+          ) : (
+            <Callout tone="error">The delivery history could not be loaded ({deliveries?.error}).</Callout>
+          )}
+        </div>
+      </div>
     </section>
   );
 }

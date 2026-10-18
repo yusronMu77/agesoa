@@ -26,7 +26,7 @@ export function LoginForm({ auth, next, allowSignup = false }: { auth: AuthConfi
   }
 
   return (
-    <form className="card form" method="post" onSubmit={onSubmit} data-testid="login-form">
+    <form className="card ws-form" method="post" onSubmit={onSubmit} data-testid="login-form">
       <label>
         Email
         <input name="email" type="email" autoComplete="username" required />

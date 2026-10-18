@@ -32,21 +32,23 @@ export function OrganizationDetailView({
     <>
       <SimOrgBand />
       <BackLink href={ROUTES.organizations}>Organizations</BackLink>
-      <PageHeader
-        bare
-        aside={
-          <Badge tone={statusTone(o.status)} icon={false} testId="organization-status">
-            {STATUS_LABEL[o.status]}
-          </Badge>
-        }
-      >
-        <h1>{o.name}</h1>
-      </PageHeader>
-      <p className="muted">
-        {KIND_LABEL[o.kind]} · <code>{o.domain}</code> · {o.region?.regency_name ?? "—"}
-        {o.verified_at ? ` · verified ${formatTime(o.verified_at)}` : ""}
-        {o.synthetic ? " · fictional (demo)" : ""}
-      </p>
+      <div className="ws-intro">
+        <PageHeader
+          bare
+          aside={
+            <Badge tone={statusTone(o.status)} icon={false} testId="organization-status">
+              {STATUS_LABEL[o.status]}
+            </Badge>
+          }
+        >
+          <h1>{o.name}</h1>
+        </PageHeader>
+        <p className="muted">
+          {KIND_LABEL[o.kind]} · <code>{o.domain}</code> · {o.region?.regency_name ?? "—"}
+          {o.verified_at ? ` · verified ${formatTime(o.verified_at)}` : ""}
+          {o.synthetic ? " · fictional (demo)" : ""}
+        </p>
+      </div>
 
       {check ? <DnsCheckResult result={check} /> : null}
 

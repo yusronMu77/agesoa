@@ -37,11 +37,11 @@ function ResetResult({ reset, seconds, error }: DemoResetResult) {
 /** Demo data reset (demo_mode only), behind a confirmation box. */
 export function DemoResetPanel({ demoMode, result }: { demoMode: boolean; result: DemoResetResult }) {
   return (
-    <section aria-labelledby="demo-heading" className="card" data-testid="demo-reset">
+    <section aria-labelledby="demo-heading" className="card ws-danger" data-testid="demo-reset">
       <h2 id="demo-heading">Demo data</h2>
       <ResetResult {...result} />
       {demoMode ? (
-        <form action={runDemoReset} className="form">
+        <form action={runDemoReset} className="ws-form">
           <p className="muted">
             Puts the demo environment back to its starting state: removes all demo cases, reports, findings and
             decisions, then seeds the fictional organizations, validators and districts again. Demo only; the synthetic

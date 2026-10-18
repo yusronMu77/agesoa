@@ -1,3 +1,4 @@
+import { Logo } from "@agesoa/ui/components/logo";
 import { Callout } from "@/components/ui/callout";
 import type { AuthConfig } from "@/configs/env.config";
 import { LoginForm } from "../components/login-form";
@@ -8,17 +9,22 @@ export function LoginView({ auth, next }: { auth: AuthConfig; next: string }) {
   const audience = loginAudience(next);
   const text = LOGIN_TEXT[audience];
   return (
-    <>
-      <h1>{text.title}</h1>
-      <p className="muted">
-        {text.intro} Reporters never need an account.
-      </p>
-      {auth.emulatorUrl ? (
-        <Callout data-testid="emulator-note">
-          Local environment: accounts live in the Firebase Auth emulator (seeded demo accounts only).
-        </Callout>
-      ) : null}
-      <LoginForm auth={auth} next={next} allowSignup={audience === "registration"} />
-    </>
+    <div className="ws-split">
+      <div className="ws-split__aside">
+        <Logo tone="ink" size={40} />
+        <h1>{text.title}</h1>
+        <p className="muted">
+          {text.intro} Reporters never need an account.
+        </p>
+      </div>
+      <div className="ws-split__main ws-split__main--narrow">
+        {auth.emulatorUrl ? (
+          <Callout data-testid="emulator-note">
+            Local environment: accounts live in the Firebase Auth emulator (seeded demo accounts only).
+          </Callout>
+        ) : null}
+        <LoginForm auth={auth} next={next} allowSignup={audience === "registration"} />
+      </div>
+    </div>
   );
 }

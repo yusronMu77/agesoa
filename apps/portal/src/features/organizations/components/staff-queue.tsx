@@ -31,9 +31,9 @@ export function StaffQueue({
         </Callout>
       ) : null}
       {staff && staff.ok && staff.data.length > 0 ? (
-        <ul className="finding-list">
+        <ul className="ws-items">
           {staff.data.map((c) => (
-            <li key={c.validator_id} className="card" data-testid="staff-candidate">
+            <li key={c.validator_id} className="ws-item" data-testid="staff-candidate">
               <p>
                 <strong>{c.name ?? "Name not read"}</strong> · {c.position ?? "position not read"} · {c.role_label}
               </p>
@@ -41,7 +41,7 @@ export function StaffQueue({
                 {c.document_type ?? "document"} · read with confidence{" "}
                 {c.confidence !== null ? `${Math.round(c.confidence * 100)}%` : "—"} · requested {formatTime(c.requested_at)}
               </p>
-              <form action={decideStaffCandidate} className="inline-form">
+              <form action={decideStaffCandidate} className="inline-form ws-actions">
                 <input type="hidden" name="organization_id" value={organizationId} />
                 <input type="hidden" name="validator_id" value={c.validator_id} />
                 <Button name="decision" value="confirm">

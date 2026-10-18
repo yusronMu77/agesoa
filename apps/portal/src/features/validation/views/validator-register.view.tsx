@@ -8,22 +8,28 @@ export function ValidatorRegisterView({ demoMode, me, roles, newsrooms, error }:
   return (
     <>
       {demoMode ? <SimOrgBand /> : null}
-      <h1>Become a validator</h1>
-      <p className="muted">
-        Validators review audit findings before they become final. Upload one document that proves your role (press
-        card, assignment letter or professional certificate). Agen Peran reads it; the image is not stored. Your name
-        is never shown publicly: findings show only your role and regency.
-      </p>
+      <div className="ws-split">
+        <div className="ws-split__aside">
+          <h1>Become a validator</h1>
+          <p className="muted">
+            Validators review audit findings before they become final. Upload one document that proves your role (press
+            card, assignment letter or professional certificate). Agen Peran reads it; the image is not stored. Your
+            name is never shown publicly: findings show only your role and regency.
+          </p>
+        </div>
 
-      {me ? <RegistrationStatus me={me} /> : null}
+        <div className="ws-split__main">
+          {me ? <RegistrationStatus me={me} /> : null}
 
-      {error !== undefined ? (
-        <Callout tone="error" role="alert" data-testid="register-error">
-          {error}
-        </Callout>
-      ) : null}
+          {error !== undefined ? (
+            <Callout tone="error" role="alert" data-testid="register-error">
+              {error}
+            </Callout>
+          ) : null}
 
-      {!me || me.status === "rejected" ? <RegisterForm roles={roles} newsrooms={newsrooms} /> : null}
+          {!me || me.status === "rejected" ? <RegisterForm roles={roles} newsrooms={newsrooms} /> : null}
+        </div>
+      </div>
     </>
   );
 }

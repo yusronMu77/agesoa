@@ -1,6 +1,7 @@
 import "@agesoa/ui/fonts.css";
 import "@agesoa/ui/tokens.css";
 import "./globals.css";
+import "./workspace.css";
 
 import type { Metadata } from "next";
 import type { ReactNode } from "react";

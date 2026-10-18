@@ -7,9 +7,9 @@ import { DNS_RESULT_TEXT } from "../constants";
 /** SCR-064: the TXT record to publish and the button that checks it. */
 export function DomainVerification({ organization: o }: { organization: Organization }) {
   return (
-    <section aria-labelledby="txt-heading" className="card">
+    <section aria-labelledby="txt-heading" className="card ws-narrow">
       <h2 id="txt-heading">Prove that you control {o.domain}</h2>
-      <ol>
+      <ol className="ws-steps">
         <li>
           In the DNS settings of <code>{o.domain}</code>, add a <strong>TXT</strong> record on the domain itself (host{" "}
           <code>@</code>) with this value:
@@ -21,7 +21,9 @@ export function DomainVerification({ organization: o }: { organization: Organiza
       </ol>
       <form action={checkDomain}>
         <input type="hidden" name="organization_id" value={o.organization_id} />
-        <Button data-testid="dns-check">Check DNS</Button>
+        <Button data-testid="dns-check" className="ws-cta">
+          Check DNS
+        </Button>
       </form>
     </section>
   );

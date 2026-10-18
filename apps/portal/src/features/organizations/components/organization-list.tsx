@@ -26,11 +26,11 @@ export function OrganizationTable({ organizations }: { organizations: Organizati
               <td>
                 <Link href={ROUTES.organization(o.organization_id)}>{o.name}</Link>
               </td>
-              <td>{KIND_LABEL[o.kind]}</td>
+              <td className="ws-muted-cell">{KIND_LABEL[o.kind]}</td>
               <td>
                 <code>{o.domain}</code>
               </td>
-              <td>{o.region?.regency_name ?? "—"}</td>
+              <td className="ws-muted-cell">{o.region?.regency_name ?? "—"}</td>
               <td>
                 <Badge tone={statusTone(o.status)} icon={false}>
                   {STATUS_LABEL[o.status]}
@@ -47,7 +47,7 @@ export function OrganizationTable({ organizations }: { organizations: Organizati
 /** SCR-060: name, type, domain and regency; the TXT record to publish comes back on the next page. */
 export function RegisterOrganizationForm() {
   return (
-    <form action={registerOrganization} className="card form" data-testid="register-form">
+    <form action={registerOrganization} className="ws-form" data-testid="register-form">
       <label>
         Name
         <input name="name" required minLength={2} maxLength={200} />

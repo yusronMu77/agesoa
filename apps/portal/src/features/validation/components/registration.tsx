@@ -8,7 +8,11 @@ import { DOCUMENT_TYPES, REJECTION_TEXT } from "../constants";
 /** SCR-026: where the registration stands. Activation follows a human decision, never the AI reading. */
 export function RegistrationStatus({ me }: { me: ValidatorProfile }) {
   return (
-    <section className="card" data-testid="registration-status" aria-labelledby="status-heading">
+    <section
+      className={`card ws-tone ws-tone--${me.status === "awaiting_confirmation" ? "warn" : me.status === "rejected" ? "error" : "ok"}`}
+      data-testid="registration-status"
+      aria-labelledby="status-heading"
+    >
       <h2 id="status-heading">Your registration</h2>
       {me.status === "awaiting_confirmation" ? (
         <p>
@@ -35,7 +39,7 @@ export function RegistrationStatus({ me }: { me: ValidatorProfile }) {
 /** SCR-021/024: role, field, regency, optional newsroom and the role document in one form. */
 export function RegisterForm({ roles, newsrooms }: { roles: RoleOption[]; newsrooms: NewsroomOption[] }) {
   return (
-    <form action={registerValidator} className="card form" data-testid="validator-register-form">
+    <form action={registerValidator} className="card ws-form" data-testid="validator-register-form">
       <label>
         Role
         <select name="role" required defaultValue="">

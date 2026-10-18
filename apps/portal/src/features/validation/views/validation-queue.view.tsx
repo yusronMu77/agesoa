@@ -12,8 +12,10 @@ export function ValidationQueueView({ demoMode, profile, requests, done }: Valid
   const pending = profile.ok && !canDecide(profile.data.status);
   return (
     <>
-      <h1>Findings waiting for validation</h1>
       {demoMode ? <SimOrgBand /> : null}
+      <div className="ws-intro">
+        <h1>Findings waiting for validation</h1>
+      </div>
       {profile.ok ? (
         <ValidatorHeader profile={profile.data} />
       ) : (

@@ -36,7 +36,7 @@ function ErrorText({ error }: { error: string }) {
 export function WebhookForm({ organizationId, subscription }: { organizationId: string; subscription: Subscription | null }) {
   const [state, action, pending] = useActionState(saveWebhook, null);
   return (
-    <form action={action} className="form" data-testid="webhook-form">
+    <form action={action} className="ws-form mb-4" data-testid="webhook-form">
       <input type="hidden" name="organization_id" value={organizationId} />
       <label>
         Webhook URL
@@ -63,7 +63,7 @@ export function WebhookForm({ organizationId, subscription }: { organizationId: 
 export function TestEventForm({ organizationId }: { organizationId: string }) {
   const [state, action, pending] = useActionState(sendTestEvent, null);
   return (
-    <form action={action} className="form">
+    <form action={action} className="ws-form mb-4">
       <input type="hidden" name="organization_id" value={organizationId} />
       <div>
         <Button variant="secondary" disabled={pending} data-testid="send-test-event">
@@ -83,7 +83,7 @@ export function TestEventForm({ organizationId }: { organizationId: string }) {
 export function ApiKeyForm({ organizationId, hasKey }: { organizationId: string; hasKey: boolean }) {
   const [state, action, pending] = useActionState(rotateApiKey, null);
   return (
-    <form action={action} className="form">
+    <form action={action} className="ws-form mb-4">
       <input type="hidden" name="organization_id" value={organizationId} />
       {hasKey ? <p className="muted">Creating a new key revokes the current one.</p> : null}
       <div>

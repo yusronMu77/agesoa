@@ -1,9 +1,38 @@
 import { Badge } from "@/components/ui/badge";
 import { TableWrap } from "@/components/ui/table-wrap";
 import { formatTime } from "@/lib/format";
+import type { OpsEvents } from "@/services/platform/ops.service";
 import type { StatusReport } from "@/services/platform/status.service";
 import { AGENTS } from "../constants";
 import type { OpsData } from "../server/load-ops";
+
+function sum(events: OpsData["events"], pick: (e: OpsEvents) => number): number | null {
+  const ok = events.flatMap(({ result }) => (result.ok ? [result.data] : []));
+  return ok.length === 0 ? null : ok.reduce((total, e) => total + pick(e), 0);
+}
+
+/** SCR-090 tiles: totals over the rows below (no extra call); "—" when no service answered. */
+export function OpsStats({ services, events }: { services: StatusReport["services"]; events: OpsData["events"] }) {
+  const ready = services.filter((s) => s.state === "ready").length;
+  const failing = sum(events, (e) => e.outbox_failing);
+  const tiles = [
+    { label: "Services ready", value: `${ready} / ${services.length}`, accent: ready < services.length },
+    { label: "Published", value: sum(events, (e) => e.outbox_published) ?? "—", accent: false },
+    { label: "Pending", value: sum(events, (e) => e.outbox_pending) ?? "—", accent: false },
+    { label: "Failing", value: failing ?? "—", accent: (failing ?? 0) > 0 },
+    { label: "Processed", value: sum(events, (e) => e.inbox_processed) ?? "—", accent: false },
+  ];
+  return (
+    <ul className="ws-stats" aria-label="Totals">
+      {tiles.map((t) => (
+        <li key={t.label} className="ws-stat">
+          <span className="ws-stat__label">{t.label}</span>
+          <span className={t.accent ? "ws-stat__value ws-stat__value--accent" : "ws-stat__value"}>{t.value}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 /** One row per service: its agents, readiness and outbox/inbox counts ("—" when the operator call failed). */
 export function OpsServicesTable({ services, events }: { services: StatusReport["services"]; events: OpsData["events"] }) {
@@ -36,7 +65,7 @@ export function OpsServicesTable({ services, events }: { services: StatusReport[
             return (
               <tr key={s.service} data-testid="ops-service" data-service={s.service}>
                 <th scope="row">{s.service}</th>
-                <td>{AGENTS[s.service].join(", ")}</td>
+                <td className="ws-muted-cell">{AGENTS[s.service].join(", ")}</td>
                 <td>
                   <Badge tone={s.state === "ready" ? "ok" : "warn"} icon={false}>
                     {s.state}
@@ -82,7 +111,7 @@ export function EventTypesTable({ events }: { events: OpsData["events"] }) {
                       <code>{t.event_type.replace(/^agesoa\./, "")}</code>
                     </td>
                     <td className="num">{t.count}</td>
-                    <td>{t.last_at ? formatTime(t.last_at) : "—"}</td>
+                    <td className="ws-nowrap">{t.last_at ? formatTime(t.last_at) : "—"}</td>
                   </tr>
                 ))
               : [],

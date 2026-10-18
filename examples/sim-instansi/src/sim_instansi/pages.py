@@ -6,29 +6,61 @@ from typing import Any
 TITLE = "SIM Badan Gizi Kabupaten Sukamaju (fictional)"
 BAND_TEXT = "SIMULASI – organisasi fiktif"  # TXT-SIM-001
 
+# Colours, type and radii follow the AGESOA design tokens (packages/ui/tokens.css), copied as plain values: this
+# fictional system has no build step and loads nothing from AGESOA.
 STYLE = """
 *{box-sizing:border-box}
-body{margin:0;font-family:system-ui,sans-serif;color:#1d2433;background:#f6f7f9;line-height:1.5}
-.sim-band{background:#7a2e0e;color:#fff;font-weight:700;text-align:center;padding:.5rem 1rem;letter-spacing:.02em}
-header.app{background:#fff;border-bottom:1px solid #d8dce3;padding:.75rem 1rem}
-header.app .name{font-weight:700;margin:0}
-nav a{margin-right:1rem}
-main{max-width:960px;margin:0 auto;padding:1rem}
-a{color:#0b57a4}
-table{border-collapse:collapse;width:100%;background:#fff}
-th,td{border:1px solid #d8dce3;padding:.4rem .6rem;text-align:left;vertical-align:top}
-.badge{display:inline-block;border-radius:.25rem;padding:0 .4rem;font-size:.85rem;font-weight:600;border:1px solid}
-.badge.alleged{background:#fff4d6;color:#6b4a00}
-.badge.supported{background:#dcecff;color:#0b3d75}
-.badge.proven{background:#ddf5e3;color:#145a2a}
-.badge.test{background:#eee;color:#333}
-.badge.synthetic{background:#f3e8ff;color:#4b1f7a}
-.panel{background:#fff;border:1px solid #d8dce3;border-radius:.4rem;padding:1rem;margin:1rem 0}
-label{display:block;font-weight:600;margin-top:.5rem}
-input,select,textarea{font:inherit;padding:.4rem;width:100%;max-width:32rem}
-button{font:inherit;margin-top:.75rem;padding:.4rem 1rem}
-.result.ok{border-left:.4rem solid #1f7a3a}
-.result.error{border-left:.4rem solid #a4161a}
+body{margin:0;font-family:"IBM Plex Sans","Segoe UI",Roboto,system-ui,sans-serif;color:#2A1A18;background:#FEFAF0;
+line-height:1.5;font-size:16px}
+h1,h2{font-family:Saira,"Segoe UI",system-ui,sans-serif;line-height:1.25;margin:0 0 .75rem}
+h1{font-size:2rem;font-weight:700}
+h2{font-size:1.25rem;font-weight:500}
+p{margin:0 0 .75rem}
+.sim-band{background:#7C2D12;color:#FFFFFF;font-weight:700;text-align:center;padding:.5rem 1rem;letter-spacing:.02em;
+font-size:.875rem}
+header.app{background:#2B0A0D;color:#F3E3D8;border-bottom:1px solid #5A2B30;padding:.75rem 1.5rem;display:flex;
+flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem 2rem}
+header.app .name{font-family:Saira,"Segoe UI",system-ui,sans-serif;font-weight:600;font-size:1.125rem;margin:0}
+header.app nav{display:flex;flex-wrap:wrap;gap:.25rem}
+header.app nav a{color:#F3E3D8;text-decoration:none;padding:.5rem .875rem;border-radius:9999px}
+header.app nav a:hover{background:#3A1519}
+header.app :focus-visible{outline-color:#F3E3D8}
+main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
+a{color:#6D151A;text-underline-offset:3px}
+a:hover{color:#561014}
+:focus-visible{outline:3px solid #6D151A;outline-offset:2px;border-radius:4px}
+table{border-collapse:separate;border-spacing:0;width:100%;background:#fff;border:1px solid #E4D5C8;border-radius:16px;
+overflow:hidden}
+caption{text-align:left;padding:0 0 .75rem;color:#6B5651}
+th,td{padding:1rem 1.5rem;text-align:left;vertical-align:middle;border-top:1px solid #E4D5C8}
+thead th{background:#F7EFE3;color:#6B5651;font-size:.875rem;font-weight:500;border-top:0;padding:.75rem 1.5rem;
+white-space:nowrap}
+tbody td{color:#6B5651}
+tbody td:first-child,tbody td:nth-child(5){color:#2A1A18}
+td a[data-testid="ticket-number"]{font-weight:600}
+tbody td:nth-child(2),tbody td:last-child{white-space:nowrap}
+.badge{display:inline-flex;align-items:center;border-radius:9999px;padding:.125rem .625rem;font-size:.875rem;
+font-weight:500;border:1px solid transparent;margin-left:.25rem}
+.badge.alleged{background:#FEF9C3;color:#713F12;border-color:#FDE68A}
+.badge.supported{background:#DBEAFE;color:#1E3A8A;border-color:#BFDBFE}
+.badge.proven{background:#DCFCE7;color:#14532D;border-color:#BBF7D0}
+.badge.test{background:#F7EFE3;color:#2A1A18;border-color:#E4D5C8}
+.badge.synthetic{background:#FFEDD5;color:#9A3412;border-color:#FED7AA;margin-left:0}
+.panel{background:#fff;border:1px solid #E4D5C8;border-radius:16px;padding:1.5rem;margin:0 0 1.5rem}
+.panel ol,.panel ul{margin:0;padding-left:1.25rem;display:grid;gap:.5rem}
+.panel li ul{margin-top:.5rem;color:#6B5651}
+.cols{display:grid;grid-template-columns:minmax(0,1fr);gap:0 1.5rem;align-items:start}
+@media (min-width:1024px){.cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+label{display:block;font-weight:500;font-size:.875rem;margin:1rem 0 .5rem}
+label:first-of-type{margin-top:0}
+input,select,textarea{font:inherit;padding:.625rem .75rem;width:100%;min-height:48px;background:#fff;color:#2A1A18;
+border:1px solid #6B5651;border-radius:8px}
+button{font:inherit;font-weight:600;margin-top:1rem;padding:.75rem 1.5rem;min-height:48px;width:100%;
+background:#6D151A;color:#FFFBF1;border:0;border-radius:8px;cursor:pointer}
+button:hover{background:#561014}
+.result{background:#fff}
+.result.ok{border-left:4px solid #15803D;background:#DCFCE7}
+.result.error{border-left:4px solid #B91C1C;background:#FEE2E2}
 """
 
 STATUS_LABELS = {"new": "New", "received": "Received", "in_progress": "In progress", "done": "Done"}
@@ -129,6 +161,7 @@ def ticket_page(item: dict[str, Any], api_result: dict[str, Any] | None = None) 
         else _e(case.get("id"))
     )
     body = f"""{result_html}
+<div class="cols"><div>
 <section class="panel" aria-labelledby="summary-h">
 <h2 id="summary-h">Case summary</h2>
 <p>Internal ticket: <strong data-testid="ticket-number">{ticket}</strong>{test}</p>
@@ -144,6 +177,7 @@ def ticket_page(item: dict[str, Any], api_result: dict[str, Any] | None = None) 
 {_list(case.get("recommendations", []), "No recommendations listed.")}</section>
 <section class="panel" aria-labelledby="val-h"><h2 id="val-h">Validations</h2>
 {_list(case.get("validations", []), "No validations listed.")}</section>
+</div><div>
 <section class="panel" aria-labelledby="status-h">
 <h2 id="status-h">Follow-up status</h2>
 <form method="post" action="/tickets/{ticket}/status" data-testid="status-form">
@@ -161,7 +195,8 @@ def ticket_page(item: dict[str, Any], api_result: dict[str, Any] | None = None) 
 <textarea id="reply-body" name="body" rows="5" required></textarea>
 <button type="submit">Send reply to AGESOA</button>
 </form>
-</section>"""
+</section>
+</div></div>"""
     return layout(f"Ticket {item['ticket']}", body)
 
 
