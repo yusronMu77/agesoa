@@ -3,11 +3,19 @@
 **Agentic Social Audit**: a social audit platform that explains *why* a public problem happens and why it keeps
 recurring, not just *what* happened.
 
-> LAPOR! tells you what happened. AGESOA tells you why it keeps happening.
+> Complaint channels record what happened. AGESOA tells you why it keeps happening.
 
 - **Live prototype** (demo mode, fictional data): https://agesoa-team.cloud.run
 - **Demo video** (3 min): https://youtu.be/6NcSvIsFF0E
 - Built for the **AI Builder Cup 2026** (Google Cloud × Hack2skill), theme Sustainability & Social Impact.
+
+Forest fires return every few years and their haze crosses borders; school meals keep making children sick.
+Reports get filed and tickets get closed, but nobody keeps an independent record of why it keeps happening.
+
+**Live today** on Cloud Run: the public dashboard, the hash-chained decision log with chain verification, the
+readiness of the five services, and validator and organisation sign-in. The demo video walks through the full
+flow on the product's English UI designs; the Witness app and the portal are built to match them screen by
+screen.
 
 ## How it works
 
@@ -27,7 +35,8 @@ services on Cloud Run (`asia-southeast2`) that talk through Pub/Sub events (tran
 inbox). Each service owns its Postgres database; Firestore holds read models only; BigQuery archives events
 for pattern tests. Architecture decisions are in [`docs/adr`](docs/adr).
 
-The core engine knows no domain. Subjects come as **domain packs**: school meals (`mbg`) is the first one.
+The core engine knows no domain. Subjects come as **domain packs**: school meals (`mbg`) is the first one;
+forest-fire haze, health services and roads are next.
 
 **Data honesty:** the audit scenarios are synthetic and the organisations, validators and agencies in the demo
 are fictional. Both are labelled in the product.

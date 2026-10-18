@@ -15,7 +15,7 @@ At CP0 the portal has:
 | `GET /api/healthz` | `{service: "portal", status: "ok", release, environment, demo_mode}` |
 
 Every page renders when services are down: data sections show an error state instead of failing.
-When `DEMO_MODE=true`, every page shows a fixed `SIMULASI — synthetic data for demonstration` band
+When `DEMO_MODE=true`, every page shows a fixed `SIMULATION — synthetic data for demonstration` band
 (`role="status"`).
 
 Later checkpoints add the public dashboard (map, findings), validator, institution and operator views.

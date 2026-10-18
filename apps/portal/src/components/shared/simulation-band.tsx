@@ -8,8 +8,7 @@ export function SimulationBand() {
   return (
     <SharedSimulationBand className="sim-band" role="status" data-testid="simulation-band">
       <p style={{ margin: 0 }}>
-        <span lang="id">SIMULASI</span>
-        {" — "}synthetic data for demonstration
+        SIMULATION — synthetic data for demonstration
       </p>
     </SharedSimulationBand>
   );
