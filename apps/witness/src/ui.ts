@@ -19,9 +19,10 @@ export function button(kind: ButtonKind = "neutral", opts: { wide?: boolean; sma
   );
 }
 
-type PillTone = "alleged" | "ok" | "error" | "neutral";
+type PillTone = "ok" | "error" | "neutral";
 
-const PILL_VARIANT = { alleged: "alleged", ok: "success", error: "destructive", neutral: "neutral" } as const;
+// Evidence status uses EvidenceBadge from @agesoa/ui; this helper is for plain result tones.
+const PILL_VARIANT = { ok: "success", error: "destructive", neutral: "neutral" } as const;
 
 export function pill(tone: PillTone): string {
   return badgeVariants({ variant: PILL_VARIANT[tone] });

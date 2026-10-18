@@ -1,4 +1,5 @@
-import { button, pill } from "../ui";
+import { EvidenceBadge } from "@agesoa/ui/components/evidence-badge";
+import { button } from "../ui";
 /**
  * SCR-006 Answer audit questions: the status of the reporter's last report and the questions Agen Audit puts to this
  * reporter, answered in text or by voice (dictation into the text field; only text is sent).
@@ -38,7 +39,7 @@ function ReportStatus({ report }: { report: Report }) {
         )}
         <dt>{T["TXT-WIT-116"]}</dt>
         <dd>
-          <span className={pill("alleged")}>{T["TXT-EVD-001"]}</span>
+          <EvidenceBadge status="alleged">{T["TXT-EVD-001"]}</EvidenceBadge>
         </dd>
       </dl>
       {deadline?.status === "likely_lost" && <p className="field-hint">{T["TXT-WIT-115"]}</p>}

@@ -17,6 +17,7 @@
     "./components/*": "./src/components/*.tsx",
     "./lib/*": "./src/lib/*.ts",
     "./hooks/*": "./src/hooks/*.ts",
+    "./assets/*": "./src/assets/*.ts",
     "./package.json": "./package.json"
   },
   "scripts": {

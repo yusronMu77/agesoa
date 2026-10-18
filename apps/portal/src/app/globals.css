@@ -94,17 +94,6 @@
     inset: 0 0 auto 0;
     z-index: 100;
     min-height: var(--band-height);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--ag-space-2);
-    padding: var(--ag-space-2) var(--ag-space-4);
-    background: var(--ag-color-simulation-band);
-    color: var(--ag-color-simulation-on-band);
-    font-size: var(--ag-font-size-sm);
-    font-weight: var(--ag-font-weight-bold);
-    letter-spacing: 0.02em;
-    text-align: center;
   }
 
   /* --- Layout --- */
@@ -506,14 +495,6 @@
     color: var(--ag-color-simulation-band);
   }
 
-  /* TXT-SIM-001 band on simulation screens (organizations): not dismissible. */
-  .sim-org-band {
-    padding: var(--ag-space-2) var(--ag-space-3);
-    margin-bottom: var(--ag-space-4);
-    background: var(--ag-color-action-accent-subtle);
-    border: 1px solid var(--ag-color-brand-accent);
-    border-radius: var(--ag-radius-md);
-  }
   .txt-record {
     overflow-x: auto;
     padding: var(--ag-space-2) var(--ag-space-3);
@@ -575,14 +556,6 @@
   }
   .small {
     font-size: var(--ag-font-size-sm);
-  }
-  .ai-label {
-    display: inline-block;
-    padding: 0 var(--ag-space-2);
-    border: 1px solid var(--ag-color-border-default);
-    border-radius: var(--ag-radius-sm);
-    font-size: var(--ag-font-size-sm);
-    color: var(--ag-color-text-secondary);
   }
   @media (max-width: 900px) {
     .report-layout {

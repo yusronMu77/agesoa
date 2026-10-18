@@ -1,3 +1,5 @@
+import { AiMarker } from "@agesoa/ui/components/ai-marker";
+import { SimulationBand as SharedSimulationBand } from "@agesoa/ui/components/simulation-band";
 import { notice } from "./ui";
 import type { ReactNode } from "react";
 import type { District } from "./api";
@@ -15,13 +17,9 @@ export function Notice({ tone, children, testId }: { tone: "info" | "error"; chi
 /** Marks agent output. Text label and a neutral icon (no sparkles); the reporter can always correct it. */
 export function AiResultLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="ai-label" data-testid="ai-result-label">
-      <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16">
-        <rect x="2.5" y="2.5" width="11" height="11" rx="2" fill="none" stroke="currentColor" />
-        <path d="M5 6h6M5 8.5h6M5 11h3.5" stroke="currentColor" />
-      </svg>
+    <AiMarker as="p" block data-testid="ai-result-label">
       {children}
-    </p>
+    </AiMarker>
   );
 }
 
@@ -36,8 +34,8 @@ export function RegionName({ region, synthetic }: { region: District; synthetic:
 
 export function SimulationBand() {
   return (
-    <div className="sim-band" role="note" data-testid="simulation-band">
+    <SharedSimulationBand role="note" data-testid="simulation-band">
       {T["TXT-WIT-002"]}
-    </div>
+    </SharedSimulationBand>
   );
 }

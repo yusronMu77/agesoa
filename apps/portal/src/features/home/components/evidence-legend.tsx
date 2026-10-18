@@ -1,4 +1,4 @@
-import { Badge } from "@agesoa/ui/components/badge";
+import { EvidenceBadge } from "@agesoa/ui/components/evidence-badge";
 /** What each evidence status means; the badges look exactly like the ones on findings. */
 export function EvidenceLegend() {
   return (
@@ -8,19 +8,19 @@ export function EvidenceLegend() {
       <dl className="evidence-legend">
         <div>
           <dt>
-            <Badge variant="alleged">Alleged</Badge>
+            <EvidenceBadge status="alleged">Alleged</EvidenceBadge>
           </dt>
           <dd>Based on reported symptoms only.</dd>
         </div>
         <div>
           <dt>
-            <Badge variant="supported">Supported by evidence</Badge>
+            <EvidenceBadge status="supported">Supported by evidence</EvidenceBadge>
           </dt>
           <dd>Backed by photos, testimony, patterns across cases or news reports.</dd>
         </div>
         <div>
           <dt>
-            <Badge variant="proven">Proven</Badge>
+            <EvidenceBadge status="proven">Proven</EvidenceBadge>
           </dt>
           <dd>Confirmed by laboratory results and a quorum of human validators.</dd>
         </div>

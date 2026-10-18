@@ -21,6 +21,7 @@ const buttonVariants = cva(
         sm: "h-8 gap-1.5 px-3 text-[0.8rem]",
         touch: "min-h-12 px-4 text-base has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
         icon: "size-10",
+        "icon-sm": "size-8",
         "icon-touch": "size-12",
       },
     },

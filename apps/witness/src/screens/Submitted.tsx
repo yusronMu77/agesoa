@@ -1,4 +1,5 @@
-import { button, pill, notice } from "../ui";
+import { EvidenceBadge } from "@agesoa/ui/components/evidence-badge";
+import { button, notice } from "../ui";
 /** SCR-005 Submitted: report code, evidence hashes, evidence deadline and how to keep the physical evidence. */
 
 import type { Report } from "../api";
@@ -22,7 +23,7 @@ export function Submitted({ report, onNew }: { report: Report; onNew: () => void
         </dd>
         <dt>{T["TXT-WIT-116"]}</dt>
         <dd>
-          <span className={pill("alleged")}>{T["TXT-EVD-001"]}</span>
+          <EvidenceBadge status="alleged">{T["TXT-EVD-001"]}</EvidenceBadge>
         </dd>
       </dl>
       {report.region && <RegionName region={report.region} synthetic={report.synthetic} />}

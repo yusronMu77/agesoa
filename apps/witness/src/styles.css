@@ -35,15 +35,6 @@
     flex-direction: column;
   }
 
-  .sim-band {
-    background: var(--ag-color-simulation-band);
-    color: var(--ag-color-simulation-on-band);
-    font-size: var(--ag-font-size-sm);
-    font-weight: var(--ag-font-weight-bold);
-    text-align: center;
-    padding: var(--ag-space-2) var(--ag-space-4);
-  }
-
   .app-header {
     padding: var(--ag-space-3) var(--ag-space-4);
     border-bottom: 1px solid var(--ag-color-border-default);
@@ -182,19 +173,6 @@
     background: var(--ag-color-ai-bg);
     color: var(--ag-color-ai-fg);
     font-size: var(--ag-font-size-xs);
-    font-weight: var(--ag-font-weight-medium);
-  }
-
-  .ai-label {
-    display: flex;
-    align-items: center;
-    gap: var(--ag-space-2);
-    margin: 0;
-    padding: var(--ag-space-3);
-    border-radius: var(--ag-radius-md);
-    background: var(--ag-color-ai-bg);
-    color: var(--ag-color-ai-fg);
-    font-size: var(--ag-font-size-sm);
     font-weight: var(--ag-font-weight-medium);
   }
 

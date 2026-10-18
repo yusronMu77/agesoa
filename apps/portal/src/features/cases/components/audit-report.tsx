@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AiMarker } from "@agesoa/ui/components/ai-marker";
 import { EvidenceBadge } from "@/components/shared/evidence-badge";
 import { ValidatedBy } from "@/components/shared/validated-by";
 import { buttonClass } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { evidenceCountText } from "../constants";
 
 /** Marks content drafted by an agent (text label, no sparkle icon). */
 function AiLabel() {
-  return <span className="ai-label">AI result</span>;
+  return <AiMarker>AI result</AiMarker>;
 }
 
 export function RootCauses({ causes }: { causes: PublicRootCause[] }) {
