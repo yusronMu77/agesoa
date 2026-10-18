@@ -32,6 +32,11 @@ tested in `libs/pack-core`, so a pack can never carry a query.
   accept both versions until every producer has moved.
 - Event `data` never contains personal names or raw coordinates (`region` holds codes + names only).
 - `synthetic: true` marks demo data; it is always shown openly as SIMULATION.
+- Human-readable text written by an agent (finding `statement`, audit report `summary`, root cause `statement`,
+  `recommendations`) may carry an optional `*_i18n` companion (`$defs/localized_text`: `{"id": …, "en": …}`,
+  at least one language) so the portal can show it in the reader's language. The plain field stays required and
+  is the source of truth; readers fall back to it and never machine-translate without a label. Adding the
+  optional companion is not a breaking change (same `v1` files).
 
 ```powershell
 uv run pytest packages/contracts   # schemas valid, catalog consistent, examples valid

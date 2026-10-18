@@ -2,6 +2,7 @@
  * Public documents of the read model (field allow-list of services/transparency/read_model.py). Firestore holds
  * them; only the transparency service writes, everyone may read.
  */
+import type { LocalizedText } from "@/lib/localized";
 
 export type EvidenceStatus = "alleged" | "supported" | "proven";
 
@@ -34,6 +35,8 @@ export interface PublicCase {
 
 export interface PublicRootCause {
   statement: string;
+  /** Per language when the producer wrote it (contract localized_text); `statement` stays the source of truth. */
+  statement_i18n?: LocalizedText | null;
   status: EvidenceStatus;
   /** How many evidence items back the statement (the items themselves are not public). */
   evidence_count: number;
@@ -42,8 +45,11 @@ export interface PublicRootCause {
 export interface PublicAuditReport {
   audit_report_id: string;
   summary: string;
+  summary_i18n?: LocalizedText | null;
   root_causes: PublicRootCause[];
   recommendations: string[];
+  /** Same order and length as `recommendations`, or null. */
+  recommendations_i18n?: (LocalizedText | null)[] | null;
   created_at: string;
 }
 
@@ -78,6 +84,7 @@ export interface PublicFinding {
   case_id: string | null;
   domain: string | null;
   statement: string | null;
+  statement_i18n?: LocalizedText | null;
   status: EvidenceStatus | null;
   evidence_count: number;
   region: PublicRegion | null;

@@ -21,7 +21,7 @@ from agesoa_platform.oidc import require_internal_caller
 from agesoa_platform.outbox import add_event
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import AnyHttpUrl, BaseModel, Field
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select, update
 
 from agesoa_delivery import SERVICE
@@ -560,8 +560,27 @@ async def run_attempt(delivery_id: str, number: int, request: Request) -> Attemp
     return AttemptResult(result=await attempt(request.app, delivery_id, number))
 
 
+class LocalizedText(BaseModel):
+    """Contract `localized_text`: the same text per portal language, at least one."""
+
+    model_config = ConfigDict(extra="forbid")
+    id: str | None = Field(None, min_length=1, max_length=4000)
+    en: str | None = Field(None, min_length=1, max_length=4000)
+
+    @model_validator(mode="after")
+    def _one_language(self) -> LocalizedText:
+        if self.id is None and self.en is None:
+            raise ValueError("at least one language (id, en)")
+        return self
+
+
+def _localized(value: LocalizedText | None) -> dict[str, str] | None:
+    return value.model_dump(exclude_none=True) if value else None
+
+
 class DemoRootCause(BaseModel):
     statement: str = Field(min_length=1, max_length=2000)
+    statement_i18n: LocalizedText | None = None
     status: Literal["alleged", "supported", "proven"]
     evidence_refs: list[str] = []
 
@@ -571,9 +590,21 @@ class DemoAuditReport(BaseModel):
     domain: str = "mbg"
     category: str | None = Field(None, max_length=48)
     summary: str = Field(min_length=1, max_length=4000)
+    summary_i18n: LocalizedText | None = None
     root_causes: list[DemoRootCause] = Field(min_length=1)
     recommendations: list[str] = []
+    recommendations_i18n: list[LocalizedText] | None = Field(
+        None, description="Same order and length as recommendations"
+    )
     region: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def _recommendations_line_up(self) -> DemoAuditReport:
+        if self.recommendations_i18n is not None and len(self.recommendations_i18n) != len(
+            self.recommendations
+        ):
+            raise ValueError("recommendations_i18n must have one entry per recommendation")
+        return self
 
 
 class DemoReportCreated(BaseModel):
@@ -593,11 +624,22 @@ class DemoReportCreated(BaseModel):
 )
 async def demo_audit_report(body: DemoAuditReport, request: Request) -> DemoReportCreated:
     now = utc_now()
-    report = body.model_dump() | {
+    # The per-language companions only travel in the event (portal); the stored report and the institution
+    # webhook keep the plain text.
+    report = body.model_dump(exclude={"summary_i18n", "recommendations_i18n"}) | {
         "id": new_id("AR-"),
         "synthetic": True,
-        "root_causes": [c.model_dump() for c in body.root_causes],
+        "root_causes": [c.model_dump(exclude={"statement_i18n"}) for c in body.root_causes],
     }
+    localized: dict[str, Any] = {}
+    if body.summary_i18n:
+        localized["summary_i18n"] = _localized(body.summary_i18n)
+    if body.recommendations_i18n is not None:
+        localized["recommendations_i18n"] = [_localized(r) for r in body.recommendations_i18n]
+    event_causes = [
+        c | ({"statement_i18n": _localized(src.statement_i18n)} if src.statement_i18n else {})
+        for c, src in zip(report["root_causes"], body.root_causes, strict=True)
+    ]
     async with request.app.state.db.transaction() as session:
         exists = (
             await session.execute(select(audit_reports.c.id).where(audit_reports.c.case_id == body.case_id))
@@ -616,8 +658,9 @@ async def demo_audit_report(body: DemoAuditReport, request: Request) -> DemoRepo
                     "case_id": body.case_id,
                     "domain": body.domain,
                     "summary": body.summary,
-                    "root_causes": report["root_causes"],
+                    "root_causes": event_causes,
                     "recommendations": body.recommendations,
+                    **localized,
                     "region": body.region,
                     "created_at": isoformat(now),
                     "synthetic": True,

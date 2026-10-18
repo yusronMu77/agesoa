@@ -120,6 +120,42 @@ def test_finding_shows_validators_only_as_role_label_regency_tier_and_decision()
         assert private not in text
 
 
+def test_finding_text_is_projected_per_language_and_falls_back_without_it():
+    both = {"id": "Satu dapur melayani 34 sekolah.", "en": "One kitchen serves 34 schools.", "fr": "x"}
+    ready = row("temuan.siap_validasi", example_data("temuan.siap_validasi", statement_i18n=both), 0, 1)
+    doc = build_finding("F-2026-0011", [ready])
+    assert doc["statement_i18n"] == {
+        "id": "Satu dapur melayani 34 sekolah.",
+        "en": "One kitchen serves 34 schools.",
+    }
+    plain = build_finding(
+        "F-2026-0012", [row("temuan.siap_validasi", example_data("temuan.siap_validasi"), 0, 2)]
+    )
+    assert plain["statement_i18n"] is None
+    assert plain["statement"]  # the plain text stays the source of truth
+
+
+def test_audit_report_text_is_projected_per_language():
+    data = example_data("laporan_audit.dibuat")
+    data["summary_i18n"] = {"id": "Ringkasan", "en": "Summary"}
+    data["root_causes"][0]["statement_i18n"] = {"id": "Akar masalah"}
+    data["recommendations_i18n"] = [{"id": f"Rekomendasi {i}"} for i, _ in enumerate(data["recommendations"])]
+    report = build_case(data["case_id"], [row("laporan_audit.dibuat", data)])["audit_report"]
+    assert report["summary_i18n"] == {"id": "Ringkasan", "en": "Summary"}
+    assert report["root_causes"][0]["statement_i18n"] == {"id": "Akar masalah"}
+    assert [r["id"] for r in report["recommendations_i18n"]] == [
+        f"Rekomendasi {i}" for i in range(len(data["recommendations"]))
+    ]
+
+
+def test_recommendations_per_language_are_dropped_when_they_do_not_line_up():
+    data = example_data("laporan_audit.dibuat")
+    data["recommendations_i18n"] = [{"id": "Hanya satu"}] * (len(data["recommendations"]) + 1)
+    report = build_case(data["case_id"], [row("laporan_audit.dibuat", data)])["audit_report"]
+    assert report["recommendations_i18n"] is None
+    assert report["summary_i18n"] is None
+
+
 def test_log_entry_projection_keeps_the_hash_link():
     entry = SimpleNamespace(
         seq=3,

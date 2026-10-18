@@ -90,6 +90,24 @@ def _latest(rows: Iterable[Row], event_type: str) -> Row | None:
     return max(matching, key=lambda r: (r.occurred_at, r.id), default=None)
 
 
+LANGUAGES = ("id", "en")
+
+
+def localized(value: Any) -> dict[str, str] | None:
+    """The per-language text of an event (contract `localized_text`), only the portal languages; None when absent."""
+    if not isinstance(value, dict):
+        return None
+    kept = {lang: value[lang] for lang in LANGUAGES if isinstance(value.get(lang), str) and value[lang]}
+    return kept or None
+
+
+def localized_list(values: Any, length: int) -> list[dict[str, str] | None] | None:
+    """Per-language recommendations, used only when they line up one to one with the plain list."""
+    if not isinstance(values, list) or len(values) != length:
+        return None
+    return [localized(v) for v in values]
+
+
 def build_case(case_id: str, rows: list[Row]) -> dict[str, Any]:
     update_row = _latest(rows, "kasus.diperbarui")
     report_row = _latest(rows, "laporan_audit.dibuat")
@@ -123,15 +141,20 @@ def build_case(case_id: str, rows: list[Row]) -> dict[str, Any]:
         {
             "audit_report_id": report_row.data["audit_report_id"],
             "summary": report_row.data["summary"],
+            "summary_i18n": localized(report_row.data.get("summary_i18n")),
             "root_causes": [
                 {
                     "statement": c["statement"],
+                    "statement_i18n": localized(c.get("statement_i18n")),
                     "status": c["status"],
                     "evidence_count": len(c["evidence_refs"]),
                 }
                 for c in report_row.data["root_causes"]
             ],
             "recommendations": list(report_row.data["recommendations"]),
+            "recommendations_i18n": localized_list(
+                report_row.data.get("recommendations_i18n"), len(report_row.data["recommendations"])
+            ),
             "created_at": report_row.data["created_at"],
         }
         if report_row
@@ -178,6 +201,7 @@ def build_finding(finding_id: str, rows: list[Row]) -> dict[str, Any]:
         "case_id": (ready or done).data["case_id"] if (ready or done) else None,
         "domain": None,
         "statement": None,
+        "statement_i18n": None,
         "status": None,
         "evidence_count": 0,
         "region": None,
@@ -187,6 +211,7 @@ def build_finding(finding_id: str, rows: list[Row]) -> dict[str, Any]:
         doc |= {
             "domain": d["domain"],
             "statement": d["statement"],
+            "statement_i18n": localized(d.get("statement_i18n")),
             "status": d["status"],
             "evidence_count": len(d["evidence_refs"]),
             "region": public_region(d["region"]),

@@ -87,6 +87,35 @@ def test_extra_envelope_attribute_is_rejected():
         validate_event(event)
 
 
+def test_findings_and_audit_reports_may_carry_their_text_in_both_languages():
+    finding = copy.deepcopy(load(EXAMPLES / "temuan.siap_validasi.json"))
+    finding["data"]["statement_i18n"] = {
+        "id": "Satu dapur melayani 34 sekolah.",
+        "en": "One kitchen serves 34 schools.",
+    }
+    validate_event(finding)
+    report = copy.deepcopy(load(EXAMPLES / "laporan_audit.dibuat.json"))
+    data = report["data"]
+    data["summary_i18n"] = {"id": "Ringkasan", "en": "Summary"}
+    data["root_causes"][0]["statement_i18n"] = {"id": "Akar masalah"}  # one language is enough
+    data["recommendations_i18n"] = [
+        {"id": "Rekomendasi", "en": "Recommendation"} for _ in data["recommendations"]
+    ]
+    validate_event(report)
+
+
+@pytest.mark.parametrize(
+    "i18n",
+    [{}, {"fr": "Une cuisine"}, {"id": ""}, "Satu dapur"],
+    ids=["empty", "unknown-language", "empty-text", "not-an-object"],
+)
+def test_localized_text_is_checked(i18n):
+    finding = copy.deepcopy(load(EXAMPLES / "temuan.siap_validasi.json"))
+    finding["data"]["statement_i18n"] = i18n
+    with pytest.raises(ContractError):
+        validate_event(finding)
+
+
 def test_region_never_carries_coordinates():
     event = load(EXAMPLES / "laporan.diterima.json")
     event["data"]["region"]["lat"] = -6.92

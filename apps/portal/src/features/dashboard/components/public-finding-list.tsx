@@ -9,6 +9,7 @@ import { ROUTES } from "@/configs/routes.config";
 import type { PublicCase, PublicFinding } from "@/services/read-model/read-model.model";
 import { shortDistrictName } from "../lib/district-map";
 import { humanize } from "../lib/filters";
+import { localizedText } from "@/lib/localized";
 
 /** "Kitchen hygiene · 3 reports": the issue type and size of the finding's case (top right of the card). */
 function caseLine(c: PublicCase | undefined): string | null {
@@ -39,7 +40,7 @@ export function PublicFindingList({ findings, caseById }: { findings: PublicFind
               {line ? <span className="finding-card__case">{line}</span> : null}
             </div>
             <div className="finding-card__body">
-              <h3 className="finding-statement">{f.statement ?? "—"}</h3>
+              <h3 className="finding-statement">{localizedText(f.statement, f.statement_i18n) || "—"}</h3>
               <p className="finding-card__basis">
                 Based on {f.evidence_count} evidence {f.evidence_count === 1 ? "item" : "items"}.
               </p>

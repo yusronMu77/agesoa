@@ -20,6 +20,7 @@
   "additionalProperties": false,
   "$defs": {
     "id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "localized_text": { "type": "object", "properties": { "id": { "type": "string", "minLength": 1 }, "en": { "type": "string", "minLength": 1 } }, "additionalProperties": false, "minProperties": 1, "description": "The same human-readable text per portal language (ISO 639-1), written by the producer. Optional companion of a plain-text field, which stays the source of truth for older readers." },
     "timestamp": { "type": "string", "format": "date-time" },
     "synthetic": { "type": "boolean", "description": "True for demo data (fictional regency, seeded organizations). Shown openly as SIMULATION." },
     "finding_status": { "enum": ["alleged", "supported", "proven"], "description": "Evidence status ladder: alleged < supported < proven." },

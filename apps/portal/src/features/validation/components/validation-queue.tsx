@@ -7,6 +7,7 @@ import { ROUTES } from "@/configs/routes.config";
 import { formatTime } from "@/lib/format";
 import type { FetchResult } from "@/services/http/fetch-json";
 import type { ValidationRequest } from "@/services/trust/trust.model";
+import { localizedText } from "@/lib/localized";
 
 /** SCR-022: count tiles over the findings already loaded (no extra call). */
 function QueueStats({ requests }: { requests: ValidationRequest[] }) {
@@ -52,7 +53,7 @@ export function ValidationQueue({ requests }: { requests: FetchResult<Validation
               {requests.data.map((r) => (
                 <tr key={r.finding_id} data-testid="validation-item">
                   <td>
-                    <p className="ws-queue-statement">{r.statement}</p>
+                    <p className="ws-queue-statement">{localizedText(r.statement, r.statement_i18n)}</p>
                     {r.synthetic ? (
                       <p className="ws-queue-meta">
                         <Badge tone="neutral" icon={false}>

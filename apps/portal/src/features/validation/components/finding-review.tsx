@@ -5,6 +5,7 @@ import { formatTime } from "@/lib/format";
 import type { AuditStep } from "@/services/case-audit/case-audit.model";
 import type { FetchResult } from "@/services/http/fetch-json";
 import type { ValidationDetail } from "@/services/trust/trust.model";
+import { localizedText } from "@/lib/localized";
 
 /** The finding under review with its quorum status and evidence references. */
 export function FindingSummary({ finding: f }: { finding: ValidationDetail }) {
@@ -18,7 +19,7 @@ export function FindingSummary({ finding: f }: { finding: ValidationDetail }) {
         </Badge>
       </div>
       <p className="finding-statement" data-testid="finding-statement">
-        {f.statement}
+        {localizedText(f.statement, f.statement_i18n)}
       </p>
       <p className="muted">
         Case {f.case_id} · evidence {f.evidence_refs.join(", ") || "—"} · roles asked: {f.required_roles.join(", ") || "any"}

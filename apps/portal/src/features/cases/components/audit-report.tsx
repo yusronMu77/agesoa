@@ -10,6 +10,7 @@ import type { FetchResult } from "@/services/http/fetch-json";
 import type { PublicFinding, PublicRootCause } from "@/services/read-model/read-model.model";
 import type { LogEntry } from "@/services/transparency/transparency.model";
 import { evidenceCountText } from "../constants";
+import { localizedText } from "@/lib/localized";
 
 /** Marks content drafted by an agent (text label, no sparkle icon). */
 function AiLabel() {
@@ -30,7 +31,7 @@ export function RootCauses({ causes }: { causes: PublicRootCause[] }) {
               <span className="muted">Root cause {i + 1}</span>
               <EvidenceBadge status={cause.status} />
             </div>
-            <p className="cause-statement">{cause.statement}</p>
+            <p className="cause-statement">{localizedText(cause.statement, cause.statement_i18n)}</p>
             <p className="muted small" data-testid="root-cause-evidence">
               {evidenceCountText(cause.evidence_count)}
             </p>

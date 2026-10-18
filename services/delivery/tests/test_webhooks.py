@@ -206,6 +206,39 @@ def test_api_key_is_shown_once_and_required(client):
     assert client.post(url, json=body, headers={"Authorization": f"Bearer {key}"}).status_code == 401
 
 
+def test_demo_report_carries_its_text_in_both_languages_only_in_the_event(client, receiver):
+    report = {
+        **REPORT,
+        "case_id": "CASE-DEMO-I18N",
+        "summary_i18n": {"id": "Ringkasan (fiktif)", "en": "Summary (fictional)"},
+        "root_causes": [{**REPORT["root_causes"][0], "statement_i18n": {"id": "Akar masalah (fiktif)"}}],
+        "recommendations": ["Shorten the route"],
+        "recommendations_i18n": [{"id": "Perpendek rute", "en": "Shorten the route"}],
+    }
+    created = client.post("/internal/demo/audit-reports", json=report)
+    assert created.status_code == 201, created.text
+    (dibuat,) = [e for e in sent(client, "laporan_audit.dibuat") if e["data"]["case_id"] == "CASE-DEMO-I18N"]
+    validate_event(dibuat)
+    data = dibuat["data"]
+    assert data["summary_i18n"] == {"id": "Ringkasan (fiktif)", "en": "Summary (fictional)"}
+    assert data["root_causes"][0]["statement_i18n"] == {"id": "Akar masalah (fiktif)"}
+    assert data["recommendations_i18n"] == [{"id": "Perpendek rute", "en": "Shorten the route"}]
+
+
+def test_demo_report_languages_are_checked(client):
+    base = {**REPORT, "case_id": "CASE-DEMO-BAD", "recommendations": ["One"]}
+    assert client.post("/internal/demo/audit-reports", json={**base, "summary_i18n": {}}).status_code == 422
+    assert (
+        client.post("/internal/demo/audit-reports", json={**base, "summary_i18n": {"fr": "x"}}).status_code
+        == 422
+    )
+    two = [{"id": "Satu"}, {"id": "Dua"}]
+    assert (
+        client.post("/internal/demo/audit-reports", json={**base, "recommendations_i18n": two}).status_code
+        == 422
+    )
+
+
 def test_delivered_report_then_follow_up_and_right_of_reply(client, receiver):
     """TC-113 (audit report) + TC-118 + TC-119 (API part) + TC-120."""
 

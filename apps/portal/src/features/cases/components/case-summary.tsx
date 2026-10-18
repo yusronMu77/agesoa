@@ -4,6 +4,7 @@ import { ValidatedBy } from "@/components/shared/validated-by";
 import { validationStatusText } from "@/components/shared/validation-status";
 import { formatTime } from "@/lib/format";
 import type { PublicCase, PublicFinding } from "@/services/read-model/read-model.model";
+import { localizedText } from "@/lib/localized";
 
 export function CaseFields({ kase }: { kase: PublicCase }) {
   return (
@@ -42,7 +43,7 @@ export function CaseFindings({ findings }: { findings: PublicFinding[] }) {
                 <EvidenceBadge status={f.status} />
                 <Badge variant="neutral">{validationStatusText(f.validation)}</Badge>
               </div>
-              <p className="finding-statement">{f.statement}</p>
+              <p className="finding-statement">{localizedText(f.statement, f.statement_i18n)}</p>
               <ValidatedBy validation={f.validation} />
             </li>
           ))}

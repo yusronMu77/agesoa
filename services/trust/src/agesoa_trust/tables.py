@@ -77,6 +77,9 @@ validation_requests = Table(
     Column("case_id", String(32), nullable=False),
     Column("domain", String(48), nullable=False),
     Column("statement", Text, nullable=False),
+    Column(
+        "statement_i18n", JSONB
+    ),  # {"id": ..., "en": ...} when the producer wrote both; statement stays primary
     Column("status_label", String(16), nullable=False),
     Column("required_roles", JSONB, nullable=False, server_default="[]"),
     Column("parties_mentioned", JSONB, nullable=False, server_default="[]"),

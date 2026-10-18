@@ -28,6 +28,7 @@ async def open_validation(session: AsyncSession, event: dict[str, Any]) -> None:
             case_id=d["case_id"],
             domain=d["domain"],
             statement=d["statement"],
+            statement_i18n=d.get("statement_i18n"),
             status_label=d["status"],
             required_roles=d["required_roles"],
             parties_mentioned=d["parties_mentioned"],

@@ -42,6 +42,10 @@
           "type": "string",
           "minLength": 1
         },
+        "summary_i18n": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/localized_text",
+          "description": "The summary per portal language; readers fall back to summary."
+        },
         "root_causes": {
           "type": "array",
           "items": {
@@ -55,6 +59,10 @@
               "statement": {
                 "type": "string",
                 "minLength": 1
+              },
+              "statement_i18n": {
+                "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/localized_text",
+                "description": "The root cause per portal language; readers fall back to statement."
               },
               "status": {
                 "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/finding_status"
@@ -76,6 +84,13 @@
             "type": "string",
             "minLength": 1
           }
+        },
+        "recommendations_i18n": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/localized_text"
+          },
+          "description": "Recommendations per portal language, same order and length as recommendations; readers fall back to recommendations."
         },
         "region": {
           "anyOf": [

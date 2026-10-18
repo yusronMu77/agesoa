@@ -1743,6 +1743,21 @@
             "type": "string",
             "title": "Statement"
           },
+          "statement_i18n": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statement I18N",
+            "description": "The statement per portal language (id, en) when the producer wrote it; else use statement"
+          },
           "status_label": {
             "type": "string",
             "enum": [
@@ -1907,6 +1922,21 @@
           "statement": {
             "type": "string",
             "title": "Statement"
+          },
+          "statement_i18n": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statement I18N",
+            "description": "The statement per portal language (id, en) when the producer wrote it; else use statement"
           },
           "status_label": {
             "type": "string",

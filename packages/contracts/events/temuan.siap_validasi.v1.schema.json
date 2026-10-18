@@ -43,6 +43,10 @@
           "type": "string",
           "minLength": 1
         },
+        "statement_i18n": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/localized_text",
+          "description": "The statement per portal language; readers fall back to statement."
+        },
         "status": {
           "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/finding_status"
         },

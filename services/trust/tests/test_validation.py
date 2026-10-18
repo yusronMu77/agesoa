@@ -93,6 +93,18 @@ def test_a_finding_becomes_final_only_after_quorum(client):
     assert "Matches the tray labels." in decisions[0]["data"]["reason"]
 
 
+def test_validators_get_the_statement_in_both_languages_when_the_producer_wrote_them(client):
+    both = {"id": "Satu dapur melayani 34 sekolah.", "en": "One kitchen serves 34 schools."}
+    open_finding(client, "F-1", statement_i18n=both)
+    open_finding(client, "F-2")  # an older producer: plain statement only
+    detail = client.get("/v1/validation-requests/F-1", headers=JOURNALIST).json()
+    assert detail["statement_i18n"] == both
+    listed = {r["finding_id"]: r for r in client.get("/v1/validation-requests", headers=JOURNALIST).json()}
+    assert listed["F-1"]["statement_i18n"] == both
+    assert listed["F-2"]["statement_i18n"] is None
+    assert listed["F-2"]["statement"]
+
+
 def test_a_rejection_returns_the_finding_to_the_audit(client):
     open_finding(client)
     body = decide(client, JOURNALIST, "reject", note="Timestamps do not match.").json()

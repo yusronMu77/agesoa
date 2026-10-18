@@ -38,6 +38,10 @@ class ValidationRequest(BaseModel):
     case_id: str
     domain: str
     statement: str
+    statement_i18n: dict[str, str] | None = Field(
+        None,
+        description="The statement per portal language (id, en) when the producer wrote it; else use statement",
+    )
     status_label: Literal["alleged", "supported", "proven"]
     required_roles: list[str]
     evidence_refs: list[str]

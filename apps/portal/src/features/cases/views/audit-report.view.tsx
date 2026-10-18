@@ -6,6 +6,7 @@ import { ROUTES } from "@/configs/routes.config";
 import { formatTime } from "@/lib/format";
 import { Recommendations, ReportLog, ReportValidators, RootCauses } from "../components/audit-report";
 import type { AuditReportData } from "../server/load-case";
+import { localizedList, localizedText } from "@/lib/localized";
 
 export function AuditReportUnavailableView() {
   return (
@@ -42,7 +43,9 @@ export function AuditReportView({ caseId, kase, report, findings, log }: AuditRe
             <p className="report-kicker">
               <EvidenceBadge status={kase.max_finding_status} /> <span className="muted">{kase.category ?? kase.domain}</span>
             </p>
-            <h1 className="report-title" data-testid="audit-report-summary">{report.summary}</h1>
+            <h1 className="report-title" data-testid="audit-report-summary">
+              {localizedText(report.summary, report.summary_i18n)}
+            </h1>
             <p className="muted report-meta">
               {kase.region?.regency_name ?? "Unknown region"} · {kase.report_count} report{kase.report_count === 1 ? "" : "s"} ·
               written {formatTime(report.created_at)}
@@ -53,7 +56,7 @@ export function AuditReportView({ caseId, kase, report, findings, log }: AuditRe
           <div className="report-layout">
             <RootCauses causes={report.root_causes} />
             <aside className="report-side">
-              <Recommendations items={report.recommendations} />
+              <Recommendations items={localizedList(report.recommendations, report.recommendations_i18n)} />
               <ReportValidators findings={findings} />
               <ReportLog caseId={caseId} log={log} />
             </aside>

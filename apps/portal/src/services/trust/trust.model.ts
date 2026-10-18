@@ -1,6 +1,7 @@
 /** Data of the trust service: validators, validation requests and quorum, organizations and their staff. */
 
 import type { EvidenceStatus } from "@/services/read-model/read-model.model";
+import type { LocalizedText } from "@/lib/localized";
 
 // --- Validators and validation (SCR-020, SCR-022) -----------------------------------------------------------
 
@@ -31,6 +32,8 @@ export interface ValidationRequest {
   case_id: string;
   domain: string;
   statement: string;
+  /** Per language when the producer wrote it; `statement` stays the source of truth. */
+  statement_i18n?: LocalizedText | null;
   status_label: EvidenceStatus;
   required_roles: string[];
   evidence_refs: string[];

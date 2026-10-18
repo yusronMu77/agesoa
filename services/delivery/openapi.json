@@ -1078,6 +1078,16 @@
             "minLength": 1,
             "title": "Summary"
           },
+          "summary_i18n": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocalizedText"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "root_causes": {
             "items": {
               "$ref": "#/components/schemas/DemoRootCause"
@@ -1093,6 +1103,21 @@
             "type": "array",
             "title": "Recommendations",
             "default": []
+          },
+          "recommendations_i18n": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LocalizedText"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendations I18N",
+            "description": "Same order and length as recommendations"
           },
           "region": {
             "anyOf": [
@@ -1143,6 +1168,16 @@
             "maxLength": 2000,
             "minLength": 1,
             "title": "Statement"
+          },
+          "statement_i18n": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocalizedText"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "status": {
             "type": "string",
@@ -1309,6 +1344,40 @@
           "api_key"
         ],
         "title": "Institution"
+      },
+      "LocalizedText": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "en": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "En"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LocalizedText",
+        "description": "Contract `localized_text`: the same text per portal language, at least one."
       },
       "OpsEvents": {
         "properties": {
