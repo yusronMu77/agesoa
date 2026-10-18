@@ -36,13 +36,11 @@
   }
 
   .app-header {
-    padding: var(--ag-space-3) var(--ag-space-4);
+    display: flex;
+    align-items: center;
+    min-height: 56px;
+    padding: var(--ag-space-2) var(--ag-space-4);
     border-bottom: 1px solid var(--ag-color-border-default);
-  }
-
-  .app-name {
-    font-weight: var(--ag-font-weight-bold);
-    color: var(--ag-color-action-primary);
   }
 
   .screen {
@@ -333,6 +331,7 @@
     margin-top: auto;
     padding: var(--ag-space-4) 0;
     background: var(--ag-color-bg-surface);
+    box-shadow: 0 -1px 0 var(--ag-color-border-default);
   }
 
   dialog.sheet {

@@ -1,5 +1,6 @@
 import { button } from "./ui";
 import { cn } from "@agesoa/ui/lib/utils";
+import { Logo } from "@agesoa/ui/components/logo";
 /**
  * AGESOA Witness: anonymous citizen reporting.
  * SCR-001 record evidence -> (SCR-002 permission explainer) -> (SCR-003 social link / screenshot)
@@ -179,7 +180,7 @@ export default function App({ config }: { config: WitnessConfig }) {
     <div className="app">
       {config.demoMode && <SimulationBand />}
       <header className="app-header">
-        <span className="app-name">{T["TXT-WIT-001"]}</span>
+        <Logo size={28}>{T["TXT-WIT-001"]}</Logo>
       </header>
 
       {questions.length > 0 && screen.name !== "questions" && (

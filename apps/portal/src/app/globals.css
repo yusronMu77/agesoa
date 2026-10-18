@@ -114,16 +114,18 @@
     top: calc(var(--band-height) + var(--ag-space-2));
   }
 
+  /* Frame: ink header and footer around the cream canvas (Penpot header/footer); content width 1280. */
   .site-header {
-    background: var(--ag-color-bg-surface);
-    border-bottom: 1px solid var(--ag-color-border-default);
+    background: var(--ag-color-bg-ink);
+    color: var(--ag-color-text-on-ink);
+    border-bottom: 1px solid var(--ag-color-border-on-ink);
   }
 
   .site-header__inner,
   .site-main,
   .site-footer__inner {
     width: 100%;
-    max-width: 1200px;
+    max-width: 1280px;
     margin: 0 auto;
     padding-left: var(--ag-space-4);
     padding-right: var(--ag-space-4);
@@ -134,16 +136,29 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: var(--ag-space-3);
-    padding-top: var(--ag-space-3);
-    padding-bottom: var(--ag-space-3);
+    column-gap: var(--ag-space-8);
+    row-gap: var(--ag-space-1);
+    padding-top: var(--ag-space-2);
+    padding-bottom: var(--ag-space-2);
   }
 
   .brand {
-    font-weight: var(--ag-font-weight-bold);
-    font-size: var(--ag-font-size-lg);
-    color: var(--ag-color-text-primary);
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    border-radius: var(--ag-radius-md);
     text-decoration: none;
+  }
+
+  /* The global focus ring is maroon: invisible on the ink surface. */
+  .site-header :focus-visible,
+  .site-footer :focus-visible {
+    outline-color: var(--ag-color-text-on-ink);
+  }
+
+  .nav {
+    flex: 1;
+    min-width: 0;
   }
 
   .nav ul {
@@ -155,23 +170,6 @@
     padding: 0;
   }
 
-  .nav a {
-    display: inline-block;
-    padding: var(--ag-space-2) var(--ag-space-3);
-    border-radius: var(--ag-radius-md);
-    text-decoration: none;
-    font-weight: var(--ag-font-weight-medium);
-  }
-
-  .nav a:hover {
-    background: var(--ag-color-action-secondary);
-  }
-
-  .nav a[aria-current="page"] {
-    background: var(--ag-color-action-secondary);
-    color: var(--ag-color-action-primary-hover);
-  }
-
   .site-main {
     flex: 1;
     padding-top: var(--ag-space-8);
@@ -179,15 +177,24 @@
   }
 
   .site-footer {
-    border-top: 1px solid var(--ag-color-border-default);
-    background: var(--ag-color-bg-surface);
-    color: var(--ag-color-text-secondary);
+    background: var(--ag-color-bg-ink);
+    border-top: 1px solid var(--ag-color-border-on-ink);
+    color: var(--ag-color-text-on-ink-muted);
     font-size: var(--ag-font-size-sm);
   }
 
   .site-footer__inner {
     padding-top: var(--ag-space-4);
     padding-bottom: var(--ag-space-4);
+  }
+
+  @media (min-width: 768px) {
+    .site-header__inner,
+    .site-main,
+    .site-footer__inner {
+      padding-left: var(--ag-space-6);
+      padding-right: var(--ag-space-6);
+    }
   }
 
   /* --- Building blocks --- */
