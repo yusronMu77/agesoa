@@ -156,9 +156,16 @@
     outline-color: var(--ag-color-text-on-ink);
   }
 
+  /* On narrow screens the navigation takes its own row under the logo instead of a one-link column. */
   .nav {
-    flex: 1;
+    flex: 1 1 100%;
     min-width: 0;
+  }
+
+  @media (min-width: 768px) {
+    .nav {
+      flex-basis: 0;
+    }
   }
 
   .nav ul {
