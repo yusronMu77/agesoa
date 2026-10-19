@@ -128,8 +128,10 @@ export default async function LogEntryPage({ params }: { params: Params }) {
           <dt>{t("public.entry.prevHash")}</dt>
           <dd>
             {item.seq > 1 ? (
-              <Link href={`/log/${item.seq - 1}`} aria-label={t("public.entry.prevAria", { n: item.seq - 1 })}>
+              <Link href={`/log/${item.seq - 1}`}>
+                {/* The accessible name starts with the visible hash (WCAG 2.5.3); the target entry is read after it. */}
                 <code>{item.prev_hash}</code>
+                <span className="sr-only"> ({t("public.entry.prevAria", { n: item.seq - 1 })})</span>
               </Link>
             ) : (
               <code>{item.prev_hash}</code>
