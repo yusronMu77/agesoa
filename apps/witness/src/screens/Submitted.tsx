@@ -1,79 +1,69 @@
+import { EvidenceBadge } from "@agesoa/ui/components/evidence-badge";
+import { HashText } from "@agesoa/ui/components/hash-text";
+import { CheckIcon } from "lucide-react";
+import { button } from "../ui";
 /** SCR-005 Submitted: report code, evidence hashes, evidence deadline and how to keep the physical evidence. */
 
 import type { Report } from "../api";
-import { EvidenceBadge, Notice, RegionName } from "../components";
-import { evidenceKind, pick, T, t } from "../copy";
+import { Notice, RegionName } from "../components";
+import { EVIDENCE_KIND, T, t } from "../copy";
 import { formatWib } from "../fields";
-import { Icon } from "../icons";
-import { reportCodeOf } from "../reports";
 
 export function reportCode(report: Report): string {
-  return reportCodeOf(report.id); // same prefix as the report's entry in the public decision log
+  return `RPT-${report.id.slice(0, 12)}`; // same prefix as the entry of this report in the public decision log
 }
 
-export function Submitted({
-  report,
-  onNew,
-  onMyReports,
-}: {
-  report: Report;
-  onNew: () => void;
-  onMyReports: () => void;
-}) {
+export function Submitted({ report, onNew, onMine }: { report: Report; onNew: () => void; onMine: () => void }) {
   const deadline = report.evidence_status;
   return (
     <main className="screen" data-screen="SCR-005">
-      <div className="hero">
-        <span className="hero-icon hero-icon--success">
-          <Icon name="checkCircle" size={40} />
+      <div className="success">
+        <span className="success-icon" aria-hidden="true">
+          <CheckIcon />
         </span>
         <h1>{T["TXT-WIT-110"]}</h1>
       </div>
 
-      <section className="card receipt" aria-label={T["TXT-WIT-111"]}>
-        <div>
-          <p className="facts-label">{T["TXT-WIT-111"]}</p>
-          <p className="code-lg" data-testid="report-code">
-            {reportCode(report)}
-          </p>
-        </div>
-        {report.evidence.length > 0 && (
+      <section className="card receipt" aria-label={T["TXT-WIT-110"]}>
+        <dl className="receipt-facts">
           <div>
-            <p className="facts-label" id="hash-heading">
-              {T["TXT-WIT-112"]}
-            </p>
-            <ul className="hashes" aria-labelledby="hash-heading">
-              {report.evidence.map((e) => (
-                <li key={e.evidence_id}>
-                  <span className="kind">{evidenceKind(e.kind)}</span>
-                  <code data-testid="evidence-hash">{e.sha256}</code>
-                </li>
-              ))}
-            </ul>
-            <p className="field-hint">{T["TXT-WIT-113"]}</p>
+            <dt>{T["TXT-WIT-111"]}</dt>
+            <dd className="receipt-code" data-testid="report-code">
+              {reportCode(report)}
+            </dd>
           </div>
-        )}
-        <div className="status-row">
+          {report.evidence.length > 0 && (
+            <div>
+              <dt id="hash-heading">{T["TXT-WIT-112"]}</dt>
+              <dd>
+                <ul className="plain hashes" aria-labelledby="hash-heading">
+                  {report.evidence.map((e) => (
+                    <li key={e.evidence_id}>
+                      <span className="kind">{EVIDENCE_KIND[e.kind]}</span>
+                      <HashText data-testid="evidence-hash">{e.sha256}</HashText>
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+          )}
+        </dl>
+        {report.evidence.length > 0 && <p className="field-hint">{T["TXT-WIT-113"]}</p>}
+        <div className="receipt-status">
           <span>{T["TXT-WIT-116"]}</span>
-          <EvidenceBadge level="alleged" />
+          <EvidenceBadge status="alleged">{T["TXT-EVD-001"]}</EvidenceBadge>
         </div>
         {report.region && <RegionName region={report.region} synthetic={report.synthetic} />}
       </section>
 
       {deadline?.status === "available" && deadline.deadline_at && (
-        <section aria-labelledby="tips-heading" className="callout callout--warning" data-testid="evidence-tips">
-          <Icon name="alert" size={20} />
-          <div className="callout-body">
-            <h2 id="tips-heading" className="callout-title">
-              {t("TXT-WIT-114", { tenggat: formatWib(deadline.deadline_at) })}
-            </h2>
-            <ul className="tips">
-              {report.evidence_tips.map((tip) => (
-                <li key={tip.id}>{pick(tip)}</li>
-              ))}
-            </ul>
-          </div>
-        </section>
+        <Notice tone="warning" title={t("TXT-WIT-114", { tenggat: formatWib(deadline.deadline_at) })} testId="evidence-tips">
+          <ul className="tips">
+            {report.evidence_tips.map((tip) => (
+              <li key={tip.id}>{tip.id}</li>
+            ))}
+          </ul>
+        </Notice>
       )}
       {deadline?.status === "likely_lost" && (
         <Notice tone="info" testId="evidence-deadline-passed">
@@ -82,11 +72,11 @@ export function Submitted({
       )}
 
       <div className="actions">
-        <button type="button" className="button primary lg wide" onClick={onNew}>
+        <button type="button" className={button("primary", { wide: true })} onClick={onNew}>
           {T["TXT-WIT-117"]}
         </button>
-        <button type="button" className="button wide" onClick={onMyReports}>
-          {T["TXT-WIT-219"]}
+        <button type="button" className={button("neutral", { wide: true })} onClick={onMine}>
+          {T["TXT-WIT-228"]}
         </button>
       </div>
     </main>

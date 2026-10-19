@@ -1,18 +1,13 @@
 import Link from "next/link";
-import { PublicShell } from "@/components/shell/PublicShell";
-import { getT } from "@/lib/i18n/server";
 
-export default async function NotFound() {
-  const { t } = await getT();
+export default function NotFound() {
   return (
-    <PublicShell>
-      <section className="empty-page">
-        <h1>{t("notFound.title")}</h1>
-        <p>{t("notFound.body")}</p>
-        <p>
-          <Link href="/log">{t("notFound.toLog")}</Link> {t("notFound.or")} <Link href="/">{t("notFound.toHome")}</Link>.
-        </p>
-      </section>
-    </PublicShell>
+    <>
+      <h1>Page not found</h1>
+      <p>The page or log entry you asked for does not exist.</p>
+      <p>
+        <Link href="/log">Go to the decision log</Link> or <Link href="/">the home page</Link>.
+      </p>
+    </>
   );
 }

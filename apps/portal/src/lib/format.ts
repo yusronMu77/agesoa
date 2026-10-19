@@ -1,4 +1,6 @@
-/** Formats an ISO timestamp as "YYYY-MM-DD HH:MM:SS UTC" (deterministic on the server). */
+/** Display formatting shared by every page (deterministic on the server). */
+
+/** Formats an ISO timestamp as "YYYY-MM-DD HH:MM:SS UTC". */
 export function formatTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   const date = new Date(iso);
@@ -10,5 +12,3 @@ export function shortHash(hash: string | null | undefined, length = 12): string 
   if (!hash) return "—";
   return hash.length > length ? `${hash.slice(0, length)}…` : hash;
 }
-
-export const GENESIS_HASH = "0".repeat(64);

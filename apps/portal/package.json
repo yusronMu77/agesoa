@@ -11,10 +11,8 @@
   },
   "dependencies": {
     "@agesoa/ui": "workspace:*",
-    "@clerk/nextjs": "7.9.17",
     "@tailwindcss/postcss": "^4.3.3",
     "firebase": "13.0.0",
-    "lucide-react": "0.545.0",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",

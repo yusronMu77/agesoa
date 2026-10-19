@@ -1,142 +1,116 @@
-/**
- * SCR-008 My reports: the reports sent from this device (ids kept on the device, see reports.ts), each read from
- * ingestion. A report that cannot be loaded shows a calm row with a retry; it never blocks the list.
- */
-
-import { useCallback, useEffect, useState } from "react";
+import { EvidenceBadge } from "@agesoa/ui/components/evidence-badge";
+import { Badge } from "@agesoa/ui/components/badge";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@agesoa/ui/components/empty";
+import { LogoMark } from "@agesoa/ui/components/logo";
+import { useEffect, useState } from "react";
 import type { IngestionClient, PackDocument, Report } from "../api";
-import { EmptyState, EvidenceBadge } from "../components";
-import { language, pick, t, T } from "../copy";
-import { formatDay } from "../fields";
-import { Icon } from "../icons";
-import { reportCodeOf } from "../reports";
+import { Notice } from "../components";
+import { T, t } from "../copy";
+import { button } from "../ui";
+import { reportIds } from "../reports";
+import { reportCode } from "./Submitted";
 
-type Entry = { state: "loading" } | { state: "error" } | { state: "ok"; report: Report };
+const DAY = new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "short", year: "numeric" });
 
-export function reportTitle(report: Report, pack: PackDocument | null): string {
-  const category = report.category
-    ? pick(pack?.categories.find((c) => c.id === report.category)?.label) || report.category
-    : T["TXT-WIT-233"];
-  const region = report.region?.district_name ?? report.region?.regency_name;
-  return region ? t("TXT-WIT-232", { kategori: category, wilayah: region }) : category;
+type Loaded = { id: string; report: Report | null };
+
+function titleOf(report: Report, pack: PackDocument | null): string {
+  const category = pack?.categories.find((c) => c.id === report.category)?.label.id;
+  const place = report.region?.district_name ?? report.region?.regency_name;
+  if (category && place) return t("TXT-WIT-253", { kategori: category, wilayah: place });
+  return category ?? report.narrative?.slice(0, 80) ?? reportCode(report);
 }
 
-function ReportRow({
-  id,
-  entry,
-  packs,
-  onRetry,
-}: {
-  id: string;
-  entry: Entry;
-  packs: Record<string, PackDocument>;
-  onRetry: () => void;
-}) {
-  const code = <span className="report-row-code mono">{reportCodeOf(id)}</span>;
-  if (entry.state === "loading") {
-    return (
-      <li className="card report-row" aria-busy="true">
-        <div className="report-row-head">{code}</div>
-        <p className="skeleton">{T["TXT-WIT-235"]}</p>
-      </li>
-    );
-  }
-  if (entry.state === "error") {
-    return (
-      <li className="card report-row" data-testid="my-report-error">
-        <div className="report-row-head">{code}</div>
-        <p className="report-row-note">
-          <Icon name="info" size={20} />
-          {T["TXT-WIT-236"]}
-        </p>
-        <button type="button" className="button small" onClick={onRetry}>
-          {T["TXT-WIT-237"]}
-        </button>
-      </li>
-    );
-  }
-  const { report } = entry;
-  const when = report.submitted_at ?? report.created_at;
-  return (
-    <li className="card report-row" data-testid="my-report">
-      <div className="report-row-head">
-        {code}
-        {when && <time dateTime={when}>{formatDay(when, language())}</time>}
-      </div>
-      <p className="report-row-title">{reportTitle(report, packs[report.domain] ?? null)}</p>
-      <div className="row">
-        <EvidenceBadge level="alleged" />
-        <span className="tag tag--info">
-          {report.status === "submitted" ? T["TXT-WIT-172"] : T["TXT-WIT-239"]}
-        </span>
-        {report.evidence.length > 0 && <span className="tag">{t("TXT-WIT-234", { n: report.evidence.length })}</span>}
-        {report.evidence_status?.status === "likely_lost" && (
-          <span className="tag tag--warning">{T["TXT-WIT-238"]}</span>
-        )}
-        {report.synthetic && <span className="tag tag--sim">{T["TXT-WIT-118"]}</span>}
-      </div>
-    </li>
-  );
+function statusOf(report: Report): "alleged" | "supported" | "proven" {
+  const level = report.evidence_status?.max_finding_status;
+  return level === "proven" || level === "supported" ? level : "alleged";
 }
 
+const STATUS_TEXT = { alleged: T["TXT-EVD-001"], supported: T["TXT-EVD-002"], proven: T["TXT-EVD-003"] } as const;
+
+/** SCR-008 My reports: the reports sent from this device, with their evidence status. No account, no names. */
 export function MyReports({
   client,
-  ids,
-  packs,
+  pack,
+  questionCount,
+  onQuestions,
   onNew,
 }: {
   client: IngestionClient;
-  /** Newest first. */
-  ids: string[];
-  /** Loaded domain packs by id: each report is labelled with its own issue type's categories. */
-  packs: Record<string, PackDocument>;
+  pack: PackDocument | null;
+  questionCount: number;
+  onQuestions: () => void;
   onNew: () => void;
 }) {
-  const [entries, setEntries] = useState<Record<string, Entry>>({});
-
-  const load = useCallback(
-    (id: string) => {
-      setEntries((current) => ({ ...current, [id]: { state: "loading" } }));
-      client.getReport(id).then(
-        (report) => setEntries((current) => ({ ...current, [id]: { state: "ok", report } })),
-        () => setEntries((current) => ({ ...current, [id]: { state: "error" } })),
-      );
-    },
-    [client],
-  );
+  const [items, setItems] = useState<Loaded[] | null>(null);
 
   useEffect(() => {
-    ids.forEach(load);
-  }, [ids, load]);
+    let live = true;
+    const ids = reportIds();
+    void Promise.all(
+      ids.map((id) =>
+        client.getReport(id).then(
+          (report): Loaded => ({ id, report }),
+          (): Loaded => ({ id, report: null }),
+        ),
+      ),
+    ).then((list) => live && setItems(list));
+    return () => {
+      live = false;
+    };
+  }, [client]);
 
+  const submitted = (items ?? []).filter((item) => item.report === null || item.report.status === "submitted");
   return (
     <main className="screen" data-screen="SCR-008">
       <div className="intro">
         <h1>{T["TXT-WIT-160"]}</h1>
         <p className="lead">{T["TXT-WIT-161"]}</p>
       </div>
-      {ids.length === 0 ? (
-        <EmptyState
-          title={T["TXT-WIT-230"]}
-          testId="my-reports-empty"
-          action={
-            <button type="button" className="button secondary" onClick={onNew}>
-              {T["TXT-WIT-117"]}
-            </button>
-          }
-        >
-          {T["TXT-WIT-231"]}
-        </EmptyState>
+      {questionCount > 0 && (
+        <Notice tone="info" title={t("TXT-WIT-147", { jumlah: questionCount })}>
+          <button type="button" className={button("link")} onClick={onQuestions}>
+            {T["TXT-WIT-148"]}
+          </button>
+        </Notice>
+      )}
+      {items === null ? (
+        <p className="lead" role="status">
+          {T["TXT-WIT-246"]}
+        </p>
+      ) : submitted.length === 0 ? (
+        <Empty data-testid="no-reports">
+          <EmptyHeader>
+            <EmptyMedia>
+              <LogoMark size={72} />
+            </EmptyMedia>
+            <EmptyTitle>{T["TXT-WIT-234"]}</EmptyTitle>
+            <EmptyDescription>{T["TXT-WIT-235"]}</EmptyDescription>
+          </EmptyHeader>
+          <button type="button" className={button("neutral")} onClick={onNew}>
+            {T["TXT-WIT-117"]}
+          </button>
+        </Empty>
       ) : (
-        <ul className="report-list" aria-label={T["TXT-WIT-160"]}>
-          {ids.map((id) => (
-            <ReportRow
-              key={id}
-              id={id}
-              entry={entries[id] ?? { state: "loading" }}
-              packs={packs}
-              onRetry={() => load(id)}
-            />
+        <ul className="stack" aria-label={T["TXT-WIT-160"]}>
+          {submitted.map(({ id, report }) => (
+            <li key={id} className="card report-card" data-testid="my-report">
+              {report ? (
+                <>
+                  <div className="report-card-head">
+                    <span className="mono">{reportCode(report)}</span>
+                    {report.submitted_at && <span>{DAY.format(new Date(report.submitted_at))}</span>}
+                  </div>
+                  <p className="report-card-title">{titleOf(report, pack)}</p>
+                  <div className="row">
+                    <EvidenceBadge status={statusOf(report)}>{STATUS_TEXT[statusOf(report)]}</EvidenceBadge>
+                    <Badge variant="neutral">{T["TXT-WIT-204"]}</Badge>
+                  </div>
+                </>
+              ) : (
+                <p className="lead">{T["TXT-WIT-247"]}</p>
+              )}
+            </li>
           ))}
         </ul>
       )}

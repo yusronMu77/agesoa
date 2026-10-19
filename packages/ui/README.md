@@ -1,7 +1,37 @@
 # packages/ui (`@agesoa/ui`)
 
 Shared UI foundation for `apps/portal` and `apps/witness`: the design tokens as CSS custom properties, the
-self-hosted fonts of the design and the shadcn theme. Shared components follow with the screens.
+self-hosted fonts of the design, the shadcn theme and the React components both apps use. A component exists
+once, here; an app never keeps its own copy.
+
+## Components
+
+`src/components/*.tsx` are shadcn components (style `base-nova`, Base UI primitives), added with the shadcn CLI
+from this folder and adjusted to the Penpot variants of the design repository (`design-system/components.md`):
+
+| Component | Penpot name | Variants |
+|---|---|---|
+| `button` | `Button` | `default` (Primer), `secondary` (Sekunder), `outline`, `ghost`, `destructive` (Bahaya), `link`; sizes `default` 40 px (desktop), `touch` 48 px (Witness), `sm`, `icon`, `icon-touch` |
+| `badge` | `Badge`, `Badge status bukti` | `neutral`, `success`, `warning`, `destructive`, evidence `alleged` / `supported` / `proven` |
+| `alert` | `Callout` | `default`, `info`, `warning`, `destructive`, `success` (tinted background, icon and title in the tone colour); no default `role` (pass `status` or `alert`) |
+| `ai-marker` (`AiMarker`, `AiCallout`) | `Penanda hasil AI` | text label with a neutral chip icon (no sparkles); `AiCallout` = title + text on the AI background |
+| `stepper` | `Stepper` | steps `done` (check), `current` (`aria-current="step"`), `upcoming`; 32 px circles with connectors |
+| `bottom-nav` (`BottomNav`, `BottomNavItem`) | `Tab bar` | `nav` landmark, 48 px items, active pill from `aria-current="page"`, optional count badge; `render` for links |
+| `attachment-row` | `Lampiran` | tile (icon or preview) + title + hint + one action; children below |
+| `evidence-badge`, `hash-text`, `logo`, `role-chip`, `simulation-band`, `nav-item`, `quorum` | `Badge status bukti`, `Hash`, `Logo`, `Chip peran`, `Pita SIMULASI`, `Nav item`, `Kuorum` | AGESOA components shared by the portal and Witness |
+| `input`, `textarea`, `native-select`, `checkbox`, `radio-group`, `switch`, `label`, `field` | `Input`, `Textarea`, `Select`, `Checkbox`, `Radio`, `Switch` | 40 px controls, `border.strong` outline (3:1 on the canvas) |
+| `dialog`, `toast`, `tabs`, `skeleton`, `empty`, `card`, `table`, `separator`, `spinner` | `Dialog`, `Toast`, `Tab`, `Skeleton`, `Empty state` | shadcn defaults on the AGESOA theme |
+
+```tsx
+import { Button } from "@agesoa/ui/components/button";
+import { cn } from "@agesoa/ui/lib/utils";
+```
+
+- Apps resolve `@agesoa/ui/components/*` through `exports`; Next.js compiles the sources (`transpilePackages`), Vite
+  does so by default. `theme.css` declares `@source "./src"`, so the apps' Tailwind build sees the classes used here.
+- App styles are in `@layer components`, below the utilities of these components; keep them there.
+- Add a component: `bunx --bun shadcn@4.21.0 add <name>` in this folder. The CLI writes `import { cn } from "cn"`
+  for this alias layout: change it to `@agesoa/ui/lib/utils` and do not keep the `cn` npm package.
 
 ## Contents
 
@@ -50,7 +80,7 @@ Naming:
   does not set falls back to the preflight reset: set `font-weight`, `text-decoration` and `list-style` of an
   element explicitly (the preflight made headings regular and removed link underlines before the apps did).
 - Dark mode: a token may carry a dark value in the `agesoa.dark` extension; the generator emits those under
-  `@media (prefers-color-scheme: dark)`. The current token set (0.3.0, final) has no dark values, so
+  `@media (prefers-color-scheme: dark)`. The current token set (0.4.0) has no dark values, so
   `tokens.css` is light only.
 
 ## Regenerate
@@ -87,4 +117,4 @@ Mapping (design token -> shadcn variable): `bg.canvas` -> `--background`, `bg.su
 `bg.sunken` -> `--muted`/`--accent`, `text.secondary` -> `--muted-foreground`, `status.danger` -> `--destructive`,
 `border.default` -> `--border`/`--input`, `focus.ring` -> `--ring`. Controls use `radius.md` (8 px, Button in the
 Penpot file) and surfaces `radius.lg` (16 px, Card temuan). Commit messages that change these files name the
-design commit and token version (`agesoa-uiux@<sha>`, tokens 0.3.0).
+design commit and token version (`agesoa-uiux@<sha>`, tokens 0.4.0).

@@ -15,13 +15,21 @@ scaffold-cli (`react-vite` template); screens and modules written for AGESOA.
 | SCR-001 Record evidence | `src/screens/Capture.tsx` | in-app camera or gallery, voice note (MediaRecorder, audio/webm), text, location → district or manual district pick |
 | SCR-002 Permission explainer | `src/screens/PermissionExplainer.tsx` | shown before the camera / microphone / location prompt; a refusal never blocks the flow |
 | SCR-003 Social post | `src/screens/SharedPost.tsx` | paste a post link (stored without the poster's username), upload screenshots |
-| SCR-004 Review draft | `src/screens/DraftReview.tsx` | Agen Intake result marked as AI output, every pack field correctable, rule check computed by the service |
+| SCR-004 Review draft | `src/screens/DraftReview.tsx` | review neutral incident fields: narrative, issue type, location, time, impact and people affected |
 | SCR-005 Submitted | `src/screens/Submitted.tsx` | report code, SHA-256 of each stored evidence file, evidence deadline and tips |
 | SCR-006 Audit questions | `src/screens/Questions.tsx` | the questions Agen Audit puts to this device's reporter (case-audit `GET /v1/witness/questions`), answered in text; offered by a banner on every screen while a question waits, answers are labelled `alleged` and never raise an evidence status |
 
 UI text is Indonesian and comes from the design repository's microcopy (`src/copy.ts`, keyed by text id); the
 end-to-end tests expect the same text. Categories, fields, rules and tips come from the domain pack served by the
-ingestion service (`GET /v1/domain-packs/{id}`), so nothing here is specific to one domain.
+ingestion service (`GET /v1/domain-packs/general`). Public reporting always uses the general incident schema.
+There is no domain-pack selector in the citizen flow. Legacy deployment presets cannot replace the public
+fields with a specialised schema. Unknown incident details may be left blank.
+
+Reporters may add, rename and remove up to 20 optional custom text fields in SCR-004. Each row has a label
+(80 characters) and a text value (2,000 characters). Both are required for an added row; remove an unused row.
+`PATCH /v1/reports/{id}` replaces `custom_fields` when present and preserves them when omitted. They survive
+Intake, reload and submission, are included in the report event, and remain separate from pack rule inputs.
+Run ingestion's Alembic migration `0004` before using this API version.
 
 Privacy: photos go to the ingestion service, which removes EXIF/GPS before storing them and hashes the stored
 bytes. The approximate position is sent once to `POST /v1/regions/resolve` and never with the report; only the
@@ -52,9 +60,7 @@ production build behind HTTPS.
 | `VITE_INGESTION_URL` | `http://localhost:8001` | |
 | `VITE_CASE_AUDIT_URL` | `http://localhost:8002` | audit questions (SCR-006); its `CORS_ORIGINS` must include the Witness origin; unreachable = no banner, reporting is not blocked |
 
-`VITE_DOMAIN` is a legacy variable and is ignored: reports start on the general pack (`domain-packs/general`); the
-reporter can move a draft to another loaded pack with the "Jenis masalah" picker on SCR-004 (`GET /v1/domain-packs`,
-`PATCH /v1/reports/{id}` with `domain`).
+`VITE_DOMAIN` is a legacy variable and is ignored. Witness always creates reports with `domain=general`.
 
-Not done yet: service worker (offline queue of drafts), Capacitor Android build (native camera plugin, share
+Not done yet: answering by voice (SCR-006 is text only), service worker (offline queue of drafts), Capacitor Android build (native camera plugin, share
 target SCR-007), Firebase anonymous sign-in.

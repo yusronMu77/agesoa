@@ -1,15 +1,21 @@
+import { AttachmentRow } from "@agesoa/ui/components/attachment-row";
+import { AiMarker } from "@agesoa/ui/components/ai-marker";
+import { Input } from "@agesoa/ui/components/input";
+import { NativeSelect } from "@agesoa/ui/components/native-select";
+import { Textarea } from "@agesoa/ui/components/textarea";
+import { cn } from "@agesoa/ui/lib/utils";
+import { ImageIcon, LinkIcon, MicIcon } from "lucide-react";
+import { button } from "../ui";
 /**
  * SCR-004 Review the Agen Intake draft: every field can be corrected, the rule check is computed by the service
  * (code, not the model), then the reporter submits.
  */
 
 import { useRef, useState } from "react";
-import type { FieldValue, IngestionClient, PackDocument, PackField, PackSummary, Report, ReportPatch } from "../api";
+import type { FieldValue, IngestionClient, PackDocument, PackField, Report, ReportPatch } from "../api";
 import { ApiError } from "../api";
-import { AiResultLabel, AiTag, Notice, RegionName } from "../components";
-import { evidenceKind, pick, T, t } from "../copy";
-import type { IconName } from "../icons";
-import { Icon } from "../icons";
+import { AiResultLabel, Notice, RegionName } from "../components";
+import { EVIDENCE_KIND, T, t } from "../copy";
 import { fieldInError, fromInput, sameValue, toInput, vocabularyOf } from "../fields";
 
 const INPUT_TYPE: Record<PackField["type"], string> = {
@@ -18,7 +24,10 @@ const INPUT_TYPE: Record<PackField["type"], string> = {
   datetime: "datetime-local",
   date: "date",
   integer: "number",
+  enum: "text",
 };
+
+const EVIDENCE_ICON = { photo: ImageIcon, audio: MicIcon, screenshot: ImageIcon } as const;
 
 function inputsOf(pack: PackDocument, report: Report): Record<string, string> {
   return Object.fromEntries(
@@ -28,35 +37,25 @@ function inputsOf(pack: PackDocument, report: Report): Record<string, string> {
 
 export function DraftReview({
   client,
-  pack: initialPack,
-  packs,
-  loadPack,
-  onIssueType,
+  pack,
   initial,
-  intakeFailed: initialIntakeFailed,
+  intakeFailed,
   onSubmitted,
 }: {
   client: IngestionClient;
   pack: PackDocument;
-  /** Issue types (domain packs) on offer; the picker is shown only when there is more than one. */
-  packs: PackSummary[] | null;
-  loadPack: (id: string) => Promise<PackDocument>;
-  /** The reporter moved the draft to another issue type (remembered on the device). */
-  onIssueType: (id: string) => void;
   initial: Report;
   intakeFailed: boolean;
   onSubmitted: (report: Report) => void;
 }) {
-  const [pack, setPack] = useState(initialPack);
-  const [intakeFailed, setIntakeFailed] = useState(initialIntakeFailed);
-  const [retyped, setRetyped] = useState(false);
   const [report, setReport] = useState(initial);
+  const [narrative, setNarrative] = useState(initial.narrative ?? initial.intake?.transcript ?? "");
   const [category, setCategory] = useState(initial.category ?? "");
   const [inputs, setInputs] = useState(() => inputsOf(pack, initial));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [badField, setBadField] = useState<string | null>(null);
-  // Reporter-defined extra fields (label + value as text), separate from the pack's fields and rules.
+  const [status, setStatus] = useState<string | null>(null);
   const [customFields, setCustomFields] = useState(() =>
     (initial.custom_fields ?? []).map((field) => ({ ...field, key: crypto.randomUUID() })),
   );
@@ -68,13 +67,8 @@ export function DraftReview({
     setCustomFields((current) => [...current, { key, label: "", value: "" }]);
     requestAnimationFrame(() => document.getElementById(`custom-label-${key}`)?.focus());
   };
-  const editCustomField = (key: string, change: { label?: string; value?: string }) =>
-    setCustomFields((current) => current.map((item) => (item.key === key ? { ...item, ...change } : item)));
 
-  const label = (id: string) => {
-    const field = pack.report_fields.find((f) => f.id === id);
-    return field ? pick(field.label) : id;
-  };
+  const label = (id: string) => pack.report_fields.find((f) => f.id === id)?.label.id ?? id;
 
   const changes = (): ReportPatch => {
     const fields: Record<string, FieldValue | null> = {};
@@ -85,6 +79,7 @@ export function DraftReview({
     const patch: ReportPatch = {};
     if (Object.keys(fields).length) patch.fields = fields;
     if ((category || null) !== report.category) patch.category = category || null;
+    if ((narrative.trim() || null) !== report.narrative) patch.narrative = narrative.trim() || null;
     const custom = customFields.map(({ label, value }) => ({ label: label.trim(), value: value.trim() }));
     if (JSON.stringify(custom) !== JSON.stringify(report.custom_fields ?? [])) patch.custom_fields = custom;
     return patch;
@@ -108,66 +103,40 @@ export function DraftReview({
     const saved = await client.patchReport(report.id, patch);
     setReport(saved);
     setInputs(inputsOf(pack, saved));
-    setCustomFields((current) =>
-      (saved.custom_fields ?? []).map((field, index) => ({ ...field, key: current[index]?.key ?? crypto.randomUUID() })),
-    );
+    setCategory(saved.category ?? "");
+    setNarrative(saved.narrative ?? "");
+    setCustomFields((current) => (saved.custom_fields ?? []).map((field, index) => ({
+      ...field, key: current[index]?.key ?? crypto.randomUUID(),
+    })));
     return saved;
   };
 
-  /** Moves the draft to another pack, then lets Agen Intake draft it again with that pack's categories and fields. */
-  const changeIssueType = async (id: string) => {
-    if (id === report.domain) return;
-    setError(null);
-    setBadField(null);
-    setBusy(true);
-    try {
-      const nextPack = await loadPack(id);
-      let next = await client.patchReport(report.id, { domain: id });
-      let failed = false;
-      try {
-        next = await client.runIntake(report.id);
-      } catch (err) {
-        if (!(err instanceof ApiError && err.status === 503)) throw err;
-        failed = true; // fill the new fields by hand
-      }
-      setPack(nextPack);
-      setReport(next);
-      setCategory(next.category ?? "");
-      setInputs(inputsOf(nextPack, next));
-      setIntakeFailed(failed);
-      setRetyped(true);
-      onIssueType(id);
-    } catch (err) {
-      fail(err);
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const run = async (submit: boolean) => {
+    if (busy) return;
     setError(null);
+    setStatus(null);
     setBadField(null);
-    if (submit && !category) {
-      setError(T["TXT-WIT-095"]);
-      return;
-    }
     setCustomError(null);
     const seen = new Set<string>();
     for (const field of customFields) {
       const normalized = field.label.trim().toLocaleLowerCase();
       if (!normalized || !field.value.trim() || seen.has(normalized)) {
         setCustomError(field.key);
-        setError(seen.has(normalized) ? T["TXT-WIT-281"] : T["TXT-WIT-280"]);
-        const part = !normalized || seen.has(normalized) ? "label" : "value";
-        document.getElementById(`custom-${part}-${field.key}`)?.focus();
+        setError(seen.has(normalized) ? T["TXT-WIT-264"] : T["TXT-WIT-263"]);
+        document.getElementById(`custom-${!normalized || seen.has(normalized) ? "label" : "value"}-${field.key}`)?.focus();
         return;
       }
       seen.add(normalized);
+    }
+    if (submit && !category) {
+      setError(T["TXT-WIT-095"]);
+      return;
     }
     setBusy(true);
     try {
       const saved = await save();
       if (submit && saved) onSubmitted(await client.submit(saved.id));
+      else setStatus(T["TXT-WIT-190"]);
     } catch (err) {
       fail(err);
     } finally {
@@ -177,100 +146,167 @@ export function DraftReview({
 
   const corrected = (id: string) =>
     !!report.intake && id in report.fields && !sameValue(report.fields[id], report.intake.fields[id]);
+  const proposed = (id: string) => !!report.intake && id in report.intake.fields;
 
-  const [aiTitle, aiBody] = splitFirstSentence(T["TXT-WIT-081"]);
+  const hintOf = (f: PackField): string | null => {
+    if (f.type === "string_list") return T["TXT-WIT-086"];
+    if (f.hint) return f.hint.id;
+    return proposed(f.id) ? T["TXT-WIT-226"] : null;
+  };
+
+  const evidenceHint = (e: Report["evidence"][number]): string | null =>
+    e.kind === "photo" && e.metadata_removed ? T["TXT-WIT-213"] : e.kind === "screenshot" ? T["TXT-WIT-214"] : null;
 
   return (
     <main className="screen" data-screen="SCR-004">
       <h1>{T["TXT-WIT-080"]}</h1>
-      {intakeFailed || !report.intake ? (
-        <Notice tone="warning">{T["TXT-WIT-082"]}</Notice>
+      {intakeFailed && report.domain === initial.domain ? (
+        <Notice tone="info">{T["TXT-WIT-082"]}</Notice>
+      ) : !report.intake ? (
+        <p className="lead">{T["TXT-WIT-189"]}</p>
       ) : (
-        <AiResultLabel title={aiTitle}>{aiBody}</AiResultLabel>
+        <AiResultLabel title={T["TXT-WIT-081"]}>{T["TXT-WIT-224"]}</AiResultLabel>
       )}
       {report.region && <RegionName region={report.region} synthetic={report.synthetic} />}
-      {report.narrative && <blockquote className="narrative">{report.narrative}</blockquote>}
-      {report.intake?.transcript && (
-        <section aria-labelledby="transcript-heading">
-          <h2 id="transcript-heading" className="visually-hidden">
-            {T["TXT-WIT-096"]}
-          </h2>
-          <AiTag>{T["TXT-WIT-096"]}</AiTag>
-          <blockquote className="narrative">{report.intake.transcript}</blockquote>
-        </section>
-      )}
 
+      <p role="status" className={status ? "field-hint" : "visually-hidden"}>
+        {status}
+      </p>
       <form
+        noValidate
+        aria-busy={busy}
         onSubmit={(event) => {
           event.preventDefault();
           void run(true);
         }}
       >
-        {packs && packs.length > 1 && (
+        <fieldset className="draft-fields" disabled={busy}>
+          <legend>{T["TXT-WIT-185"]}</legend>
+          <p className="field-hint">{T["TXT-WIT-186"]}</p>
           <div className="field">
-            <label className="field-label" htmlFor="issue-type">
-              {T["TXT-WIT-260"]}
+            <label className="field-label" htmlFor="draft-narrative">
+              {T["TXT-WIT-188"]}
             </label>
-            <select
-              id="issue-type"
-              data-testid="issue-type"
-              value={report.domain}
-              disabled={busy}
-              aria-describedby="issue-type-hint"
-              onChange={(event) => void changeIssueType(event.target.value)}
+            <Textarea
+              id="draft-narrative"
+              rows={4}
+              maxLength={5000}
+              value={narrative}
+              onChange={(event) => setNarrative(event.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="draft-category">
+              {T["TXT-WIT-083"]} <span className="required">({T["TXT-WIT-085"]})</span>
+            </label>
+            <NativeSelect
+              id="draft-category"
+              className="w-full"
+              value={category}
+              required
+              aria-describedby={report.intake?.category ? "draft-category-hint" : undefined}
+              onChange={(event) => setCategory(event.target.value)}
             >
-              {packs.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {pick(p.name) || p.id}
+              <option value="">{T["TXT-WIT-084"]}</option>
+              {pack.categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label.id}
                 </option>
               ))}
-            </select>
-            <p className="field-hint" id="issue-type-hint" role={retyped ? "status" : undefined}>
-              {T[retyped ? "TXT-WIT-262" : "TXT-WIT-261"]}
-            </p>
-          </div>
-        )}
-
-        <div className="field">
-          <label className="field-label" htmlFor="draft-category">
-            {T["TXT-WIT-083"]} <span className="required">({T["TXT-WIT-085"]})</span>
-          </label>
-          <select id="draft-category" value={category} onChange={(event) => setCategory(event.target.value)}>
-            <option value="">{T["TXT-WIT-084"]}</option>
-            {pack.categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {pick(c.label)}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {pack.report_fields.map((f) => (
-          <div className="field" key={f.id}>
-            <label className="field-label" htmlFor={`draft-${f.id}`}>
-              {pick(f.label)}
-              {f.required && <span className="required"> ({T["TXT-WIT-085"]})</span>}
-            </label>
-            <input
-              id={`draft-${f.id}`}
-              name={f.id}
-              type={INPUT_TYPE[f.type]}
-              min={f.type === "integer" ? 0 : undefined}
-              inputMode={f.type === "integer" ? "numeric" : undefined}
-              value={inputs[f.id] ?? ""}
-              aria-invalid={badField === f.id}
-              aria-describedby={f.hint || f.type === "string_list" ? `draft-${f.id}-hint` : undefined}
-              data-corrected={corrected(f.id) || undefined}
-              onChange={(event) => setInputs((current) => ({ ...current, [f.id]: event.target.value }))}
-            />
-            {(f.hint || f.type === "string_list") && (
-              <p className="field-hint" id={`draft-${f.id}-hint`}>
-                {f.type === "string_list" ? T["TXT-WIT-086"] : pick(f.hint)}
+            </NativeSelect>
+            {report.intake?.category && (
+              <p className="field-hint" id="draft-category-hint">
+                {T["TXT-WIT-225"]}
               </p>
             )}
-            {corrected(f.id) && <span className="tag tag--corrected">{T["TXT-WIT-097"]}</span>}
           </div>
-        ))}
+
+          {pack.report_fields.map((f) => {
+            const hint = hintOf(f);
+            const was = report.intake?.fields[f.id];
+            return (
+              <div className="field" key={f.id}>
+                <label className="field-label" htmlFor={`field-${f.id}`}>
+                  {f.label.id}
+                  {f.required && <span className="required"> ({T["TXT-WIT-193"]})</span>}
+                </label>
+                {f.type === "enum" ? (
+                  <NativeSelect
+                    id={`field-${f.id}`}
+                    name={f.id}
+                    className="w-full"
+                    value={inputs[f.id] ?? ""}
+                    aria-invalid={badField === f.id}
+                    onChange={(event) => setInputs((current) => ({ ...current, [f.id]: event.target.value }))}
+                  >
+                    <option value="">—</option>
+                    {f.options?.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                ) : (
+                  <Input
+                    id={`field-${f.id}`}
+                    name={f.id}
+                    type={INPUT_TYPE[f.type]}
+                    min={f.type === "integer" ? 0 : undefined}
+                    inputMode={f.type === "integer" ? "numeric" : undefined}
+                    className={cn("h-12", corrected(f.id) && "border-2 border-primary")}
+                    value={inputs[f.id] ?? ""}
+                    aria-invalid={badField === f.id}
+                    aria-describedby={hint || corrected(f.id) ? `hint-${f.id}` : undefined}
+                    onChange={(event) => setInputs((current) => ({ ...current, [f.id]: event.target.value }))}
+                  />
+                )}
+                {(hint || corrected(f.id)) && (
+                  <p className="field-hint" id={`hint-${f.id}`}>
+                    {corrected(f.id)
+                      ? was === undefined
+                        ? T["TXT-WIT-097"]
+                        : t("TXT-WIT-227", { nilai: String(was) })
+                      : hint}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </fieldset>
+
+        <fieldset className="draft-fields custom-fields" disabled={busy}>
+          <legend>{T["TXT-WIT-254"]}</legend>
+          <p className="field-hint" id="custom-fields-hint">{T["TXT-WIT-255"]}</p>
+          {customFields.length === 0 && <p className="field-hint">{T["TXT-WIT-256"]}</p>}
+          {customFields.map((field, index) => (
+            <section className="custom-field" key={field.key} aria-labelledby={`custom-heading-${field.key}`}>
+              <h3 id={`custom-heading-${field.key}`}>{t("TXT-WIT-257", { nomor: String(index + 1) })}</h3>
+              <label className="field" htmlFor={`custom-label-${field.key}`}>
+                <span className="field-label">{T["TXT-WIT-258"]}</span>
+                <Input className="h-12" id={`custom-label-${field.key}`} type="text" maxLength={80} required
+                  placeholder={T["TXT-WIT-259"]} value={field.label} aria-invalid={customError === field.key}
+                  aria-describedby="custom-fields-hint"
+                  onChange={(event) => setCustomFields((current) => current.map((item) => item.key === field.key ? { ...item, label: event.target.value } : item))} />
+              </label>
+              <label className="field" htmlFor={`custom-value-${field.key}`}>
+                <span className="field-label">{T["TXT-WIT-260"]}</span>
+                <Textarea id={`custom-value-${field.key}`} rows={2} maxLength={2000} required
+                  placeholder={T["TXT-WIT-261"]} value={field.value} aria-invalid={customError === field.key}
+                  onChange={(event) => setCustomFields((current) => current.map((item) => item.key === field.key ? { ...item, value: event.target.value } : item))} />
+              </label>
+              <button type="button" className={button("neutral")}
+                aria-label={t("TXT-WIT-262", { nomor: String(index + 1) })}
+                onClick={() => {
+                  setCustomFields((current) => current.filter((item) => item.key !== field.key));
+                  setCustomError(null);
+                  requestAnimationFrame(() => addFieldButton.current?.focus());
+                }}>{T["TXT-WIT-266"]}</button>
+            </section>
+          ))}
+          <p className="field-hint" role="status">{customFields.length}/20 {T["TXT-WIT-267"]}</p>
+          <button ref={addFieldButton} type="button" className={button("neutral")}
+            disabled={customFields.length >= 20} onClick={addCustomField}>{T["TXT-WIT-265"]}</button>
+        </fieldset>
 
         {report.missing_required.length > 0 && (
           <Notice tone="info" testId="missing-required">
@@ -278,150 +314,80 @@ export function DraftReview({
           </Notice>
         )}
 
-        <fieldset className="field custom-fields" disabled={busy}>
-          <legend className="field-label">{T["TXT-WIT-270"]}</legend>
-          <p className="field-hint" id="custom-fields-hint">
-            {T["TXT-WIT-271"]}
-          </p>
-          {customFields.length === 0 && <p className="field-hint">{T["TXT-WIT-272"]}</p>}
-          {customFields.map((field, index) => (
-            <section className="custom-field" key={field.key} aria-labelledby={`custom-heading-${field.key}`}>
-              <h3 id={`custom-heading-${field.key}`}>{t("TXT-WIT-273", { nomor: String(index + 1) })}</h3>
-              <div className="field">
-                <label className="field-label" htmlFor={`custom-label-${field.key}`}>
-                  {T["TXT-WIT-274"]}
-                </label>
-                <input
-                  id={`custom-label-${field.key}`}
-                  type="text"
-                  maxLength={80}
-                  required
-                  placeholder={T["TXT-WIT-275"]}
-                  value={field.label}
-                  aria-invalid={customError === field.key}
-                  aria-describedby="custom-fields-hint"
-                  onChange={(event) => editCustomField(field.key, { label: event.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label className="field-label" htmlFor={`custom-value-${field.key}`}>
-                  {T["TXT-WIT-276"]}
-                </label>
-                <textarea
-                  id={`custom-value-${field.key}`}
-                  rows={2}
-                  maxLength={2000}
-                  required
-                  placeholder={T["TXT-WIT-277"]}
-                  value={field.value}
-                  aria-invalid={customError === field.key}
-                  onChange={(event) => editCustomField(field.key, { value: event.target.value })}
-                />
-              </div>
-              <button
-                type="button"
-                className="button"
-                aria-label={t("TXT-WIT-278", { nomor: String(index + 1) })}
-                onClick={() => {
-                  setCustomFields((current) => current.filter((item) => item.key !== field.key));
-                  setCustomError(null);
-                  requestAnimationFrame(() => addFieldButton.current?.focus());
-                }}
-              >
-                {T["TXT-WIT-283"]}
-              </button>
-            </section>
-          ))}
-          <p className="field-hint" role="status">
-            {customFields.length}/20 {T["TXT-WIT-279"]}
-          </p>
-          <button
-            ref={addFieldButton}
-            type="button"
-            className="button wide"
-            disabled={customFields.length >= 20}
-            onClick={addCustomField}
-          >
-            {T["TXT-WIT-282"]}
-          </button>
-        </fieldset>
-
-        <section aria-labelledby="rules-heading">
-          <h2 id="rules-heading">{T["TXT-WIT-087"]}</h2>
-          <p className="field-hint">{T["TXT-WIT-088"]}</p>
-          <ul className="rules">
-            {report.rule_results.map((r) => {
-              const rule = pack.rules.find((x) => x.id === r.rule_id);
-              const [icon, text, tone]: [IconName, string, string] =
-                r.violated === null
-                  ? ["info", T["TXT-WIT-091"], "info"]
-                  : r.violated
-                    ? ["xCircle", T["TXT-WIT-089"], "error"]
-                    : ["checkCircle", T["TXT-WIT-090"], "success"];
-              return (
-                <li
-                  key={r.rule_id}
-                  className={`rule callout callout--${tone}`}
-                  data-testid={`rule-${r.rule_id}`}
-                  data-violated={String(r.violated)}
-                >
-                  <Icon name={icon} size={20} />
-                  <div className="callout-body">
-                    <p className="callout-title">{text}</p>
-                    <p className="rule-name">{rule ? pick(rule.label) : r.rule_id}</p>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-
-        {report.evidence.length > 0 && (
-          <section aria-labelledby="evidence-heading">
-            <h2 id="evidence-heading">{T["TXT-WIT-092"]}</h2>
-            <ul className="items">
-              {report.evidence.map((e) => (
-                <li key={e.evidence_id} className="item">
-                  <span className="item-thumb">
-                    <Icon name={e.kind === "audio" ? "mic" : "image"} />
-                  </span>
-                  <span className="item-body">
-                    <span className="item-name">{evidenceKind(e.kind)}</span>
-                    <span className="item-meta mono">{e.sha256.slice(0, 16)}…</span>
-                  </span>
-                </li>
-              ))}
+        {pack.rules.length > 0 && (
+          <section aria-labelledby="rules-heading">
+            <h2 id="rules-heading">{T["TXT-WIT-087"]}</h2>
+            <p className="field-hint">{T["TXT-WIT-088"]}</p>
+            <ul className="stack">
+              {report.rule_results.map((r) => {
+                const rule = pack.rules.find((x) => x.id === r.rule_id);
+                const [tone, text] =
+                  r.violated === null
+                    ? (["info", T["TXT-WIT-091"]] as const)
+                    : r.violated
+                      ? (["error", T["TXT-WIT-089"]] as const)
+                      : (["success", T["TXT-WIT-090"]] as const);
+                return (
+                  <li key={r.rule_id} data-testid={`rule-${r.rule_id}`} data-violated={String(r.violated)}>
+                    <Notice tone={tone} title={text}>
+                      {rule?.label.id ?? r.rule_id}
+                      {r.violated && r.detail ? ` · ${r.detail}` : ""}
+                    </Notice>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         )}
-        {report.shared_post && (
-          <div className="item">
-            <span className="item-thumb">
-              <Icon name="link" />
-            </span>
-            <p className="item-body">
-              <span className="item-name">{T["TXT-WIT-069"]}:</span>{" "}
-              <span className="item-meta mono">{report.shared_post.url}</span>
-            </p>
-          </div>
+
+        {(report.evidence.length > 0 || report.shared_post) && (
+          <section aria-labelledby="evidence-heading">
+            <h2 id="evidence-heading">{T["TXT-WIT-092"]}</h2>
+            <ul className="stack">
+              {report.evidence.map((e) => {
+                const Icon = EVIDENCE_ICON[e.kind];
+                return (
+                  <li key={e.evidence_id}>
+                    <AttachmentRow tile={<Icon aria-hidden="true" />} title={EVIDENCE_KIND[e.kind]} hint={evidenceHint(e)} />
+                  </li>
+                );
+              })}
+              {report.shared_post && (
+                <li>
+                  <AttachmentRow
+                    tile={<LinkIcon aria-hidden="true" />}
+                    title={T["TXT-WIT-069"]}
+                    hint={<span className="mono">{report.shared_post.url}</span>}
+                  />
+                </li>
+              )}
+            </ul>
+          </section>
+        )}
+
+        {report.intake?.transcript && (
+          <section aria-labelledby="transcript-heading">
+            <h2 id="transcript-heading">{T["TXT-WIT-252"]}</h2>
+            <AiMarker className="self-start">{T["TXT-WIT-096"]}</AiMarker>
+            <blockquote className="narrative">{report.intake.transcript}</blockquote>
+          </section>
         )}
 
         <div className="actions">
           {error && <Notice tone="error">{error}</Notice>}
-          <button type="submit" className="button primary lg wide" disabled={busy}>
+          <button type="submit" className={button("primary", { wide: true })} disabled={busy}>
             {T["TXT-WIT-094"]}
           </button>
-          <button type="button" className="button wide" disabled={busy} onClick={() => void run(false)}>
+          <button
+            type="button"
+            className={button("neutral", { wide: true })}
+            disabled={busy}
+            onClick={() => void run(false)}
+          >
             {T["TXT-WIT-093"]}
           </button>
         </div>
       </form>
     </main>
   );
-}
-
-/** "Hasil AI (Agen Intake). Periksa …" -> ["Hasil AI (Agen Intake)", "Periksa …"]: title and text of the marker. */
-export function splitFirstSentence(text: string): [string, string] {
-  const at = text.indexOf(". ");
-  return at < 0 ? [text, ""] : [text.slice(0, at), text.slice(at + 2)];
 }

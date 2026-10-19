@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
-import { PublicDashboard } from "@/components/public/PublicDashboard";
-import { getT } from "@/lib/i18n/server";
+import { parseFilters } from "@/features/dashboard/lib/filters";
+import { loadDashboard } from "@/features/dashboard/server/load-dashboard";
+import { DashboardUnavailableView, DashboardView } from "@/features/dashboard/views/dashboard.view";
+import type { PageProps } from "@/lib/page-props";
 
-// SCR-040 public dashboard (same view as the home page).
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Public dashboard" };
 
-type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-export async function generateMetadata(): Promise<Metadata> {
-  const { t } = await getT();
-  return { title: t("public.dashboard.title") };
-}
-
-export default async function DashboardPage({ searchParams }: { searchParams: SearchParams }) {
-  return <PublicDashboard basePath="/dashboard" searchParams={await searchParams} />;
+export default async function DashboardPage({ searchParams }: PageProps) {
+  const data = await loadDashboard(parseFilters(await searchParams));
+  return data.ok ? <DashboardView {...data} /> : <DashboardUnavailableView />;
 }

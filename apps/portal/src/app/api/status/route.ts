@@ -1,5 +1,5 @@
-import { loadConfig } from "@/lib/config";
-import { getStatusReport } from "@/lib/status";
+import { loadConfig } from "@/configs/env.config";
+import { getStatusReport } from "@/services/platform/status.service";
 
 export const dynamic = "force-dynamic";
 
