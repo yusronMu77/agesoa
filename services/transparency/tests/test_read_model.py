@@ -271,6 +271,42 @@ def test_redelivery_does_not_duplicate_and_rebuild_reproduces_the_same_documents
     assert store.docs["public_stats"]["summary"]["log_length"] == 1
 
 
+def _alembic(schema: str, action: str, revision: str) -> None:
+    from alembic import command
+    from alembic.config import Config
+
+    config = Config(str(ALEMBIC_INI))
+    config.set_main_option("sqlalchemy.url", TEST_DATABASE_URL.replace("%", "%%"))
+    os.environ["DB_SEARCH_PATH"] = schema
+    try:
+        getattr(command, action)(config, revision)
+    finally:
+        os.environ.pop("DB_SEARCH_PATH", None)
+
+
+@db
+def test_rows_stored_under_the_old_event_names_are_renamed_and_rebuild_keeps_their_content(app_store):
+    client, store = app_store
+    feed(client)
+    sync(client)
+    before = {c: dict(d) for c, d in store.docs.items() if c != "public_stats"}
+    stats = store.docs["public_stats"]["summary"]["findings_by_status"]
+    schema = client.app.state.settings.db_search_path
+    # Back to the names stored before #150: the builders no longer recognise them and the content is lost.
+    _alembic(schema, "downgrade", "0003")
+    client.post("/internal/read-model/rebuild")
+    assert next(iter(store.docs["public_findings"].values()))["statement"] is None
+    # Migration 0004 renames them.
+    _alembic(schema, "upgrade", "head")
+    result = client.post("/internal/read-model/rebuild").json()
+    assert result["cleared"] == 5
+    after = {c: dict(d) for c, d in store.docs.items() if c != "public_stats"}
+    assert after == before
+    assert store.docs["public_stats"]["summary"]["findings_by_status"] == stats
+    finding = next(iter(after["public_findings"].values()))
+    assert finding["statement"] and finding["status"]
+
+
 @db
 def test_projection_runs_after_commit_without_explicit_sync(app_store):
     client, store = app_store
