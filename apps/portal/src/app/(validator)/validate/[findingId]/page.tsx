@@ -180,7 +180,8 @@ export default async function ValidateFindingPage({ params, searchParams }: { pa
               {t("decide.quorum", { outcome, a: f.quorum.approvals, r: f.quorum.rejections })}
             </span>
           </p>
-          <p className="muted small">{f.quorum.reason}</p>
+          {/* trust explains the quorum in English only; other languages show the rule for the outcome. */}
+          <p className="muted small">{lang === "en" ? f.quorum.reason : t(`decide.quorumHint.${f.quorum.outcome}`)}</p>
           {closed ? (
             <p className="callout" data-testid="decision-closed">
               {f.my_decision
