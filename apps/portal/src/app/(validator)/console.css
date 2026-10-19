@@ -400,6 +400,11 @@ a.button--secondary:hover {
   font-size: var(--ag-font-size-sm);
 }
 
+/* The quorum summary is a sentence; longer languages wrap it instead of widening the page at 360 px. */
+.quorum-line .badge {
+  white-space: normal;
+}
+
 .footnote {
   margin: 0;
   font-size: var(--ag-font-size-xs);

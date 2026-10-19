@@ -801,6 +801,8 @@ pre,
 /* --- Tables --- */
 
 .table-wrap {
+  /* Contains absolutely positioned children (sr-only header text) so they scroll with the table, not the page. */
+  position: relative;
   overflow-x: auto;
   background: var(--ag-color-bg-surface);
   border: 1px solid var(--ag-color-border-default);
