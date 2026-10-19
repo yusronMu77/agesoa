@@ -33,7 +33,7 @@ export function fromLocalInput(value: string): string | null {
   return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) ? `${value}:00${TZ_OFFSET}` : null;
 }
 
-const longDate = new Intl.DateTimeFormat("id-ID", {
+const longOptions: Intl.DateTimeFormatOptions = {
   timeZone: TZ,
   weekday: "short",
   day: "numeric",
@@ -42,11 +42,15 @@ const longDate = new Intl.DateTimeFormat("id-ID", {
   hour: "2-digit",
   minute: "2-digit",
   hourCycle: "h23",
-});
+};
+const longDates = {
+  id: new Intl.DateTimeFormat("id-ID", longOptions),
+  en: new Intl.DateTimeFormat("en-GB", longOptions),
+};
 
-/** "Sen, 5 Okt 2026 03.00 WIB" */
-export function formatWib(iso: string): string {
-  return `${longDate.format(new Date(iso)).replace(/,(?= \d{2}\.\d{2}$)/, "")} WIB`;
+/** "Sen, 5 Okt 2026 03.00 WIB" / "Mon, 5 Oct 2026 03:00 WIB" */
+export function formatWib(iso: string, lang: "id" | "en" = "id"): string {
+  return `${longDates[lang].format(new Date(iso)).replace(/,(?= \d{2}[.:]\d{2}$)/, "")} WIB`;
 }
 
 const dayFormats = {

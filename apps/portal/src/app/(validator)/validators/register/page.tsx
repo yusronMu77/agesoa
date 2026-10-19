@@ -178,7 +178,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Sea
               <div className="callout callout--ai callout--inline">
                 <p className="callout__title">
                   <Cpu aria-hidden size={18} strokeWidth={2} />
-                  {t("common.ai.result")} · Agen Peran
+                  {t("common.ai.result")} · {t("reg.aiSource")}
                 </p>
                 <p>{t("reg.aiNote")}</p>
               </div>

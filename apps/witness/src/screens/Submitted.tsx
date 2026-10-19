@@ -2,7 +2,7 @@
 
 import type { Report } from "../api";
 import { EvidenceBadge, Notice, RegionName } from "../components";
-import { evidenceKind, pick, T, t } from "../copy";
+import { evidenceKind, language, pick, T, t } from "../copy";
 import { formatWib } from "../fields";
 import { Icon } from "../icons";
 import { reportCodeOf } from "../reports";
@@ -65,7 +65,7 @@ export function Submitted({
           <Icon name="alert" size={20} />
           <div className="callout-body">
             <h2 id="tips-heading" className="callout-title">
-              {t("TXT-WIT-114", { tenggat: formatWib(deadline.deadline_at) })}
+              {t("TXT-WIT-114", { tenggat: formatWib(deadline.deadline_at, language()) })}
             </h2>
             <ul className="tips">
               {report.evidence_tips.map((tip) => (

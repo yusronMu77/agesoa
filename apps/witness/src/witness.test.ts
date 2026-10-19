@@ -93,6 +93,7 @@ describe("field values", () => {
     expect(fromLocalInput("2026-10-05T09:30")).toBe("2026-10-05T09:30:00+07:00");
     expect(fromLocalInput("09:30")).toBeNull();
     expect(formatWib("2026-10-07T03:00:00+07:00")).toBe("Rab, 7 Okt 2026 03.00 WIB");
+    expect(formatWib("2026-10-07T03:00:00+07:00", "en")).toBe("Wed, 7 Oct 2026 03:00 WIB");
   });
 
   test("list values use the pack's local words and map back to canonical ids", () => {

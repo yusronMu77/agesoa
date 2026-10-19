@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Report, WitnessQuestion } from "../api";
 import { ApiError } from "../api";
 import { AiTag, EmptyState, EvidenceBadge, Notice } from "../components";
-import { pick, t, T } from "../copy";
+import { language, pick, t, T } from "../copy";
 import { Icon } from "../icons";
 import type { Dictation } from "../dictation";
 import { appendDictated, dictationSupported, startDictation } from "../dictation";
@@ -33,7 +33,7 @@ function ReportStatus({ report }: { report: Report }) {
         {report.submitted_at && (
           <>
             <dt>{T["TXT-WIT-172"]}</dt>
-            <dd>{formatWib(report.submitted_at)}</dd>
+            <dd>{formatWib(report.submitted_at, language())}</dd>
           </>
         )}
         <dt>{T["TXT-WIT-116"]}</dt>
