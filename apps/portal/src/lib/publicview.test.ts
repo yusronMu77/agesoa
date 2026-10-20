@@ -12,6 +12,9 @@ import {
   isActiveCase,
   middleHash,
   parseEvidenceFilter,
+  QUORUM_APPROVALS,
+  quorumFinding,
+  quorumOf,
   rankDistricts,
   rankMostReported,
   shortDistrictName,
@@ -308,5 +311,36 @@ describe("domain packs", () => {
     expect(loaded.map((p) => p.id)).toEqual(["mbg"]);
     expect(urls).toHaveLength(2);
     expect(urls[0]).toEndWith("/v1/domain-packs/mbg");
+  });
+});
+
+describe("quorumOf", () => {
+  const base = { validation: null, validation_state: null, validation_progress: null } as const;
+  test("nothing published", () => {
+    expect(quorumOf(null).state).toBe("none");
+    expect(quorumOf({ ...base }).approvals).toBe(0);
+  });
+  test("open progress as counts", () => {
+    const q = quorumOf({
+      ...base,
+      validation_state: "needs_evidence",
+      validation_progress: { state: "needs_evidence", approvals: 1, evidence_requests: 2, deadline_at: "2026-10-21T00:00:00Z", updated_at: "x" },
+    });
+    expect(q).toEqual({ state: "needs_evidence", approvals: 1, needed: QUORUM_APPROVALS, evidenceRequests: 2, deadline: "2026-10-21T00:00:00Z" });
+  });
+  test("final validation wins over progress", () => {
+    const q = quorumOf({
+      ...base,
+      validation: { outcome: "approved", completed_at: "x", decisions: [{ tier: "high", decision: "approve" }, { tier: "medium", decision: "approve" }] },
+      validation_progress: { state: "awaiting_decisions", approvals: 1, evidence_requests: 0, deadline_at: null, updated_at: "x" },
+    });
+    expect(q.state).toBe("approved");
+    expect(q.approvals).toBe(2);
+  });
+  test("quorumFinding prefers final, then open progress", () => {
+    const a = { finding_id: "a", validation: null, validation_progress: null };
+    const b = { finding_id: "b", validation: null, validation_progress: { state: "awaiting_decisions" as const, approvals: 1, evidence_requests: 0, deadline_at: null, updated_at: "x" } };
+    expect(quorumFinding([a, b])?.finding_id).toBe("b");
+    expect(quorumFinding([])).toBeNull();
   });
 });

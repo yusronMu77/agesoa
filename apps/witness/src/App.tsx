@@ -10,15 +10,13 @@ import { useEffect, useMemo, useState } from "react";
 import type { PackDocument, PackSummary, Report, WitnessQuestion } from "./api";
 import { ApiError, CaseAuditClient, IngestionClient } from "./api";
 import type { Tab } from "./components";
-import { AppHeader, Notice, SimulationBand, Stepper, TabBar } from "./components";
+import { AppHeader, Notice, QuestionsBanner, SimulationBand, Stepper, TabBar } from "./components";
 import type { WitnessConfig } from "./config";
 import type { Language } from "./copy";
-import { language, setLanguage, T, t } from "./copy";
+import { language, setLanguage, T } from "./copy";
 import type { Capability } from "./device";
 import { permissionStatus } from "./device";
-import { Icon } from "./icons";
-import { saveLanguage, suggestedLanguage } from "./language";
-import { saveIssueType, savedIssueType } from "./issueType";
+import { savedPreference, savedRegion, saveLanguage, saveRegion, suggestedLanguage, uiLanguage } from "./language";
 import { lastReportId, rememberReport, reportIds } from "./reports";
 import { Capture } from "./screens/Capture";
 import { DraftReview } from "./screens/DraftReview";
@@ -60,7 +58,7 @@ export function messageFor(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** The default issue type first, then the others by id (stable order for the picker). */
+/** The default issue type first, then the others by id (stable order). */
 export function orderPacks(list: PackSummary[], first: string): PackSummary[] {
   return [...list].sort((a, b) => Number(b.id === first) - Number(a.id === first) || a.id.localeCompare(b.id));
 }
@@ -71,9 +69,12 @@ export default function App({ config }: { config: WitnessConfig }) {
   const [screen, setScreen] = useState<Screen>({ name: "capture" });
   const [capture, setCapture] = useState<CaptureState>(EMPTY_CAPTURE);
   const [pack, setPack] = useState<PackDocument | null>(null);
-  // Issue type (domain pack) of the report being made, and every loaded pack (SCR-008 shows reports of any type).
-  const [domain, setDomain] = useState(() => savedIssueType() ?? config.domain);
-  const [packs, setPacks] = useState<PackSummary[] | null>(null);
+  // The general form could not be loaded (TXT-WIT-191); "Coba lagi" bumps the attempt to load it again.
+  const [packFailed, setPackFailed] = useState(false);
+  const [packAttempt, setPackAttempt] = useState(0);
+  // Every report starts on the general pack (SCR-004 general form); every loaded pack labels SCR-008 rows, which
+  // may come from reports of other packs made by earlier builds.
+  const domain = config.domain;
   const [packDocs, setPackDocs] = useState<Record<string, PackDocument>>({});
   const [explained, setExplained] = useState<Capability[]>([]);
   const [pending, setPending] = useState<PendingPermission | null>(null);
@@ -84,6 +85,9 @@ export default function App({ config }: { config: WitnessConfig }) {
   const [tab, setTab] = useState<Tab>("report");
   const [helpView, setHelpView] = useState<"help" | "language">("help");
   const [lang, setLang] = useState<Language>(language);
+  const [preference, setPreference] = useState(() => savedPreference());
+  const [region, setRegion] = useState(() => savedRegion());
+  const [regions, setRegions] = useState<string[]>([]);
   const [myReports, setMyReports] = useState<string[]>(() => reportIds());
 
   // Questions appear after the report has been grouped into a case, so look again while the app is open. An
@@ -108,39 +112,37 @@ export default function App({ config }: { config: WitnessConfig }) {
     setQuestions((list) => list.filter((q) => q.question_id !== question.question_id));
   };
 
-  // The issue types on offer; the configured default first. Without the list the app keeps working on the default.
+  // The labels of every pack for SCR-008; without the list the app keeps working on the general pack.
   useEffect(() => {
     client.packs().then(
       (list) => {
-        const sorted = orderPacks(list, config.domain);
-        setPacks(sorted);
-        setDomain((current) => (sorted.some((p) => p.id === current) || sorted.length === 0 ? current : sorted[0].id));
-        for (const summary of sorted) {
+        for (const summary of orderPacks(list, config.domain)) {
           client.pack(summary.id).then(
             (doc) => setPackDocs((docs) => ({ ...docs, [doc.id]: doc })),
             () => undefined,
           );
         }
       },
-      () => setPacks(null),
+      () => undefined,
     );
   }, [client, config.domain]);
 
   useEffect(() => {
     let live = true;
     setPack(null);
+    setPackFailed(false);
     client.pack(domain).then(
       (doc) => {
         if (!live) return;
         setPack(doc);
         setPackDocs((docs) => ({ ...docs, [doc.id]: doc }));
       },
-      (err) => live && setError(messageFor(err)),
+      () => live && setPackFailed(true),
     );
     return () => {
       live = false;
     };
-  }, [client, domain]);
+  }, [client, domain, packAttempt]);
 
   const update = (change: Partial<CaptureState>) => setCapture((current) => ({ ...current, ...change }));
 
@@ -222,53 +224,43 @@ export default function App({ config }: { config: WitnessConfig }) {
     window.scrollTo?.({ top: 0 });
   };
 
-  const changeLanguage = (next: Language) => {
-    saveLanguage(next);
+  const openLanguage = () => {
+    setHelpView("language");
+    // Region names for SCR-009 come from the district list; without it only a saved name is offered.
+    if (regions.length === 0) {
+      client.districts().then(
+        (list) => setRegions([...new Set(list.map((d) => d.regency_name))].sort()),
+        () => undefined,
+      );
+    }
+  };
+
+  const changeLanguage = (code: string, name: string | null) => {
+    const next = uiLanguage(code);
+    saveLanguage(code);
+    saveRegion(name);
+    setPreference(code);
+    setRegion(name);
     setLanguage(next);
     setLang(next);
     setHelpView("help");
   };
 
   const reporting = tab === "report";
-  // SCR-004 works with the pack of its own report; switching the issue type there must not unmount the screen.
+  // SCR-004 works with the pack of its own report.
   const draftPack =
     screen.name === "draft" ? (packDocs[screen.report.domain] ?? (pack?.id === screen.report.domain ? pack : null)) : null;
-  const loadPack = (id: string): Promise<PackDocument> =>
-    packDocs[id]
-      ? Promise.resolve(packDocs[id])
-      : client.pack(id).then((doc) => {
-          setPackDocs((docs) => ({ ...docs, [doc.id]: doc }));
-          return doc;
-        });
   // Focus steps (link, draft review, language form) hide the tab bar so the screen's own actions stay in reach.
   const showTabs = !(reporting && (screen.name === "social" || screen.name === "draft")) && !(tab === "help" && helpView === "language");
-  const showBanner =
-    questions.length > 0 && ((reporting && (screen.name === "capture" || screen.name === "submitted")) || tab === "reports");
+  const showBanner = questions.length > 0 && reporting && (screen.name === "capture" || screen.name === "submitted");
+  const banner = <QuestionsBanner count={questions.length} onOpen={openQuestions} />;
 
   return (
     <div className={showTabs ? "app has-tabs" : "app"} lang={lang}>
       {config.demoMode && <SimulationBand />}
       <AppHeader />
-      {reporting && <Stepper step={STEP[screen.name]} />}
-
-      {showBanner && (
-        <button
-          type="button"
-          className="banner"
-          data-testid="audit-questions-banner"
-          onClick={openQuestions}
-        >
-          <Icon name="message" size={20} />
-          <span className="banner-text">
-            <span className="banner-title">{t("TXT-WIT-147", { jumlah: questions.length })}</span>
-            <span className="banner-sep" aria-hidden="true">
-              {" · "}
-            </span>
-            <span className="banner-action">{T["TXT-WIT-148"]}</span>
-          </span>
-          <Icon name="chevronRight" size={20} />
-        </button>
-      )}
+      {reporting && screen.name !== "social" && <Stepper step={STEP[screen.name]} />}
+      {showBanner && <div className="banner-slot">{banner}</div>}
 
       {reporting && screen.name === "capture" && (
         <Capture
@@ -280,6 +272,8 @@ export default function App({ config }: { config: WitnessConfig }) {
           onContinue={() => void toDraft()}
           busy={busy || !pack}
           error={error}
+          packFailed={packFailed}
+          onRetryPack={() => setPackAttempt((n) => n + 1)}
         />
       )}
       {reporting && screen.name === "social" && (
@@ -297,14 +291,9 @@ export default function App({ config }: { config: WitnessConfig }) {
         <DraftReview
           client={client}
           pack={draftPack}
-          packs={packs}
-          loadPack={loadPack}
-          onIssueType={(id) => {
-            saveIssueType(id);
-            setDomain(id);
-          }}
           initial={screen.report}
           intakeFailed={screen.intakeFailed}
+          items={capture.items}
           onSubmitted={(report) => {
             rememberReport(report.id);
             setMyReports(reportIds());
@@ -315,7 +304,7 @@ export default function App({ config }: { config: WitnessConfig }) {
       {reporting && screen.name === "submitted" && (
         <Submitted report={screen.report} onNew={restart} onMyReports={() => selectTab("reports")} />
       )}
-      {reporting && !pack && error && screen.name !== "capture" && <Notice tone="error">{error}</Notice>}
+      {reporting && packFailed && screen.name !== "capture" && <Notice tone="error">{T["TXT-WIT-191"]}</Notice>}
 
       {tab === "reports" && (
         <MyReports
@@ -323,20 +312,24 @@ export default function App({ config }: { config: WitnessConfig }) {
           ids={myReports}
           packs={packDocs}
           onNew={() => (screen.name === "submitted" ? restart() : selectTab("report"))}
+          waiting={questions.length}
+          banner={questions.length > 0 ? banner : undefined}
         />
       )}
       {tab === "questions" && <Questions questions={questions} report={lastReport} onAnswer={answer} />}
-      {tab === "help" && helpView === "help" && <Help onLanguage={() => setHelpView("language")} />}
+      {tab === "help" && helpView === "help" && <Help onLanguage={openLanguage} />}
       {tab === "help" && helpView === "language" && (
         <LanguageRegion
-          current={lang}
+          current={preference}
+          regions={regions}
+          region={region}
           suggested={suggestedLanguage(typeof navigator === "undefined" ? [] : navigator.languages ?? [])}
           onSave={changeLanguage}
           onCancel={() => setHelpView("help")}
         />
       )}
 
-      {showTabs && <TabBar active={tab} onSelect={selectTab} waiting={questions.length} />}
+      {showTabs && <TabBar active={tab} onSelect={selectTab} />}
 
       {pending && (
         <PermissionExplainer

@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agesoa:schema:event:validation.updated:v1",
+  "title": "Validation updated",
+  "description": "Progress of an open validation: published when trust opens it and after every validator decision that does not close it. validation.completed stays the only final outcome.",
+  "allOf": [
+    {
+      "$ref": "urn:agesoa:schema:cloudevent:v1"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "agesoa.validation.updated"
+    },
+    "dataschema": {
+      "const": "urn:agesoa:schema:event:validation.updated:v1"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "finding_id",
+        "case_id",
+        "state",
+        "approvals",
+        "rejections",
+        "evidence_requests",
+        "deadline_at",
+        "updated_at",
+        "synthetic"
+      ],
+      "properties": {
+        "finding_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "case_id": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/id"
+        },
+        "state": {
+          "enum": [
+            "awaiting_decisions",
+            "needs_evidence"
+          ],
+          "description": "needs_evidence while at least one counted validator's current decision asks for more evidence; never a verdict and never counted toward quorum."
+        },
+        "approvals": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Counted approvals so far."
+        },
+        "rejections": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Counted rejections so far (one closes the validation, so this is 0 while open)."
+        },
+        "evidence_requests": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Counted validators whose current decision is needs_evidence."
+        },
+        "deadline_at": {
+          "anyOf": [
+            {
+              "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Decision deadline from the domain pack's validation.decision_window_hours; null when the pack sets none."
+        },
+        "updated_at": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/timestamp"
+        },
+        "synthetic": {
+          "$ref": "urn:agesoa:schema:cloudevent:v1#/$defs/synthetic"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

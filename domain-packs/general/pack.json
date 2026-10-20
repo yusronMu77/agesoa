@@ -8,41 +8,45 @@
     "id": "Laporan tentang layanan publik, infrastruktur, lingkungan, dan masalah warga lainnya yang belum memiliki formulir khusus."
   },
   "categories": [
-    { "id": "infrastructure", "label": { "en": "Roads and public facilities", "id": "Jalan dan fasilitas umum" } },
+    { "id": "infrastructure", "label": { "en": "Roads and infrastructure", "id": "Jalan dan infrastruktur" } },
     { "id": "public_services", "label": { "en": "Public services", "id": "Pelayanan publik" } },
     { "id": "environment", "label": { "en": "Environment and sanitation", "id": "Lingkungan dan kebersihan" } },
     { "id": "health", "label": { "en": "Health services", "id": "Layanan kesehatan" } },
     { "id": "education", "label": { "en": "Education services", "id": "Layanan pendidikan" } },
     { "id": "other", "label": { "en": "Other / unsure", "id": "Lainnya / belum tahu" } }
   ],
+  "category_hint": { "en": "Choose Other / unsure if nothing fits yet.", "id": "Pilih Lainnya / belum tahu jika belum sesuai." },
   "report_fields": [
     {
       "id": "place", "type": "string", "required": false,
       "label": { "en": "Incident location", "id": "Lokasi kejadian" },
-      "hint": { "en": "A public place or landmark; do not enter a private home address.", "id": "Nama tempat umum atau patokan. Tidak perlu alamat rumah pribadi." },
+      "hint": { "en": "No need for a private home address.", "id": "Tidak perlu alamat rumah pribadi." },
+      "placeholder": { "en": "Place name or landmark", "id": "Nama tempat atau patokan" },
       "sources": ["text", "voice", "photo", "shared_post"]
     },
     {
       "id": "occurred_at", "type": "datetime", "required": false,
       "label": { "en": "Incident time (WIB)", "id": "Waktu kejadian (WIB)" },
-      "hint": { "en": "Leave blank if you do not know the time.", "id": "Boleh dikosongkan jika waktunya belum diketahui." },
+      "hint": { "en": "Leave blank if you do not know yet.", "id": "Boleh dikosongkan jika belum tahu." },
+      "placeholder": { "en": "Date and time of the incident", "id": "Tanggal dan waktu kejadian" },
       "sources": ["text", "voice", "shared_post"]
     },
     {
       "id": "impact", "type": "string", "required": false,
       "label": { "en": "Observed impact", "id": "Dampak yang Anda lihat" },
-      "hint": { "en": "Describe what was affected without naming individuals.", "id": "Ceritakan apa yang terganggu, tanpa menyebut nama orang." },
+      "placeholder": { "en": "What was affected?", "id": "Apa yang terganggu?" },
       "sources": ["text", "voice", "photo", "shared_post"]
     },
     {
       "id": "affected_count", "type": "integer", "required": false,
       "label": { "en": "People affected", "id": "Jumlah orang terdampak" },
-      "hint": { "en": "Leave blank if unknown; do not guess.", "id": "Kosongkan jika belum diketahui. Tidak perlu menebak." },
+      "placeholder": { "en": "May be left blank", "id": "Boleh dikosongkan" },
       "sources": ["text", "voice", "shared_post"]
     }
   ],
   "rules": [],
   "evidence_deadline": null,
+  "validation": { "decision_window_hours": 120 },
   "evidence_ladder": [
     { "status": "proven", "evidence": [{ "en": "Verified evidence and human validator agreement", "id": "Bukti terverifikasi dan kesepakatan validator manusia" }] },
     { "status": "supported", "evidence": [{ "en": "Corroborating documents, photos or independent witnesses", "id": "Dokumen, foto, atau kesaksian independen yang saling mendukung" }] },

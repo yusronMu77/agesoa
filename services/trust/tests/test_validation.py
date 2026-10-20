@@ -226,3 +226,144 @@ def test_completed_validation_names_roles_and_regency_not_people(client):
         ("Journalist", "Kabupaten Sukamaju (fictional)"),
         ("Nutritionist", "Kabupaten Sukamaju (fictional)"),
     ]
+
+
+# --- needs_evidence ("Butuh bukti") ------------------------------------------------------------------------
+
+
+def test_asking_for_evidence_is_logged_but_never_counted(client):
+    open_finding(client)
+    asked = decide(client, JOURNALIST, "needs_evidence", note="Lab result of the food sample is missing.")
+    assert asked.status_code == 201, asked.text
+    body = asked.json()
+    assert body["decision"] == "needs_evidence" and body["counted"] is True
+    assert body["quorum_reached"] is False and body["outcome"] is None and body["state"] == "needs_evidence"
+    assert body["quorum"]["approvals"] == 0 and body["quorum"]["evidence_requests"] == 1
+
+    detail = client.get("/v1/validation-requests/F-1", headers=JOURNALIST).json()
+    assert detail["state"] == "needs_evidence" and detail["my_decision"] == "needs_evidence"
+    assert detail["outcome"] is None
+    (listed,) = client.get("/v1/validation-requests", headers=NUTRITIONIST).json()
+    assert listed["state"] == "needs_evidence" and listed["evidence_requests"] == 1
+    assert listed["my_decision"] is None
+
+    (vote,) = (d["data"] for d in sent(client, "decision.recorded"))
+    assert vote["action"] == "finding.evidence_requested" and vote["status_label"] == "supported"
+    assert vote["reason"] == (
+        "Validator asked for more evidence before deciding (not counted toward quorum). "
+        "Note: Lab result of the food sample is missing."
+    )
+    assert sent(client, "validation.completed") == []
+    progress = sent(client, "validation.updated")
+    for event in progress:
+        validate_event(event)
+    assert [p["data"]["state"] for p in progress] == ["awaiting_decisions", "needs_evidence"]
+    assert "validator_ref" not in json.dumps(progress)
+
+
+def test_a_later_approval_replaces_the_request_for_evidence(client):
+    open_finding(client)
+    decide(client, JOURNALIST, "needs_evidence", note="Need the kitchen log.")
+    assert decide(client, JOURNALIST, "needs_evidence", note="Again.").status_code == 409
+    replaced = decide(client, JOURNALIST, "approve", note="Kitchen log received.").json()
+    assert replaced["replaced"] is True and replaced["state"] == "awaiting_decisions"
+    assert replaced["quorum"] == {
+        "outcome": "pending",
+        "reason": replaced["quorum"]["reason"],
+        "approvals": 1,
+        "rejections": 0,
+        "evidence_requests": 0,
+    }
+    assert decide(client, JOURNALIST, "reject").status_code == 409  # approve/reject are final
+    assert decide(client, NUTRITIONIST).json()["outcome"] == "approved"
+    actions = [d["data"]["action"] for d in sent(client, "decision.recorded")]
+    assert actions == [
+        "finding.evidence_requested",
+        "finding.approved",
+        "finding.approved",
+        "finding.validated",
+    ]
+    assert (
+        "replacing their request for more evidence" in sent(client, "decision.recorded")[1]["data"]["reason"]
+    )
+    (done,) = sent(client, "validation.completed")
+    assert [d["decision"] for d in done["data"]["decisions"]] == ["approve", "approve"]
+
+
+def test_an_outstanding_evidence_request_does_not_block_or_join_the_outcome(client):
+    open_finding(client)
+    decide(client, AGENCY_STAFF, "needs_evidence", note="Need the delivery note.", finding_id="F-1")
+    # the agency is named in the finding: its staff is refused before anything is recorded
+    assert sent(client, "decision.recorded") == []
+    open_finding(client, "F-2", parties_mentioned=[])
+    assert (
+        decide(client, AGENCY_STAFF, "needs_evidence", note="Need the note.", finding_id="F-2").status_code
+        == 201
+    )
+    decide(client, JOURNALIST, finding_id="F-2")
+    assert decide(client, NUTRITIONIST, finding_id="F-2").json()["outcome"] == "approved"
+    (done,) = sent(client, "validation.completed")
+    validate_event(done)
+    assert [d["decision"] for d in done["data"]["decisions"]] == ["approve", "approve"]
+
+
+def test_asking_for_evidence_needs_a_note(client):
+    open_finding(client)
+    assert decide(client, JOURNALIST, "needs_evidence").status_code == 422
+    assert decide(client, JOURNALIST, "needs_evidence", note="  ").status_code == 422
+    assert sent(client, "decision.recorded") == []
+
+
+# --- deadline (Tenggat) -------------------------------------------------------------------------------------
+
+
+def open_at(client, finding_id, time, **changes):
+    event = finding(finding_id, **changes)
+    event["time"] = time
+    assert client.post("/events/finding.ready_for_validation", json=push_envelope(event)).status_code == 204
+
+
+def test_queue_is_sorted_by_the_pack_deadline(client):
+    open_at(client, "F-LATE", "2026-10-14T00:00:00Z")  # mbg: 72 h -> 2026-10-17
+    open_at(client, "F-SOON", "2026-10-13T00:00:00Z")
+    open_at(client, "F-GENERAL", "2026-10-10T00:00:00Z", domain="general")  # 120 h -> 2026-10-15
+    open_at(client, "F-NONE", "2026-10-01T00:00:00Z", domain="unknown-pack")  # no pack: no deadline
+    listed = client.get("/v1/validation-requests", headers=JOURNALIST).json()
+    assert [(r["finding_id"], r["deadline_at"]) for r in listed] == [
+        ("F-GENERAL", "2026-10-15T00:00:00Z"),
+        ("F-SOON", "2026-10-16T00:00:00Z"),
+        ("F-LATE", "2026-10-17T00:00:00Z"),
+        ("F-NONE", None),
+    ]
+    detail = client.get("/v1/validation-requests/F-SOON", headers=JOURNALIST).json()
+    assert detail["deadline_at"] == "2026-10-16T00:00:00Z"
+    client.portal.call(client.app.state.outbox.dispatch)  # what the sweep does within a minute
+    opened = {e["data"]["finding_id"]: e["data"] for e in sent(client, "validation.updated")}
+    assert opened["F-SOON"]["deadline_at"] == "2026-10-16T00:00:00Z"
+    assert opened["F-SOON"]["state"] == "awaiting_decisions"
+    assert opened["F-NONE"]["deadline_at"] is None
+
+
+def test_deadline_counts_from_the_ready_time_in_utc(client):
+    open_at(client, "F-1", "2026-10-14T10:00:00+07:00")
+    detail = client.get("/v1/validation-requests/F-1", headers=JOURNALIST).json()
+    assert detail["deadline_at"] == "2026-10-17T03:00:00Z"
+
+
+def test_a_naive_ready_time_never_opens_a_validation(client):
+    event = finding("F-NAIVE")
+    event["time"] = "2026-10-14T10:00:00"
+    assert client.post("/events/finding.ready_for_validation", json=push_envelope(event)).status_code == 400
+    assert client.get("/v1/validation-requests/F-NAIVE", headers=JOURNALIST).status_code == 404
+
+
+def test_opening_a_validation_publishes_its_progress_without_waiting_for_the_sweep(client):
+    open_finding(client)
+    client.portal.call(client.app.state.outbox_flush.wait_idle)  # no sweep, no API request
+    (opened,) = sent(client, "validation.updated")
+    validate_event(opened)
+    assert opened["data"]["state"] == "awaiting_decisions" and opened["data"]["deadline_at"]
+    # a redelivered finding opens nothing new and publishes nothing new
+    client.post("/events/finding.ready_for_validation", json=push_envelope(finding()))
+    client.portal.call(client.app.state.outbox_flush.wait_idle)
+    assert len(sent(client, "validation.updated")) == 1

@@ -47,6 +47,8 @@ export interface PortalConfig {
   /** Base URL of the Firestore documents of the public read model (read-only for clients). */
   readModelUrl: string;
   auth: AuthConfig;
+  /** Public URL of the Witness app ("Mulai melapor" on the About page); null when not configured. */
+  witnessUrl?: string | null;
 }
 
 export class ConfigError extends Error {
@@ -125,5 +127,8 @@ export function loadConfig(env: Env = process.env): PortalConfig {
     emulatorUrl: emulatorRaw ? parseServiceUrl("FIREBASE_AUTH_EMULATOR_URL", emulatorRaw) : null,
   };
 
-  return { appEnv, demoMode, release, serviceUrls, readModelUrl, auth };
+  const witnessRaw = read(env, "WITNESS_URL");
+  const witnessUrl = witnessRaw ? parseServiceUrl("WITNESS_URL", witnessRaw) : null;
+
+  return { appEnv, demoMode, release, serviceUrls, readModelUrl, auth, witnessUrl };
 }

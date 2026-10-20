@@ -1,10 +1,12 @@
 import { TriangleAlert } from "lucide-react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { ConfirmSubmit } from "@/components/console/ConfirmSubmit";
+import { ConsoleContext } from "@/components/console/ConsoleContext";
+import { OpsConsole } from "@/components/console/Consoles";
 import { KpiTiles } from "@/components/console/KpiTiles";
-import { PendingButton } from "@/components/console/PendingButton";
 import { loadConfig } from "@/lib/config";
-import { opsTotals, recentEvents } from "@/lib/console-view";
+import { formatClock, opsTotals, recentEvents } from "@/lib/console-view";
 import { formatDateTime, formatNumber } from "@/lib/i18n/core";
 import { getT } from "@/lib/i18n/server";
 import { AGENTS, resetDemo, serviceEvents } from "@/lib/ops";
@@ -24,16 +26,18 @@ async function runReset(formData: FormData) {
   "use server";
   const token = await sessionToken();
   if (!token) redirect("/login?next=/ops");
-  if (formData.get("confirm") !== "on") redirect("/ops?reset=unconfirmed");
+  // Only the confirm button of the dialog (PRV-reset-demo) sends `confirm`; a direct submit is refused.
+  if (formData.get("confirm") !== "on") redirect("/ops?reset=unconfirmed#demo");
   const report = await resetDemo(loadConfig(), token);
   const failed = report.steps.filter((s) => !s.ok).map((s) => `${s.service}: ${s.detail}`);
   redirect(
     `/ops?reset=${report.ok ? "ok" : "failed"}&seconds=${report.seconds}` +
-      (failed.length ? `&error=${encodeURIComponent(failed.join("; "))}` : ""),
+      (failed.length ? `&error=${encodeURIComponent(failed.join("; "))}` : "") +
+      "#demo",
   );
 }
 
-/** SCR-090, tab "Machine": what the agents and services are doing. Read-only: no write to any case content. */
+/** SCR-090 machine status: services, events, outbox and the demo mode. Read-only except the demo reset. */
 export default async function OpsPage({ searchParams }: { searchParams: SearchParams }) {
   const token = await sessionToken();
   if (!token) redirect("/login?next=/ops");
@@ -46,22 +50,41 @@ export default async function OpsPage({ searchParams }: { searchParams: SearchPa
 
   const data = events.map((e) => ({ service: e.service as string, data: e.result.ok ? e.result.data : null }));
   const totals = opsTotals(data.map((d) => d.data));
-  const recent = recentEvents(data);
+  const recent = recentEvents(data, 4);
   const ready = status.services.filter((s) => s.state === "ready").length;
-  const checked = formatDateTime(lang, status.checked_at);
+  const slowest = status.services.reduce((max, s) => Math.max(max, s.latency_ms), 0);
+  const checkedTime = formatClock(lang, status.checked_at);
   const n = (value: number) => formatNumber(lang, value);
+  const overallTone = status.overall === "ok" ? "badge--ok" : status.overall === "down" ? "badge--error" : "badge--warn";
+
+  const context = (
+    <ConsoleContext
+      action="/ops"
+      label={t("console.context.label")}
+      applyLabel={t("console.context.apply")}
+      hint={t("console.context.hint")}
+      selects={[
+        {
+          name: "env",
+          label: t("console.context.environment"),
+          value: config.appEnv,
+          options: [{ value: config.appEnv, label: config.appEnv }],
+        },
+      ]}
+    />
+  );
 
   return (
-    <>
-      <div className="page-intro">
-        <h1>{t("ops.title")}</h1>
-      </div>
-      <nav aria-label={t("ops.tabs")} className="tabs">
-        <span className="tab tab--active" aria-current="page">
-          {t("ops.tab.machine")}
+    <OpsConsole section="machine" context={context}>
+      <div className="page-intro page-intro--split">
+        <div>
+          <h1>{t("ops.title")}</h1>
+          <p>{t("ops.intro")}</p>
+        </div>
+        <span className={`badge ${overallTone}`} data-testid="overall-status">
+          {t(`ops.overall.${status.overall}`)}
         </span>
-      </nav>
-      <p className="muted">{t("ops.intro", { at: checked })}</p>
+      </div>
       {denied ? (
         <p className="callout callout--error" data-testid="not-operator">
           {t("ops.notOperator")}
@@ -74,23 +97,131 @@ export default async function OpsPage({ searchParams }: { searchParams: SearchPa
           {
             label: t("ops.kpi.ready"),
             value: t("ops.kpi.readyValue", { n: ready, total: status.services.length }),
-            sub: t("ops.kpi.readySub", { at: checked }),
+            sub: t("ops.kpi.readySub", { at: checkedTime }),
           },
           {
             label: t("ops.kpi.published"),
             value: n(totals.published),
-            sub: t("ops.kpi.publishedSub", { n: totals.reporting }),
+            sub: t("ops.kpi.publishedSub", { n: n(totals.failing) }),
           },
-          { label: t("ops.kpi.pending"), value: n(totals.pending), sub: t("ops.kpi.pendingSub", { n: n(totals.failing) }) },
-          { label: t("ops.kpi.processed"), value: n(totals.processed), sub: t("ops.kpi.processedSub") },
+          { label: t("ops.kpi.pending"), value: n(totals.pending), sub: t("ops.kpi.pendingSub", { n: totals.reporting }) },
+          { label: t("ops.kpi.latency"), value: `${slowest} ms`, sub: t("ops.kpi.latencySub") },
         ]}
       />
 
-      <section aria-labelledby="services-heading" className="stack stack--tight ops-section">
-        <h2 id="services-heading" className="section-title">
-          {t("ops.services")}
+      <div className="ops-grid">
+        <section className="card ops-card" aria-labelledby="services-heading">
+          <h2 id="services-heading">{t("ops.services")}</h2>
+          <ul className="service-list">
+            {status.services.map((s) => (
+              <li key={s.service} className="service-row">
+                <span className="service-row__text">
+                  <span className="service-row__name">{s.service}</span>
+                  <span className="service-row__meta">
+                    {AGENTS[s.service].join(", ")} · {t("ops.rev", { rev: s.release ?? "—" })} · {s.latency_ms} ms
+                  </span>
+                </span>
+                <span className={`badge ${s.state === "ready" ? "badge--ok" : s.state === "down" ? "badge--error" : "badge--warn"}`}>
+                  {t(`ops.state.${s.state}`)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <div className="stack">
+          <section className="card ops-card" aria-labelledby="recent-heading">
+            <h2 id="recent-heading">{t("ops.recent")}</h2>
+            {recent.length > 0 ? (
+              <ul className="event-list" data-testid="ops-recent">
+                {recent.map((e, index) => (
+                  <li key={`${index}-${e.service}-${e.event_type}`}>
+                    <span className="event-list__type">{e.event_type.replace(/^agesoa\./, "")}</span>
+                    <time dateTime={e.at} title={formatDateTime(lang, e.at)}>
+                      {formatClock(lang, e.at, true)}
+                    </time>
+                    <span className="sr-only">
+                      {" "}
+                      · {e.service} · {t(`ops.dir.${e.direction}`)} · {e.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted">{t("ops.recentEmpty")}</p>
+            )}
+          </section>
+
+          <section aria-labelledby="demo-heading" className="card ops-card" id="demo" data-testid="demo-reset">
+            <div className="section-title">
+              <h2 id="demo-heading">{t("ops.demo")}</h2>
+              <span className="demo-switch">
+                <span className={`demo-switch__track${config.demoMode ? " demo-switch__track--on" : ""}`} aria-hidden="true">
+                  <span className="demo-switch__thumb" />
+                </span>
+                {config.demoMode ? t("ops.demoOn") : t("ops.demoOff")}
+              </span>
+            </div>
+            {reset === "ok" ? (
+              <div className="callout callout--success callout--inline" role="status" data-testid="reset-result">
+                <p className="callout__title">{t("ops.resetDoneTitle")}</p>
+                <p>{t("ops.resetDone", { s: String(seconds ?? "—") })}</p>
+              </div>
+            ) : reset === "failed" ? (
+              <p className="callout callout--error callout--inline" role="alert" data-testid="reset-result">
+                {t("ops.resetFailed", { s: String(seconds ?? "—"), error: typeof error === "string" ? error : t("ops.resetUnknown") })}
+              </p>
+            ) : reset === "unconfirmed" ? (
+              <p className="callout callout--error callout--inline" role="alert" data-testid="reset-result">
+                {t("ops.resetUnconfirmed")}
+              </p>
+            ) : null}
+            {config.demoMode ? (
+              <form action={runReset} className="ops-reset">
+                <p className="muted">{t("ops.demoMode")}</p>
+                <div className="callout callout--error callout--inline">
+                  <p className="callout__title">
+                    <TriangleAlert aria-hidden size={20} strokeWidth={2} />
+                    {t("ops.resetTitle")}
+                  </p>
+                  <p>{t("ops.resetBody")}</p>
+                </div>
+                <ConfirmSubmit
+                  className="button button--danger ops-reset__button"
+                  confirmClassName="button button--danger"
+                  testId="reset-button"
+                  confirmTestId="reset-confirm"
+                  confirmField={{ name: "confirm", value: "on" }}
+                  title={t("ops.resetDialog.title")}
+                  body={t("ops.resetDialog.body", { env: config.appEnv })}
+                  confirmLabel={t("ops.resetDialog.yes")}
+                  cancelLabel={t("decide.confirm.cancel")}
+                  pendingLabel={t("ops.resetting")}
+                >
+                  {t("ops.resetButton")}
+                </ConfirmSubmit>
+                <p className="footnote">
+                  {t("ops.resetScript")} <code>scripts/demo/reset_demo.py</code>.
+                </p>
+              </form>
+            ) : (
+              <p className="muted">{t("ops.demoOnly")}</p>
+            )}
+          </section>
+        </div>
+      </div>
+
+      <section aria-labelledby="outbox-heading" className="ops-section" id="outbox">
+        <h2 id="outbox-heading" className="section-title">
+          {t("ops.outbox")}
         </h2>
-        <div className="table-wrap" role="region" aria-labelledby="services-heading" tabIndex={0}>
+        {totals.reporting > 0 && totals.pending === 0 && totals.failing === 0 ? (
+          <div className="callout callout--inline" data-testid="outbox-empty">
+            <p className="callout__title">{t("ops.outboxEmptyTitle")}</p>
+            <p>{t("ops.outboxEmpty")}</p>
+          </div>
+        ) : null}
+        <div className="table-wrap" role="region" aria-labelledby="outbox-heading" tabIndex={0}>
           <table data-testid="ops-services">
             <thead>
               <tr>
@@ -138,68 +269,10 @@ export default async function OpsPage({ searchParams }: { searchParams: SearchPa
         </div>
       </section>
 
-      <div className="ops-grid">
-        <section className="card" aria-labelledby="recent-heading">
-            <h2 id="recent-heading">{t("ops.recent")}</h2>
-            {recent.length > 0 ? (
-              <ul className="event-list" data-testid="ops-recent">
-                {recent.map((e, index) => (
-                  <li key={`${index}-${e.service}-${e.event_type}`}>
-                    <code>{e.event_type.replace(/^agesoa\./, "")}</code>
-                    <time dateTime={e.at}>{formatDateTime(lang, e.at)}</time>
-                    <span className="event-list__meta">
-                      {e.service} · {t(`ops.dir.${e.direction}`)} · {e.status}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted">{t("ops.recentEmpty")}</p>
-            )}
-          </section>
-
-          <section aria-labelledby="demo-heading" className="card" data-testid="demo-reset">
-            <h2 id="demo-heading">{t("ops.demo")}</h2>
-            {reset === "ok" ? (
-              <p className="callout callout--success" role="status" data-testid="reset-result">
-                {t("ops.resetDone", { s: String(seconds ?? "—") })}
-              </p>
-            ) : reset === "failed" ? (
-              <p className="callout callout--error" role="alert" data-testid="reset-result">
-                {t("ops.resetFailed", { s: String(seconds ?? "—"), error: typeof error === "string" ? error : t("ops.resetUnknown") })}
-              </p>
-            ) : reset === "unconfirmed" ? (
-              <p className="callout callout--error" role="alert" data-testid="reset-result">
-                {t("ops.resetUnconfirmed")}
-              </p>
-            ) : null}
-            {config.demoMode ? (
-              <form action={runReset} className="form">
-                <p className="muted">{t("ops.demoMode")}</p>
-                <div className="callout callout--error callout--inline">
-                  <p className="callout__title">
-                    <TriangleAlert aria-hidden size={18} strokeWidth={2} />
-                    {t("ops.resetTitle")}
-                  </p>
-                  <p>
-                    {t("ops.resetBody")} <code>scripts/demo/reset_demo.py</code>.
-                  </p>
-                </div>
-                <label>
-                  <input type="checkbox" name="confirm" /> {t("ops.resetConfirm")}
-                </label>
-                <PendingButton pendingLabel={t("ops.resetting")} className="button button--danger" testId="reset-button">
-                  {t("ops.resetButton")}
-                </PendingButton>
-              </form>
-            ) : (
-              <p className="muted">{t("ops.demoOnly")}</p>
-            )}
-          </section>
-      </div>
-
-      <section aria-labelledby="types-heading">
-        <h2 id="types-heading">{t("ops.types")}</h2>
+      <section aria-labelledby="types-heading" className="ops-section" id="events">
+        <h2 id="types-heading" className="section-title">
+          {t("ops.types")}
+        </h2>
         <div className="table-wrap" role="region" aria-labelledby="types-heading" tabIndex={0}>
           <table data-testid="ops-event-types">
             <thead>
@@ -233,6 +306,6 @@ export default async function OpsPage({ searchParams }: { searchParams: SearchPa
           </table>
         </div>
       </section>
-    </>
+    </OpsConsole>
   );
 }

@@ -37,6 +37,21 @@ tested in `libs/pack-core`, so a pack can never carry a query.
   at least one language) so the portal can show it in the reader's language. The plain field stays required and
   is the source of truth; readers fall back to it and never machine-translate without a label. Adding the
   optional companion is not a breaking change (same `v1` files).
+- Text an institution writes about its own case (right of reply `body`, follow-up status `detail`) is shown
+  publicly as the institution's statement: labelled, never edited or translated. `follow_up.updated` `detail`
+  (optional, one line, max 160 characters) was added to `v1` as an optional field; consumers read it with a default.
+
+## Validation events (trust)
+
+- `validation.completed` is the only final outcome (`approved` | `rejected`); its `decisions` list only the
+  `approve` / `reject` votes. A validator's `needs_evidence` decision ("Butuh bukti") never counts toward quorum,
+  so it is not listed there and `validation.completed` stays `v1`.
+- `validation.updated` (new type, `v1`) carries the progress of an open validation for the public side: `state`
+  (`awaiting_decisions` | `needs_evidence`), counted approvals / rejections / evidence requests and `deadline_at`
+  (from the domain pack's optional `validation.decision_window_hours`, null without it). No validator or
+  organization reference.
+- Every vote is a `decision.recorded` (`v1`, unchanged): action `finding.approved`, `finding.rejected` or
+  `finding.evidence_requested`.
 
 ```powershell
 uv run pytest packages/contracts   # schemas valid, catalog consistent, examples valid

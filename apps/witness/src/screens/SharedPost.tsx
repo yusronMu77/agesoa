@@ -74,7 +74,7 @@ export function SharedPost({
           id="post-excerpt"
           rows={4}
           maxLength={1000}
-          placeholder={T["TXT-WIT-218"]}
+          placeholder={T["TXT-WIT-418"]}
           aria-describedby="post-excerpt-hint"
           value={excerpt}
           onChange={(event) => setExcerpt(event.target.value)}
@@ -92,10 +92,11 @@ export function SharedPost({
                 <img className="item-thumb" src={item.previewUrl} alt={`Screenshot ${index + 1}`} />
                 <span className="item-body">
                   <span className="item-name">{item.name}</span>
+                  <span className="item-meta">{T["TXT-WIT-295"]}</span>
                 </span>
                 <button
                   type="button"
-                  className="button ghost small"
+                  className="button ghost remove"
                   aria-label={`${T["TXT-WIT-016"]} screenshot ${index + 1}`}
                   onClick={() => setShots((list) => list.filter((s) => s.key !== item.key))}
                 >
@@ -105,8 +106,7 @@ export function SharedPost({
             ))}
           </ul>
         )}
-        <label className="button">
-          <Icon name="upload" />
+        <label className="button wide">
           {T["TXT-WIT-066"]}
           <input
             type="file"
@@ -121,12 +121,12 @@ export function SharedPost({
           />
         </label>
       </section>
-      <Notice tone="info" title={T["TXT-WIT-216"]}>
-        {T["TXT-WIT-217"]}
+      <Notice tone="info" title={T["TXT-WIT-416"]}>
+        {T["TXT-WIT-297"]}
       </Notice>
 
       <div className="actions">
-        <button type="button" className="button primary lg wide" onClick={save}>
+        <button type="button" className="button primary wide" onClick={save}>
           {T["TXT-WIT-067"]}
         </button>
         <button type="button" className="button ghost wide" onClick={onBack}>

@@ -1,12 +1,12 @@
 import { MapPinned } from "lucide-react";
 import type { Translate } from "@/lib/i18n/core";
-import { type Geometry, projectShapes, shade } from "@/lib/geo";
-import { heatLegend, shortDistrictName } from "@/lib/publicview";
+import { type Geometry, projectShapes } from "@/lib/geo";
+import { HEAT_STEPS, heatLevel, shortDistrictName } from "@/lib/publicview";
 import type { PublicDistrict } from "@/lib/readmodel";
 import { count } from "./text";
 
-const MAP_WIDTH = 640;
-const MAP_HEIGHT = 520;
+const MAP_WIDTH = 540;
+const MAP_HEIGHT = 430;
 
 /**
  * SCR-040 "Sebaran kasus": district heat map drawn from the read model's boundaries (no tiles, no third-party map
@@ -16,14 +16,12 @@ export function DistrictMap({
   t,
   districts,
   perDistrict,
-  max,
   unmapped,
   anySynthetic,
 }: {
   t: Translate;
   districts: PublicDistrict[];
   perDistrict: Map<string, number>;
-  max: number;
   unmapped: number;
   anySynthetic: boolean;
 }) {
@@ -34,7 +32,6 @@ export function DistrictMap({
   );
   const byCode = new Map(districts.map((d) => [d.district_code, d]));
   const regencies = [...new Set(districts.map((d) => d.regency_name))].join(", ");
-  const legend = heatLegend(max);
 
   return (
     <section className="card pub-map" aria-labelledby="map-heading">
@@ -65,7 +62,7 @@ export function DistrictMap({
             {shapes.map((s) => {
               const d = byCode.get(s.key)!;
               const n = perDistrict.get(s.key) ?? 0;
-              const level = shade(n, max);
+              const level = heatLevel(n);
               return (
                 <g key={s.key} data-testid="district" data-district={d.district_name} data-cases={n}>
                   <path d={s.path} className={`district district--${level}`}>
@@ -92,12 +89,16 @@ export function DistrictMap({
             })}
           </svg>
           <figcaption className="pub-legend">
-            <span className="muted small">{t("public.map.legend")}</span>
+            <span>{t("public.map.legend")}</span>
             <ul>
-              {legend.map((step) => (
+              {HEAT_STEPS.map((step) => (
                 <li key={step.level}>
                   <span className={`pub-legend__swatch district--${step.level}`} aria-hidden="true" />
-                  {step.from === step.to ? step.from : `${step.from}–${step.to}`}
+                  {step.to === null
+                    ? t("public.map.legend.6plus")
+                    : step.from === step.to
+                      ? step.from
+                      : `${step.from}–${step.to}`}
                 </li>
               ))}
             </ul>

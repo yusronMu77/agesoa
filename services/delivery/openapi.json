@@ -335,6 +335,102 @@
         }
       }
     },
+    "/v1/institutions/{organization_id}/subscription/pause": {
+      "post": {
+        "tags": [
+          "institutions"
+        ],
+        "summary": "Pause webhook delivery: new audit reports are held (not sent, not dropped, no attempt counted) until resumed; idempotent",
+        "operationId": "pause_subscription_v1_institutions__organization_id__subscription_pause_post",
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Organization Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No verified agency with this id administered by the caller"
+          },
+          "409": {
+            "description": "No active webhook subscription"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/institutions/{organization_id}/subscription/resume": {
+      "post": {
+        "tags": [
+          "institutions"
+        ],
+        "summary": "Resume webhook delivery: held deliveries are sent oldest first (normal signing and retries); idempotent",
+        "operationId": "resume_subscription_v1_institutions__organization_id__subscription_resume_post",
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Organization Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionResumed"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No verified agency with this id administered by the caller"
+          },
+          "409": {
+            "description": "No active webhook subscription"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/institutions/{organization_id}/api-key": {
       "post": {
         "tags": [
@@ -385,7 +481,7 @@
         "tags": [
           "institutions"
         ],
-        "summary": "Send a test_event to the subscribed webhook",
+        "summary": "Send a test_event to the subscribed webhook (also while paused: it checks the endpoint)",
         "operationId": "send_test_event_v1_institutions__organization_id__test_event_post",
         "parameters": [
           {
@@ -962,10 +1058,25 @@
             "type": "string",
             "enum": [
               "pending",
+              "held",
               "delivered",
               "failed"
             ],
-            "title": "Status"
+            "title": "Status",
+            "description": "held = waiting for the paused webhook to resume (no attempt made)"
+          },
+          "held_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Held At",
+            "description": "Set when the delivery was held by a pause; kept after it is released"
           },
           "internal_ticket": {
             "anyOf": [
@@ -998,6 +1109,7 @@
           "event",
           "case_id",
           "status",
+          "held_at",
           "internal_ticket",
           "created_at",
           "attempts"
@@ -1630,6 +1742,22 @@
             ],
             "title": "Status"
           },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail",
+            "description": "Optional short status detail in the institution's own words (e.g. 'Re-inspection scheduled'). One line; shown publicly next to the finding, labelled as the institution's statement and never edited. Blank = none.",
+            "examples": [
+              "Pemeriksaan ulang dijadwalkan"
+            ]
+          },
           "note": {
             "type": "string",
             "maxLength": 4000,
@@ -1714,6 +1842,27 @@
         ],
         "title": "SubscriptionRequest"
       },
+      "SubscriptionResumed": {
+        "properties": {
+          "subscription": {
+            "$ref": "#/components/schemas/SubscriptionView"
+          },
+          "released": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Released",
+            "description": "Delivery ids released, oldest first (sent in this order)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subscription",
+          "released"
+        ],
+        "title": "SubscriptionResumed"
+      },
       "SubscriptionView": {
         "properties": {
           "id": {
@@ -1754,6 +1903,42 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused",
+            "description": "Delivery paused by the agency: audit reports are held, not sent"
+          },
+          "paused_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paused At",
+            "description": "When the current pause started (null = not paused)"
+          },
+          "resumed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resumed At",
+            "description": "When delivery was last resumed"
+          },
+          "held_deliveries": {
+            "type": "integer",
+            "title": "Held Deliveries",
+            "description": "Deliveries waiting for resume (status held)"
           }
         },
         "type": "object",
@@ -1763,7 +1948,11 @@
           "region_code",
           "category",
           "active",
-          "created_at"
+          "created_at",
+          "paused",
+          "paused_at",
+          "resumed_at",
+          "held_deliveries"
         ],
         "title": "SubscriptionView"
       },

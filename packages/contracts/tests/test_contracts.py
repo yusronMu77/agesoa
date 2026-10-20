@@ -80,6 +80,23 @@ def test_report_event_accepts_older_payload_without_custom_fields():
     assert validate_event(event).type == "report.received"
 
 
+@pytest.mark.parametrize("detail", [None, "Re-inspection scheduled", "x" * 160])
+def test_follow_up_detail_is_optional_and_short(detail):
+    event = copy.deepcopy(load(EXAMPLES / "follow_up.updated.json"))
+    event["data"].pop("detail")
+    if detail is not None:
+        event["data"]["detail"] = detail
+    assert validate_event(event).type == "follow_up.updated"
+
+
+@pytest.mark.parametrize("detail", ["", "x" * 161, None])
+def test_follow_up_detail_is_checked(detail):
+    event = copy.deepcopy(load(EXAMPLES / "follow_up.updated.json"))
+    event["data"]["detail"] = detail
+    with pytest.raises(ContractError):
+        validate_event(event)
+
+
 def test_extra_envelope_attribute_is_rejected():
     event = copy.deepcopy(load(EXAMPLES / "case.updated.json"))
     event["reporter_name"] = "should never travel in an envelope"
@@ -145,3 +162,64 @@ def test_webhook_body_schema():
     body["case"]["root_causes"] = [{"statement": "x", "status": "certain", "evidence": []}]
     with pytest.raises(ContractError):
         validate_webhook_body(body)
+
+
+def test_validation_progress_carries_a_state_never_a_verdict():
+    event = copy.deepcopy(load(EXAMPLES / "validation.updated.json"))
+    event["data"]["state"] = "awaiting_decisions"
+    event["data"]["deadline_at"] = None  # a pack without validation.decision_window_hours
+    validate_event(event)
+    for verdict in ("approved", "rejected", "proven"):
+        event["data"]["state"] = verdict
+        with pytest.raises(ContractError, match="state"):
+            validate_event(event)
+
+
+def test_validation_deadline_needs_a_time_zone():
+    event = copy.deepcopy(load(EXAMPLES / "validation.updated.json"))
+    event["data"]["deadline_at"] = "2026-10-17T03:15:00"  # naive
+    with pytest.raises(ContractError, match="deadline_at"):
+        validate_event(event)
+
+
+def test_validation_progress_never_names_validators():
+    event = copy.deepcopy(load(EXAMPLES / "validation.updated.json"))
+    event["data"]["validator_ref"] = "V-0001"
+    with pytest.raises(ContractError):
+        validate_event(event)
+
+
+def test_completed_validation_lists_only_approve_or_reject_decisions():
+    """needs_evidence never counts toward quorum, so it is not a decision of validation.completed (v1 unchanged)."""
+    event = copy.deepcopy(load(EXAMPLES / "validation.completed.json"))
+    event["data"]["decisions"][0]["decision"] = "needs_evidence"
+    with pytest.raises(ContractError):
+        validate_event(event)
+
+
+def test_a_validator_vote_asking_for_evidence_fits_decision_recorded_v1():
+    event = copy.deepcopy(load(EXAMPLES / "decision.recorded.json"))
+    event["data"] |= {
+        "actor": {"kind": "human", "name": "Journalist (high tier validator)", "service": "trust"},
+        "action": "finding.evidence_requested",
+        "reason": "Validator asked for more evidence before deciding. Note: lab result missing.",
+    }
+    validate_event(event)
+
+
+@pytest.mark.parametrize(
+    ("validation", "valid"),
+    [
+        ({"decision_window_hours": 72}, True),
+        ({}, True),
+        ({"decision_window_hours": 0}, False),
+        ({"decision_window_hours": 721}, False),
+        ({"decision_window_hours": 1.5}, False),
+        ({"decision_window_days": 3}, False),
+    ],
+    ids=["hours", "empty", "zero", "over-30-days", "fraction", "unknown-key"],
+)
+def test_domain_pack_validation_window(validation, valid):
+    schema = load(DOMAIN_PACK_SCHEMA)
+    errors = list(Draft202012Validator(schema["properties"]["validation"]).iter_errors(validation))
+    assert (not errors) == valid

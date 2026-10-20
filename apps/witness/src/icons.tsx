@@ -100,6 +100,8 @@ const PATHS = {
     </>
   ),
   chevronRight: <path d="m9 18 6-6-6-6" />,
+  chevronDown: <path d="m6 9 6 6 6-6" />,
+  pause: <path d="M8 4h3v16H8zM13 4h3v16h-3z" />,
   upload: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />,
   stop: <rect x="6" y="6" width="12" height="12" rx="1" />,
   x: <path d="M18 6 6 18M6 6l12 12" />,

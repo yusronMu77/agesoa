@@ -1,4 +1,5 @@
 import json
+import re
 import uuid
 
 import httpx
@@ -6,12 +7,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from sim_institution.main import build_app
+from sim_institution.models import resolve_follow_up
 from sim_institution.signature import sign
 from sim_institution.store import Config, Store
 
 SECRET = "whsec-test"
 NOW = 1_760_500_000
-BAND = '<span lang="id">SIMULASI – organisasi fiktif</span>'
+BAND = "<span>SIMULASI – organisasi fiktif</span>"
 
 
 def report(event: str = "audit_report.final", event_id: str | None = None) -> dict:
@@ -238,10 +240,10 @@ def test_test_event_is_marked_in_inbox():
     deliver(client, report(event="test_event"))
     page = client.get("/").text
     assert 'data-testid="inbox-item" data-event="test_event"' in page
-    assert "Test event" in page
+    assert '<span class="badge test">Event uji</span>' in page
 
 
-@pytest.mark.parametrize("path", ["/", "/webhook-log", "/settings", "/tickets/SIM-1"])
+@pytest.mark.parametrize("path", ["/", "/webhook-log", "/settings", "/tickets/SIM-1", "/replies", "/staff"])
 def test_html_pages_have_band_and_title(path):
     client = make_client()
     deliver(client, report())
@@ -249,7 +251,8 @@ def test_html_pages_have_band_and_title(path):
     assert page.status_code == 200
     assert 'data-testid="sim-band"' in page.text
     assert BAND in page.text
-    assert "<title>SIM Badan Gizi Kabupaten Sukamaju (fictional)</title>" in page.text
+    assert '<html lang="id">' in page.text
+    assert " · SIM Badan Gizi Kabupaten Sukamaju (fiktif)</title>" in page.text
 
 
 def test_ticket_detail_shows_report():
@@ -257,13 +260,18 @@ def test_ticket_detail_shows_report():
     deliver(client, report())
     page = client.get("/tickets/SIM-1").text
     assert 'data-testid="ticket-number">SIM-1<' in page
-    assert "Evidence: supported" in page
-    assert "Evidence: alleged" in page
+    assert '<span class="badge supported" data-evidence="supported">' in page
+    assert '<span class="badge alleged" data-evidence="alleged">' in page
+    assert "Cold chain broken during delivery." in page
+    assert "Bukti: E-1." in page
     assert "Audit the delivery route." in page
     assert "Nutritionist, Kabupaten Sukamaju" in page
-    assert "Synthetic data: yes" in page
-    assert 'data-testid="status-form"' in page
-    assert 'data-testid="reply-form"' in page
+    assert "Data audit sintetis." in page
+    assert '<a href="https://agesoa.example/cases/CASE-42">CASE-42</a>' in page
+    assert 'action="/tickets/SIM-1/respond" data-testid="respond-form"' in page
+    for label in ("Status tindak lanjut", "Tanggapan resmi", "Lampirkan dokumen", "Kirim tanggapan"):
+        assert label in page
+    assert "Terbitkan tanggapan resmi?" in page  # PRV-response-confirm
     assert client.get("/tickets/SIM-99").status_code == 404
 
 
@@ -336,7 +344,7 @@ def test_api_not_configured_is_shown_without_call():
     deliver(client, report())
     page = client.post("/tickets/SIM-1/reply", data={"body": "x"})
     assert calls == []
-    assert "not configured" in page.text
+    assert "belum diatur" in page.text
 
 
 def test_persistence_to_data_file(tmp_path):
@@ -353,3 +361,220 @@ def test_persistence_to_data_file(tmp_path):
     assert deliver(reloaded, payload).json() == {"internal_ticket": "SIM-1"}
     assert deliver(reloaded, report()).json() == {"internal_ticket": "SIM-2"}
     assert oct(path.stat().st_mode & 0o777) == "0o600"
+
+
+def test_respond_sends_status_then_reply_with_attachment():
+    calls: list[httpx.Request] = []
+    client = configured(recording_transport(200, calls))
+    page = client.post(
+        "/tickets/SIM-1/respond",
+        data={
+            "status": "in_progress",
+            "body": " Route under review. ",
+            "attachment_name": "Jadwal",
+            "attachment_url": "https://dinas.example/jadwal.pdf",
+        },
+    )
+    assert [str(c.url) for c in calls] == [
+        "http://delivery.test/api/v1/cases/CASE-42/status",
+        "http://delivery.test/api/v1/cases/CASE-42/reply",
+    ]
+    assert all(c.headers["authorization"] == "Bearer key-123" for c in calls)
+    assert json.loads(calls[0].content) == {"status": "in_progress", "note": "", "internal_ticket": "SIM-1"}
+    assert json.loads(calls[1].content) == {
+        "body": "Route under review.",
+        "attachments": [{"name": "Jadwal", "url": "https://dinas.example/jadwal.pdf"}],
+    }
+    assert 'data-testid="api-result" data-ok="true"' in page.text
+    assert "Hak jawab: HTTP 200" in page.text
+    item = client.get("/api/inbox").json()["items"][0]
+    assert item["status"] == "in_progress"
+    assert item["reply"]["body"] == "Route under review."
+    assert item["reply"]["attachments"] == [{"name": "Jadwal", "url": "https://dinas.example/jadwal.pdf"}]
+
+
+def test_respond_without_body_only_sends_status():
+    calls: list[httpx.Request] = []
+    client = configured(recording_transport(200, calls))
+    page = client.post("/tickets/SIM-1/respond", data={"status": "done", "body": "  "})
+    assert [str(c.url).rsplit("/", 1)[-1] for c in calls] == ["status"]
+    assert 'data-ok="true"' in page.text
+    item = client.get("/api/inbox").json()["items"][0]
+    assert (item["status"], item["reply"]) == ("done", None)
+
+
+def test_respond_does_not_publish_reply_when_status_fails():
+    calls: list[httpx.Request] = []
+    client = configured(recording_transport(403, calls))
+    page = client.post("/tickets/SIM-1/respond", data={"status": "done", "body": "Our response."})
+    assert len(calls) == 1
+    assert 'data-testid="api-result" data-ok="false"' in page.text
+    assert "HTTP 403" in page.text
+    item = client.get("/api/inbox").json()["items"][0]
+    assert (item["status"], item["reply"]) == ("new", None)
+
+
+def test_respond_rejects_unknown_status():
+    client = configured(recording_transport(200, []))
+    assert client.post("/tickets/SIM-1/respond", data={"status": "closed"}).status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("choice", "detail", "expected"),
+    [
+        ("received", "", ("received", None)),
+        ("in_progress", "   ", ("in_progress", None)),
+        ("done", " Jalan sudah\n diperbaiki ", ("done", "Jalan sudah diperbaiki")),
+        ("reinspection_scheduled", "", ("in_progress", "Pemeriksaan ulang dijadwalkan")),
+        ("reinspection_scheduled", "Uji kepadatan 18 Okt", ("in_progress", "Uji kepadatan 18 Okt")),
+        ("in_progress", "x" * 160, ("in_progress", "x" * 160)),
+    ],
+)
+def test_resolve_follow_up_maps_statuses_and_presets(choice, detail, expected):
+    assert resolve_follow_up(choice, detail) == expected
+
+
+@pytest.mark.parametrize(("choice", "detail"), [("closed", ""), ("in_progress", "x" * 161)])
+def test_resolve_follow_up_rejects_unknown_status_and_long_detail(choice, detail):
+    with pytest.raises(ValueError):
+        resolve_follow_up(choice, detail)
+
+
+def test_ticket_select_offers_statuses_and_presets():
+    client = configured(recording_transport(200, []))
+    page = client.get("/tickets/SIM-1").text
+    options = re.findall(r'<option value="([^"]+)"[^>]*>([^<]+)</option>', page)
+    assert options == [
+        ("received", "Diterima"),
+        ("in_progress", "Sedang dikerjakan"),
+        ("reinspection_scheduled", "Pemeriksaan ulang dijadwalkan"),
+        ("done", "Selesai"),
+    ]
+    assert '<label for="status-detail">Keterangan status (opsional)</label>' in page
+    assert 'name="detail" maxlength="160"' in page
+    assert 'data-testid="sent-status"' not in page
+
+
+def test_respond_preset_sends_status_with_detail_and_shows_it():
+    calls: list[httpx.Request] = []
+    client = configured(recording_transport(200, calls))
+    page = client.post(
+        "/tickets/SIM-1/respond", data={"status": "reinspection_scheduled", "body": "Tim lapangan memeriksa."}
+    )
+    assert json.loads(calls[0].content) == {
+        "status": "in_progress",
+        "detail": "Pemeriksaan ulang dijadwalkan",
+        "note": "",
+        "internal_ticket": "SIM-1",
+    }
+    assert 'data-ok="true"' in page.text
+    item = client.get("/api/inbox").json()["items"][0]
+    assert (item["status"], item["detail"]) == ("in_progress", "Pemeriksaan ulang dijadwalkan")
+    ticket = client.get("/tickets/SIM-1").text
+    assert '<option value="reinspection_scheduled" selected>' in ticket
+    assert "Status terkirim: Sedang dikerjakan · Pemeriksaan ulang dijadwalkan" in ticket
+    inbox = client.get("/?tab=sudah").text
+    assert "Tindak lanjut sedang berjalan." in inbox
+    assert "Keterangan: Pemeriksaan ulang dijadwalkan." in inbox
+
+
+def test_respond_typed_detail_is_sent_trimmed_and_wins_over_preset():
+    calls: list[httpx.Request] = []
+    client = configured(recording_transport(200, calls))
+    client.post(
+        "/tickets/SIM-1/respond",
+        data={"status": "reinspection_scheduled", "detail": "  Uji kepadatan\n18 Okt 2026 "},
+    )
+    sent = json.loads(calls[0].content)
+    assert (sent["status"], sent["detail"]) == ("in_progress", "Uji kepadatan 18 Okt 2026")
+    ticket = client.get("/tickets/SIM-1").text
+    assert '<option value="in_progress" selected>' in ticket
+    assert "Status terkirim: Sedang dikerjakan · Uji kepadatan 18 Okt 2026" in ticket
+
+
+def test_respond_rejects_too_long_detail_without_call():
+    calls: list[httpx.Request] = []
+    client = configured(recording_transport(200, calls))
+    response = client.post("/tickets/SIM-1/respond", data={"status": "done", "detail": "x" * 161})
+    assert response.status_code == 422
+    assert calls == []
+
+
+def test_failed_status_does_not_store_detail():
+    client = configured(recording_transport(500, []))
+    client.post("/tickets/SIM-1/respond", data={"status": "reinspection_scheduled"})
+    item = client.get("/api/inbox").json()["items"][0]
+    assert (item["status"], item["detail"]) == ("new", None)
+
+
+def test_status_route_accepts_optional_detail():
+    calls: list[httpx.Request] = []
+    client = configured(recording_transport(200, calls))
+    client.post(
+        "/tickets/SIM-1/status", data={"status": "done", "note": "", "detail": "Ruas sudah dipadatkan"}
+    )
+    assert json.loads(calls[0].content) == {
+        "status": "done",
+        "detail": "Ruas sudah dipadatkan",
+        "note": "",
+        "internal_ticket": "SIM-1",
+    }
+    assert client.get("/api/inbox").json()["items"][0]["detail"] == "Ruas sudah dipadatkan"
+
+
+def test_answered_card_says_when_and_how_far_the_follow_up_is():
+    client = configured(recording_transport(200, []))
+    client.post("/tickets/SIM-1/respond", data={"status": "in_progress", "body": "Route under review."})
+    page = client.get("/?tab=sudah").text
+    assert "Sudah ditanggapi " in page
+    assert "Tindak lanjut sedang berjalan." in page
+    assert "· tiket" not in page  # the ticket number stays on the link and the ticket page
+
+
+def test_reply_route_records_the_reply():
+    client = configured(recording_transport(201, []))
+    client.post("/tickets/SIM-1/reply", data={"body": "Our response."})
+    assert client.get("/api/inbox").json()["items"][0]["reply"]["body"] == "Our response."
+    assert "Our response." in client.get("/tickets/SIM-1").text
+
+
+def test_inbox_tabs_and_filters():
+    client = configured(recording_transport(200, []))
+    other = report()
+    other["case"] |= {"id": "CASE-7", "category": "water_quality", "region": "Mekarsari"}
+    deliver(client, other)  # SIM-2
+    client.post("/tickets/SIM-1/respond", data={"status": "done", "body": "Fixed."})
+
+    def tickets(path: str) -> list[str]:
+        return re.findall(r'href="/tickets/(SIM-\d+)" data-testid="ticket-number"', client.get(path).text)
+
+    assert tickets("/") == ["SIM-2"]  # "Perlu tanggapan": follow-up not done
+    assert tickets("/?tab=sudah") == ["SIM-1"]
+    assert tickets("/?tab=semua") == ["SIM-2", "SIM-1"]
+    assert tickets("/?tab=semua&category=food_poisoning") == ["SIM-1"]
+    assert tickets("/?tab=semua&region=Mekarsari") == ["SIM-2"]
+    assert tickets("/replies") == ["SIM-1"]
+    assert tickets("/?tab=unknown") == ["SIM-2"]
+    assert "Tidak ada temuan untuk pilihan ini." in client.get("/?region=Nowhere").text
+
+
+def test_inbox_card_shows_case_and_escapes_webhook_text():
+    client = make_client()
+    payload = report()
+    payload["case"]["summary"] = "<script>alert(1)</script>"
+    deliver(client, payload)
+    page = client.get("/").text
+    assert "<script>alert(1)</script>" not in page
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in page
+    assert "Food poisoning · CASE-42" in page
+    assert "Belum ada tanggapan dari organisasi Anda." in page
+    assert "Belum ada temuan masuk." in make_client().get("/").text
+
+
+def test_format_date():
+    from sim_institution.pages import format_date
+
+    assert format_date("2026-10-19T08:00:00Z") == "19 Okt 2026"
+    assert format_date("2026-05-01") == "1 Mei 2026"
+    assert format_date("soon") == "soon"
+    assert format_date(None) == ""

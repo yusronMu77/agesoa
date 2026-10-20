@@ -1,49 +1,21 @@
 /**
- * SCR-006 Answer audit questions: the status of the reporter's last report and the questions Agen Audit puts to this
- * reporter, answered in text or by voice (dictation into the text field; only text is sent).
+ * SCR-006 Answer audit questions: the questions Agen Audit puts to this reporter, one at a time, answered in text or by
+ * voice (dictation into the text field; only text is sent). The region of the reporter's last report gives context.
  */
 
 import { useEffect, useRef, useState } from "react";
 import type { Report, WitnessQuestion } from "../api";
 import { ApiError } from "../api";
-import { AiTag, EmptyState, EvidenceBadge, Notice } from "../components";
-import { language, pick, t, T } from "../copy";
+import { AiTag, EmptyState, Notice } from "../components";
+import { pick, t, T } from "../copy";
 import { Icon } from "../icons";
 import type { Dictation } from "../dictation";
 import { appendDictated, dictationSupported, startDictation } from "../dictation";
-import { formatWib } from "../fields";
-import { reportCode } from "./Submitted";
 
 function answerError(err: unknown): string {
   if (err instanceof ApiError && err.status === 409) return T["TXT-WIT-149"];
   if (err instanceof ApiError && err.status === null) return T["TXT-WIT-130"];
   return err instanceof Error ? err.message : String(err);
-}
-
-function ReportStatus({ report }: { report: Report }) {
-  const deadline = report.evidence_status;
-  return (
-    <section className="card" aria-labelledby="report-status-heading" data-testid="report-status">
-      <h2 id="report-status-heading">{T["TXT-WIT-170"]}</h2>
-      <dl className="facts">
-        <dt>{T["TXT-WIT-171"]}</dt>
-        <dd className="mono" data-testid="report-status-code">
-          {reportCode(report)}
-        </dd>
-        {report.submitted_at && (
-          <>
-            <dt>{T["TXT-WIT-172"]}</dt>
-            <dd>{formatWib(report.submitted_at, language())}</dd>
-          </>
-        )}
-        <dt>{T["TXT-WIT-116"]}</dt>
-        <dd>
-          <EvidenceBadge level="alleged" />
-        </dd>
-      </dl>
-      {deadline?.status === "likely_lost" && <p className="field-hint">{T["TXT-WIT-115"]}</p>}
-    </section>
-  );
 }
 
 export function Questions({
@@ -62,6 +34,7 @@ export function Questions({
   const [sending, setSending] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [listening, setListening] = useState<string | null>(null);
+  const [dictated, setDictated] = useState(false);
   const dictation = useRef<Dictation | null>(null);
   const canDictate = dictationSupported();
   useEffect(() => () => dictation.current?.stop(), []);
@@ -82,6 +55,7 @@ export function Questions({
       },
     );
     setListening(dictation.current ? id : null);
+    if (dictation.current) setDictated(true);
   };
 
   const setError = (id: string, text: string) => setErrors((current) => ({ ...current, [id]: text }));
@@ -105,6 +79,12 @@ export function Questions({
     }
   };
 
+  // One question at a time (SCR-006): the next one appears once this one is answered.
+  const question = questions[0];
+  const id = question?.question_id;
+  const error = id ? errors[id] : undefined;
+  const region = report?.region?.district_name ?? report?.region?.regency_name;
+
   return (
     <main className="screen" data-screen="SCR-006">
       <h1>{T["TXT-WIT-140"]}</h1>
@@ -114,80 +94,88 @@ export function Questions({
           {T["TXT-WIT-145"]}
         </p>
       )}
-      <Notice tone="info" title={T["TXT-WIT-220"]}>
-        {T["TXT-WIT-221"]}
+      <Notice tone="info" title={T["TXT-WIT-420"]}>
+        {T["TXT-WIT-421"]}
       </Notice>
-      {report && <ReportStatus report={report} />}
-      {questions.length === 0 ? (
+      {!question || !id ? (
         <EmptyState title={T["TXT-WIT-146"]} testId="no-questions">
-          {T["TXT-WIT-225"]}
+          {T["TXT-WIT-425"]}
         </EmptyState>
       ) : (
-        <ul className="questions" aria-label={T["TXT-WIT-140"]}>
-          {questions.map((question, index) => {
-            const id = question.question_id;
-            const error = errors[id];
-            return (
-              <li key={id} className="question" data-testid="audit-question">
-                <div className="card question-card">
-                  <div className="question-meta">
-                    <span>{t("TXT-WIT-222", { n: index + 1, total: questions.length })}</span>
-                    <AiTag>{T["TXT-WIT-223"]}</AiTag>
-                  </div>
-                  <p className="question-text">{pick(question.text)}</p>
-                </div>
-                <div className="field">
-                  <label className="field-label" htmlFor={`answer-${id}`}>
-                    {T["TXT-WIT-142"]}
-                  </label>
-                  <textarea
-                    id={`answer-${id}`}
-                    rows={4}
-                    maxLength={4000}
-                    placeholder={T["TXT-WIT-224"]}
-                    value={drafts[id] ?? ""}
-                    aria-invalid={error ? true : undefined}
-                    aria-describedby={`answer-${id}-hint`}
-                    onChange={(event) => setDrafts((current) => ({ ...current, [id]: event.target.value }))}
-                  />
-                  {error ? (
-                    <p className="field-error" id={`answer-${id}-hint`} role="alert">
-                      <Icon name="alert" size={16} />
-                      {error}
-                    </p>
-                  ) : (
-                    <p className="field-hint" id={`answer-${id}-hint`}>
-                      {T["TXT-WIT-226"]}
-                    </p>
-                  )}
-                </div>
-                {canDictate && (
-                  <div className="field">
-                    <button
-                      type="button"
-                      className="button start"
-                      aria-pressed={listening === id}
-                      data-testid="dictate-answer"
-                      onClick={() => toggleDictation(id)}
-                    >
-                      <Icon name={listening === id ? "stop" : "mic"} />
-                      {listening === id ? T["TXT-WIT-174"] : T["TXT-WIT-173"]}
-                    </button>
-                    <p className="field-hint">{T["TXT-WIT-175"]}</p>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  className="button primary lg wide"
-                  disabled={sending !== null}
-                  onClick={() => void send(question)}
-                >
-                  {T["TXT-WIT-143"]}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="question" data-testid="audit-question" key={id}>
+          <section className="card question-card" aria-labelledby={`question-${id}`}>
+            <div className="question-meta">
+              <span>
+                {t("TXT-WIT-422", { n: 1, total: questions.length })} ·{" "}
+                <span className="nowrap">{t("TXT-WIT-432", { id: question.case_id })}</span>
+              </span>
+              <AiTag>{T["TXT-WIT-423"]}</AiTag>
+            </div>
+            <h2 className="question-text" id={`question-${id}`}>
+              {pick(question.text)}
+            </h2>
+            <p className="question-context">
+              {region ? t("TXT-WIT-304", { wilayah: region }) : T["TXT-WIT-305"]}
+            </p>
+          </section>
+          <div className="field">
+            <label className="field-label" htmlFor={`answer-${id}`}>
+              {T["TXT-WIT-142"]}
+            </label>
+            <textarea
+              id={`answer-${id}`}
+              rows={4}
+              maxLength={4000}
+              placeholder={T["TXT-WIT-424"]}
+              value={drafts[id] ?? ""}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={`answer-${id}-hint`}
+              onChange={(event) => setDrafts((current) => ({ ...current, [id]: event.target.value }))}
+            />
+            {error ? (
+              <p className="field-error" id={`answer-${id}-hint`} role="alert">
+                <Icon name="alert" size={16} />
+                {error}
+              </p>
+            ) : (
+              <p className="field-hint" id={`answer-${id}-hint`}>
+                {T["TXT-WIT-426"]}
+              </p>
+            )}
+          </div>
+          {canDictate && (
+            <div className="field">
+              <button
+                type="button"
+                className="button tile"
+                aria-pressed={listening === id}
+                aria-describedby={`dictate-${id}-note`}
+                data-testid="dictate-answer"
+                onClick={() => toggleDictation(id)}
+              >
+                <Icon name={listening === id ? "stop" : "mic"} />
+                {listening === id ? T["TXT-WIT-174"] : T["TXT-WIT-018"]}
+              </button>
+              {/* Shown once dictation is used; always the description of the button for screen readers. */}
+              <p
+                className={dictated ? "field-hint" : "field-hint visually-hidden"}
+                id={`dictate-${id}-note`}
+              >
+                {T["TXT-WIT-175"]}
+              </p>
+            </div>
+          )}
+          <div className="actions">
+            <button
+              type="button"
+              className="button primary wide"
+              disabled={sending !== null}
+              onClick={() => void send(question)}
+            >
+              {T["TXT-WIT-143"]}
+            </button>
+          </div>
+        </div>
       )}
     </main>
   );

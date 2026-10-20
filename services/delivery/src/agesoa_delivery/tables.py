@@ -73,10 +73,14 @@ subscriptions = Table(
     Column("active", Boolean, nullable=False, server_default="true"),
     Column("synthetic", Boolean, nullable=False, server_default="false"),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    # Delivery paused by the agency (SCR-062): set = paused; audit reports are held until it is resumed.
+    Column("paused_at", DateTime(timezone=True)),
+    Column("resumed_at", DateTime(timezone=True)),
 )
 
 # One webhook to send (an audit report or a test event to one subscription): the signed body and its state.
-# Retries reuse the same event id; `attempts` guards against a task that runs twice.
+# Retries reuse the same event id; `attempts` guards against a task that runs twice. `held` = waiting for the paused
+# subscription to resume (no attempt made, none counted); `held_at` stays set after release (history marks it).
 webhook_jobs = Table(
     "webhook_jobs",
     metadata,
@@ -88,13 +92,16 @@ webhook_jobs = Table(
     Column("case_id", String(32), nullable=False),
     Column("audit_report_id", String(32)),
     Column("body", Text, nullable=False),
-    Column("status", String(16), nullable=False, server_default="pending"),  # pending | delivered | failed
+    # pending | held | delivered | failed
+    Column("status", String(16), nullable=False, server_default="pending"),
     Column("attempts", Integer, nullable=False, server_default="0"),
     Column("internal_ticket", String(120)),
     Column("synthetic", Boolean, nullable=False, server_default="false"),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("finished_at", DateTime(timezone=True)),
+    Column("held_at", DateTime(timezone=True)),
     Index("ix_webhook_jobs_org_case", "organization_id", "case_id"),
+    Index("ix_webhook_jobs_subscription_status", "subscription_id", "status"),
 )
 
 # Webhook secrets in the devenv only (no Secret Manager locally); elsewhere secret_ref names a Secret Manager secret.
@@ -129,6 +136,8 @@ follow_ups = Table(
     Column("organization_id", String(32), nullable=False),
     Column("status", String(16), nullable=False),  # received | in_progress | done
     Column("note", Text),
+    # Short public status detail in the institution's own words (e.g. "Re-inspection scheduled"), shown unedited.
+    Column("detail", String(160)),
     Column("internal_ticket", String(120)),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Index("ix_follow_ups_case", "case_id"),

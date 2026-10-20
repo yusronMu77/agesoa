@@ -1,8 +1,8 @@
 import "./console.css";
 
 import type { ReactNode } from "react";
-import { ConsoleShell } from "@/components/shell/ConsoleShell";
 
+/** Console screens render their own shell (ConsoleShell via components/console/Consoles): it depends on page data. */
 export default function ValidatorLayout({ children }: { children: ReactNode }) {
-  return <ConsoleShell surface="validator">{children}</ConsoleShell>;
+  return children;
 }

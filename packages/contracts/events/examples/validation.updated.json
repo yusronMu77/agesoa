@@ -1,0 +1,21 @@
+{
+  "specversion": "1.0",
+  "id": "00000000-0000-0000-0000-00000000000e",
+  "source": "//agesoa/trust",
+  "type": "agesoa.validation.updated",
+  "subject": "K-2026-0007",
+  "time": "2026-10-14T02:40:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "urn:agesoa:schema:event:validation.updated:v1",
+  "data": {
+    "finding_id": "F-2026-0011",
+    "case_id": "K-2026-0007",
+    "state": "needs_evidence",
+    "approvals": 1,
+    "rejections": 0,
+    "evidence_requests": 1,
+    "deadline_at": "2026-10-17T03:15:00Z",
+    "updated_at": "2026-10-14T02:40:00Z",
+    "synthetic": true
+  }
+}

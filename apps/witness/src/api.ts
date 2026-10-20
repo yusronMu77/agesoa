@@ -16,12 +16,16 @@ export interface PackField {
   required: boolean;
   label: Label;
   hint?: Label;
+  /** Example text shown in the empty input (never a value). */
+  placeholder?: Label;
 }
 
 export interface PackDocument {
   id: string;
   name: Label;
   categories: { id: string; label: Label }[];
+  /** Help under the issue type picker. */
+  category_hint?: Label;
   report_fields: PackField[];
   rules: { id: string; label: Label }[];
   evidence_tips: Label[];

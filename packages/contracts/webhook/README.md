@@ -43,6 +43,10 @@ Compare signatures in constant time. Reference implementation: `agesoa_platform.
   (30 s, 2 min, 10 min), then marked failed in `deliveries`.
 - Every attempt is logged (`deliveries`: event id, HTTP status, attempt number) and the successful one
   publishes `audit_report.sent`.
+- The agency can **pause** delivery (dashboard). While paused, audit reports are held: not sent, not dropped,
+  no attempt counted (a retry that comes due is held too, keeping its attempt count). On **resume** the held
+  ones are sent oldest first with their original event id, signed at send time, with the normal retries.
+  `test_event` is not held (it checks the endpoint).
 
 ## Institution API (institution → AGESOA)
 
@@ -51,5 +55,5 @@ Compare signatures in constant time. Reference implementation: `agesoa_platform.
 
 | Endpoint | Body | Effect |
 |---|---|---|
-| `POST /api/v1/cases/{case_id}/status` | `status` (`received`/`in_progress`/`done`), `note`, `internal_ticket` | stores the follow-up, logs a decision, shown on the public dashboard |
+| `POST /api/v1/cases/{case_id}/status` | `status` (`received`/`in_progress`/`done`), optional `detail` (one line, max 160 chars, e.g. "Re-inspection scheduled"), `note`, `internal_ticket` | stores the follow-up, logs a decision, shown on the public dashboard; `detail` is shown next to the finding as the institution's own statement, unedited |
 | `POST /api/v1/cases/{case_id}/reply` | `body`, `attachments[]` | stores a labelled right of reply, logs a decision, shown next to the finding |

@@ -1,7 +1,7 @@
 /** Organization admin calls to trust (P1b): register, list, DNS TXT check. The token comes from the session. */
 
 import type { PortalConfig } from "./config";
-import { type FetchResult, fetchJson } from "./http";
+import { type FetchLike, type FetchResult, fetchJson } from "./http";
 
 export interface Organization {
   organization_id: string;
@@ -11,6 +11,8 @@ export interface Organization {
   region: { regency_code?: string | null; regency_name?: string } | null;
   status: "awaiting_dns" | "verified" | "rejected";
   txt_record: string;
+  /** Private contact address for finding notifications ("Email kontak"); only the organization's admin sees it. */
+  contact_email?: string | null;
   verified_at: string | null;
   synthetic: boolean;
   created_at: string;
@@ -29,6 +31,8 @@ export interface OrganizationInput {
   kind: "newsroom" | "agency";
   domain: string;
   region: { regency_name: string };
+  /** Optional; "" or null = none. Never published. */
+  contact_email?: string | null;
 }
 
 const bearer = (token: string) => ({ headers: { authorization: `Bearer ${token}` } });
@@ -46,8 +50,9 @@ export function registerOrganization(
   config: PortalConfig,
   token: string,
   body: OrganizationInput,
+  options: { fetchImpl?: FetchLike } = {},
 ): Promise<FetchResult<Organization>> {
-  return fetchJson(base(config), { ...bearer(token), method: "POST", body });
+  return fetchJson(base(config), { ...bearer(token), method: "POST", body, fetchImpl: options.fetchImpl });
 }
 
 export function checkDns(config: PortalConfig, token: string, id: string): Promise<FetchResult<DnsCheck>> {

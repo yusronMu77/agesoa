@@ -39,6 +39,12 @@
             "done"
           ]
         },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "description": "Optional short status detail in the institution's own words (one line, e.g. \"Re-inspection scheduled\"). Shown publicly next to the finding, labelled as the institution's statement, never edited. Added in v1 as an optional field (not breaking)."
+        },
         "note": {
           "type": "string"
         },

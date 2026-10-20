@@ -5,7 +5,17 @@ import { useState } from "react";
 import { useT } from "@/lib/i18n/client";
 
 /** Copies a value (the DNS TXT record) to the clipboard and says so in a live region. */
-export function CopyButton({ value }: { value: string }) {
+export function CopyButton({
+  value,
+  label,
+  copiedLabel,
+  testId = "copy-txt",
+}: {
+  value: string;
+  label?: string;
+  copiedLabel?: string;
+  testId?: string;
+}) {
   const t = useT();
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
   async function copy() {
@@ -18,12 +28,12 @@ export function CopyButton({ value }: { value: string }) {
   }
   return (
     <span className="copy-row">
-      <button type="button" className="button button--secondary" onClick={copy} data-testid="copy-txt">
+      <button type="button" className="button button--secondary" onClick={copy} data-testid={testId}>
         <Copy aria-hidden size={18} strokeWidth={2} />
-        {t("dns.copy")}
+        {label ?? t("dns.copy")}
       </button>
       <span className="copy-row__feedback" role="status">
-        {state === "copied" ? t("dns.copied") : state === "failed" ? t("dns.copyFailed") : ""}
+        {state === "copied" ? (copiedLabel ?? t("dns.copied")) : state === "failed" ? t("dns.copyFailed") : ""}
       </span>
     </span>
   );

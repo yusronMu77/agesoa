@@ -1,11 +1,13 @@
-import { Activity, LayoutDashboard, ScrollText } from "lucide-react";
+import { Activity, Building2, LayoutDashboard, ScrollText, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EvidenceBadge } from "@/components/EvidenceBadge";
+import { loadConfig } from "@/lib/config";
 import { getT } from "@/lib/i18n/server";
+import { ROUTES } from "@/lib/routes";
 import { EVIDENCE_STATUSES } from "@/lib/publicview";
 
-// "Tentang" (About): why AGESOA exists and how findings are labelled (the former home page intro).
+// "Tentang" (About): why AGESOA exists (PRV-about wording), where to go next, and how findings are labelled.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -15,16 +17,27 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function AboutPage() {
   const { lang, t } = await getT();
+  const witnessUrl = loadConfig().witnessUrl ?? null;
   const explore = [
-    { href: "/dashboard", title: t("public.dashboard.title"), body: t("public.about.dashboard"), Icon: LayoutDashboard },
+    { href: ROUTES.home, title: t("public.dashboard.title"), body: t("public.about.dashboard"), Icon: LayoutDashboard },
     { href: "/log", title: t("public.logPage.title"), body: t("public.about.log"), Icon: ScrollText },
     { href: "/status", title: t("public.about.status.title"), body: t("public.about.status"), Icon: Activity },
+    { href: ROUTES.validator, title: t("public.nav.forValidators"), body: t("public.about.validators"), Icon: ShieldCheck },
+    { href: ROUTES.institution, title: t("public.nav.forInstitutions"), body: t("public.about.institutions"), Icon: Building2 },
   ];
   return (
     <div className="pub-about">
       <p className="eyebrow">{t("public.about.title")}</p>
-      <h1>{t("public.about.lead")}</h1>
+      <h1 className="pub-about__title">{t("public.about.lead")}</h1>
       <p className="lead">{t("public.about.intro1")}</p>
+      {/* PRV-about primary: the Witness app, where reports start (anonymous, no account). */}
+      {witnessUrl ? (
+        <p>
+          <a className="button" href={witnessUrl}>
+            {t("public.about.start")}
+          </a>
+        </p>
+      ) : null}
       <p className="pub-about__body">{t("public.about.intro2")}</p>
 
       <ul className="card-grid" aria-label={t("public.about.explore")}>

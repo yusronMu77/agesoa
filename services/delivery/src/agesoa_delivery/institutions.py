@@ -1,5 +1,5 @@
-"""Institution side of delivery: the agency dashboard (SCR-062: webhook subscription, test event, API key, delivery
-history) for the organization's admin, the institution API (status + right of reply, API key), and the internal
+"""Institution side of delivery: the agency dashboard (SCR-062: webhook subscription, pause/resume, test event, API
+key, delivery history) for the organization's admin, the institution API (status + right of reply, API key), and the internal
 endpoints that run webhook attempts (Cloud Tasks) and create fictional audit reports in demo_mode.
 
 Only the admin of a verified agency (learned from `organization.verified`) manages its subscription. Institutions
@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+import unicodedata
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
@@ -21,8 +22,8 @@ from agesoa_platform.oidc import require_internal_caller
 from agesoa_platform.outbox import add_event
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import select, update
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator, model_validator
+from sqlalchemy import func, select, update
 
 from agesoa_delivery import SERVICE
 from agesoa_delivery.tables import (
@@ -34,7 +35,15 @@ from agesoa_delivery.tables import (
     subscriptions,
     webhook_jobs,
 )
-from agesoa_delivery.webhooks import attempt, new_id, schedule_first, stage_report, stage_test_event
+from agesoa_delivery.webhooks import (
+    attempt,
+    new_id,
+    release_held,
+    schedule_first,
+    schedule_released,
+    stage_report,
+    stage_test_event,
+)
 
 router = APIRouter(tags=["institutions"])
 institution_api = APIRouter(prefix="/api/v1", tags=["institution API"])
@@ -58,6 +67,10 @@ class SubscriptionView(BaseModel):
     category: str | None
     active: bool
     created_at: datetime
+    paused: bool = Field(description="Delivery paused by the agency: audit reports are held, not sent")
+    paused_at: datetime | None = Field(description="When the current pause started (null = not paused)")
+    resumed_at: datetime | None = Field(description="When delivery was last resumed")
+    held_deliveries: int = Field(description="Deliveries waiting for resume (status held)")
 
 
 class ApiKeyView(BaseModel):
@@ -80,6 +93,11 @@ class SubscriptionRequest(BaseModel):
         None, max_length=32, description="Only reports of this regency; null = all"
     )
     category: str | None = Field(None, max_length=48, description="Only reports of this category; null = all")
+
+
+class SubscriptionResumed(BaseModel):
+    subscription: SubscriptionView
+    released: list[str] = Field(description="Delivery ids released, oldest first (sent in this order)")
 
 
 class SubscriptionCreated(BaseModel):
@@ -110,10 +128,18 @@ class Delivery(BaseModel):
     event_id: str
     event: Literal["audit_report.final", "test_event"]
     case_id: str
-    status: Literal["pending", "delivered", "failed"]
+    status: Literal["pending", "held", "delivered", "failed"] = Field(
+        description="held = waiting for the paused webhook to resume (no attempt made)"
+    )
+    held_at: datetime | None = Field(
+        description="Set when the delivery was held by a pause; kept after it is released"
+    )
     internal_ticket: str | None
     created_at: datetime
     attempts: list[DeliveryAttempt]
+
+
+DELIVERY_FIELDS = ("delivery_id", "event_id", "event", "case_id", "status", "held_at", "internal_ticket")
 
 
 async def _agency(request: Request, organization_id: str, admin: Principal) -> dict[str, Any]:
@@ -151,8 +177,21 @@ async def _subscription(session, organization_id: str) -> dict[str, Any] | None:
     return dict(row) if row else None
 
 
-def _subscription_view(row: dict[str, Any]) -> SubscriptionView:
-    return SubscriptionView(**{k: row[k] for k in SubscriptionView.model_fields})
+async def _subscription_view(session, row: dict[str, Any]) -> SubscriptionView:
+    held = (
+        await session.execute(
+            select(func.count())
+            .select_from(webhook_jobs)
+            .where(webhook_jobs.c.subscription_id == row["id"], webhook_jobs.c.status == "held")
+        )
+    ).scalar_one()
+    return SubscriptionView(
+        **{k: row[k] for k in ("id", "webhook_url", "region_code", "category", "active", "created_at")},
+        paused=row["paused_at"] is not None,
+        paused_at=row["paused_at"],
+        resumed_at=row["resumed_at"],
+        held_deliveries=held,
+    )
 
 
 @router.get("/v1/institutions/mine", summary="Verified organizations administered by the caller")
@@ -182,7 +221,7 @@ async def _institution(session, row: dict[str, Any]) -> Institution:
         name=row["name"],
         kind=row["kind"],
         synthetic=row["synthetic"],
-        subscription=_subscription_view(subscription) if subscription else None,
+        subscription=await _subscription_view(session, subscription) if subscription else None,
         api_key=(
             ApiKeyView(prefix=row["api_key_prefix"], created_at=row["api_key_created_at"])
             if row["api_key_hash"]
@@ -214,11 +253,22 @@ async def subscribe(
     secret = "whsec_" + secrets.token_urlsafe(32)
     secret_ref = await request.app.state.secrets.put(subscription_id.lower(), secret)
     async with request.app.state.db.transaction() as session:
-        await session.execute(
-            update(subscriptions)
-            .where(subscriptions.c.organization_id == organization_id, subscriptions.c.active.is_(True))
-            .values(active=False)
+        previous = (
+            (
+                await session.execute(
+                    update(subscriptions)
+                    .where(
+                        subscriptions.c.organization_id == organization_id, subscriptions.c.active.is_(True)
+                    )
+                    .values(active=False)
+                    .returning(subscriptions.c.id, subscriptions.c.paused_at)
+                )
+            )
+            .mappings()
+            .all()
         )
+        # A replacement keeps the pause, and the held deliveries move to it (sent to the new URL on resume).
+        paused_at = next((p["paused_at"] for p in previous if p["paused_at"] is not None), None)
         await session.execute(
             subscriptions.insert().values(
                 id=subscription_id,
@@ -228,10 +278,84 @@ async def subscribe(
                 webhook_url=str(body.webhook_url),
                 secret_ref=secret_ref,
                 synthetic=institution["synthetic"],
+                paused_at=paused_at,
             )
         )
+        if previous:
+            await session.execute(
+                update(webhook_jobs)
+                .where(
+                    webhook_jobs.c.subscription_id.in_([p["id"] for p in previous]),
+                    webhook_jobs.c.status == "held",
+                )
+                .values(subscription_id=subscription_id)
+            )
         created = await _subscription(session, organization_id)
-    return SubscriptionCreated(subscription=_subscription_view(created), secret=secret)
+        view = await _subscription_view(session, created)
+    return SubscriptionCreated(subscription=view, secret=secret)
+
+
+NO_SUBSCRIPTION = {409: {"description": "No active webhook subscription"}}
+
+
+async def _locked_subscription(session, organization_id: str) -> dict[str, Any]:
+    row = (
+        (
+            await session.execute(
+                select(subscriptions)
+                .where(subscriptions.c.organization_id == organization_id, subscriptions.c.active.is_(True))
+                .with_for_update()
+            )
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if row is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "no active webhook subscription")
+    return dict(row)
+
+
+@router.post(
+    "/v1/institutions/{organization_id}/subscription/pause",
+    summary="Pause webhook delivery: new audit reports are held (not sent, not dropped, no attempt counted) "
+    "until resumed; idempotent",
+    responses=NOT_FOUND | NO_SUBSCRIPTION,
+)
+async def pause_subscription(organization_id: str, request: Request, admin: OrgAdmin) -> SubscriptionView:
+    await _agency(request, organization_id, admin)
+    async with request.app.state.db.transaction() as session:
+        row = await _locked_subscription(session, organization_id)
+        if row["paused_at"] is None:
+            row["paused_at"] = utc_now()
+            await session.execute(
+                update(subscriptions)
+                .where(subscriptions.c.id == row["id"])
+                .values(paused_at=row["paused_at"])
+            )
+        return await _subscription_view(session, row)
+
+
+@router.post(
+    "/v1/institutions/{organization_id}/subscription/resume",
+    summary="Resume webhook delivery: held deliveries are sent oldest first (normal signing and retries); "
+    "idempotent",
+    responses=NOT_FOUND | NO_SUBSCRIPTION,
+)
+async def resume_subscription(organization_id: str, request: Request, admin: OrgAdmin) -> SubscriptionResumed:
+    await _agency(request, organization_id, admin)
+    async with request.app.state.db.transaction() as session:
+        row = await _locked_subscription(session, organization_id)
+        if row["paused_at"] is not None:
+            row["paused_at"], row["resumed_at"] = None, utc_now()
+            await session.execute(
+                update(subscriptions)
+                .where(subscriptions.c.id == row["id"])
+                .values(paused_at=None, resumed_at=row["resumed_at"])
+            )
+        released = await release_held(session, row["id"])
+        view = await _subscription_view(session, row)
+    await schedule_released(request.app, released)
+    return SubscriptionResumed(subscription=view, released=[d for d, _ in released])
 
 
 @router.post(
@@ -256,7 +380,7 @@ async def create_api_key(organization_id: str, request: Request, admin: OrgAdmin
 @router.post(
     "/v1/institutions/{organization_id}/test-event",
     status_code=202,
-    summary="Send a test_event to the subscribed webhook",
+    summary="Send a test_event to the subscribed webhook (also while paused: it checks the endpoint)",
     responses=NOT_FOUND | {409: {"description": "No active webhook subscription"}},
 )
 async def send_test_event(organization_id: str, request: Request, admin: OrgAdmin) -> TestEventQueued:
@@ -316,7 +440,7 @@ async def delivery_history(organization_id: str, request: Request, admin: OrgAdm
         )
     return [
         Delivery(
-            **{k: j[k] for k in ("delivery_id", "event_id", "event", "case_id", "status", "internal_ticket")},
+            **{k: j[k] for k in DELIVERY_FIELDS},
             created_at=j["created_at"],
             attempts=by_job.get(j["delivery_id"], []),
         )
@@ -367,10 +491,31 @@ async def institution_by_key(
 InstitutionByKey = Annotated[dict[str, Any], Depends(institution_by_key)]
 
 
+DETAIL_MAX = 160
+
+
 class StatusUpdate(BaseModel):
     status: Literal["received", "in_progress", "done"]
+    detail: str | None = Field(
+        None,
+        max_length=DETAIL_MAX,
+        description="Optional short status detail in the institution's own words (e.g. 'Re-inspection "
+        "scheduled'). One line; shown publicly next to the finding, labelled as the institution's statement and "
+        "never edited. Blank = none.",
+        examples=["Pemeriksaan ulang dijadwalkan"],
+    )
     note: str = Field("", max_length=4000)
     internal_ticket: str | None = Field(None, max_length=120)
+
+    @field_validator("detail")
+    @classmethod
+    def _one_line(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if any(unicodedata.category(c).startswith("C") for c in value):
+            raise ValueError("detail must be one line of text (no control characters)")
+        return value or None
 
 
 class Attachment(BaseModel):
@@ -450,6 +595,7 @@ async def update_status(
                     case_id=case_id,
                     organization_id=institution["organization_id"],
                     status=body.status,
+                    detail=body.detail,
                     note=body.note,
                     internal_ticket=body.internal_ticket,
                     created_at=now,
@@ -467,6 +613,7 @@ async def update_status(
                     "case_id": case_id,
                     "organization_id": institution["organization_id"],
                     "status": body.status,
+                    **({"detail": body.detail} if body.detail else {}),
                     "note": body.note,
                     "internal_ticket": body.internal_ticket,
                     "updated_at": isoformat(now),

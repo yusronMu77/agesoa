@@ -57,6 +57,29 @@ are fictional. Both are labelled in the product.
 | `templates/service` | new-service template |
 | `docs/adr` | architecture decision records |
 
+## Demo account
+
+One account opens every surface of the portal, so the whole flow can be tried without registering:
+
+| | |
+|---|---|
+| Email | `demo@demo.agesoa.local` |
+| Password | `AgesoaDemo-2026!` |
+| Roles | validator (VAL-DEMO-4, journalist, Kabupaten Sukamaju), admin of the fictional agency *Dinas Contoh Sukamaju (fictional)*, operator |
+
+Where to sign in (choose a role from the **Publik** chip in the public header):
+
+| Surface | Sign in | What you can do |
+|---|---|---|
+| Validator | `/validator/masuk` | queue, decide (approve / reject / needs evidence), decision log |
+| Organisation | `/instansi/masuk` | the fictional agency's dashboard: webhook, API key, deliveries |
+| Operator | `/login?next=/ops` | service status, events, outbox, demo reset |
+
+The account exists only where `demo_mode` is on (local devenv and the demo environment; `demo_mode` is refused in
+prod) and is created by the trust service at start-up (`services/trust/demo/validators.json`). Everything it touches
+is fictional and labelled SIMULASI. Its decisions are recorded in the public hash-chained log like any validator's,
+and the operator role can reset the demo data. Witness needs no account (anonymous reporting).
+
 ## Quick start (local)
 
 ```sh

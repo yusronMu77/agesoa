@@ -1,4 +1,5 @@
 import type { District, EvidenceKind, SharedPostInput } from "./api";
+import type { Capability } from "./device";
 
 /** A file picked or recorded on this device, before (and after) it is uploaded. */
 export interface EvidenceItem {
@@ -20,6 +21,8 @@ export interface CaptureState {
   sharedPost: SharedPostInput | null;
   /** The draft on the service, once created. */
   reportId: string | null;
+  /** Permissions the reporter refused for this report; the notice stays while they come back from SCR-003. */
+  denied: Capability[];
 }
 
 export const EMPTY_CAPTURE: CaptureState = {
@@ -28,6 +31,7 @@ export const EMPTY_CAPTURE: CaptureState = {
   district: null,
   sharedPost: null,
   reportId: null,
+  denied: [],
 };
 
 export function newItem(kind: EvidenceKind, blob: Blob, name: string): EvidenceItem {

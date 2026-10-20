@@ -42,6 +42,10 @@ HOSTNAME = re.compile(r"^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-
 # never pushes a name past the limit). Input is lowercased and a trailing dot (fully qualified name) dropped
 # before HOSTNAME is applied.
 DOMAIN_PATTERN = r"^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}\.?$"
+# Contact email (SCR-060 "Email kontak"): a dot-atom local part (RFC 5322, no quoted strings) of at most 64
+# characters and a domain that passes HOSTNAME. Surrounding spaces are dropped and the domain lowercased first.
+EMAIL_LOCAL = re.compile(r"^(?=.{1,64}$)[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*$")
+EMAIL_PATTERN = r"^\s*[^@\s]+@[^@\s]+\s*$"
 log = logging.getLogger(__name__)
 
 
@@ -60,6 +64,14 @@ class OrganizationIn(BaseModel):
         description="The organization's own domain, e.g. redaksi.example.org",
     )
     region: Region
+    contact_email: str | None = Field(
+        None,
+        min_length=6,
+        max_length=254,
+        pattern=EMAIL_PATTERN,
+        description="Optional contact address for finding notifications (Email kontak), separate from the admin "
+        "account's sign-in email. Private: returned only to the organization's admin, never published.",
+    )
 
     @field_validator("domain")
     @classmethod
@@ -68,6 +80,24 @@ class OrganizationIn(BaseModel):
         if not HOSTNAME.match(value):
             raise ValueError("not a domain name")
         return value
+
+    @field_validator("contact_email", mode="before")
+    @classmethod
+    def _blank_is_none(cls, value: object) -> object:
+        return None if isinstance(value, str) and not value.strip() else value
+
+    @field_validator("contact_email")
+    @classmethod
+    def _contact_email(cls, value: str | None) -> str | None:
+        return None if value is None else normalize_email(value)
+
+
+def normalize_email(value: str) -> str:
+    local, _, domain = value.strip().rpartition("@")
+    domain = domain.lower()
+    if not local or not EMAIL_LOCAL.match(local) or not HOSTNAME.match(domain):
+        raise ValueError("not an email address")
+    return f"{local}@{domain}"
 
 
 class Organization(BaseModel):
@@ -78,6 +108,7 @@ class Organization(BaseModel):
     region: dict[str, Any] | None
     status: Literal["awaiting_dns", "verified", "rejected"]
     txt_record: str = Field(description="The TXT value to publish on the domain")
+    contact_email: str | None = Field(None, description="Private contact address (only the admin sees it)")
     verified_at: datetime | None
     synthetic: bool
     created_at: datetime
@@ -98,6 +129,7 @@ def _out(row: Any) -> Organization:
         region=row["region"],
         status=row["status"],
         txt_record=TXT_PREFIX + row["verification_token"],
+        contact_email=row["contact_email"],
         verified_at=row["verified_at"],
         synthetic=row["synthetic"],
         created_at=row["created_at"],
@@ -120,6 +152,7 @@ async def register(body: OrganizationIn, request: Request, admin: OrgAdmin) -> O
         "status": "awaiting_dns",
         "verification_token": secrets.token_urlsafe(24),
         "region": {"regency_code": body.region.regency_code, "regency_name": body.region.regency_name},
+        "contact_email": body.contact_email,
         "synthetic": settings.demo_mode,
         "admin_uid": admin.uid,
     }

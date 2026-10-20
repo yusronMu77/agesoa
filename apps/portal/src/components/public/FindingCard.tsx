@@ -6,6 +6,8 @@ import type { Lang, Translate } from "@/lib/i18n/core";
 import type { PublicFinding } from "@/lib/readmodel";
 import { count, validationText } from "./text";
 import { localizedText } from "@/lib/localized";
+import { shortDistrictName } from "@/lib/publicview";
+import { ROUTES } from "@/lib/routes";
 
 /** Validation state badge of a finding; its text is the whole badge text (QA reads it as is). */
 export function ValidationBadge({ t, validation }: { t: Translate; validation: PublicFinding["validation"] }) {
@@ -20,54 +22,61 @@ export function ValidationBadge({ t, validation }: { t: Translate; validation: P
 }
 
 /**
- * SCR-040 finding card: evidence badge, validation state, statement, district, the case it belongs to and a link to
- * its audit trail (the audit report when there is one, else the case's decision log).
+ * SCR-040 finding card: evidence badge with the issue type and case on the right, statement, what it is based on and
+ * its validation state, the district and a link to its audit trail (the audit report when there is one, else the
+ * case's decision log).
  */
 export function FindingCard({
   t,
   lang,
   finding: f,
-  meta,
+  category,
+  reports,
   hasReport,
 }: {
   t: Translate;
   lang: Lang;
   finding: PublicFinding;
-  /** Category of the case and its reports, e.g. "Food poisoning · 3 citizen reports". */
-  meta?: string | null;
+  /** Issue category of the finding's case, e.g. "Food poisoning". */
+  category?: string | null;
+  /** Citizen reports of the finding's case, null when the case is not published. */
+  reports?: number | null;
   hasReport: boolean;
 }) {
   const statement = localizedText(lang, f.statement, f.statement_i18n);
-  const caseHref = f.case_id ? `/cases/${encodeURIComponent(f.case_id)}` : null;
-  const trailHref = caseHref ? (hasReport ? `${caseHref}/report` : `${caseHref}#case-log`) : null;
-  const place = [f.region?.district_name ?? t("public.findings.unknownDistrict"), f.region?.regency_name]
-    .filter(Boolean)
-    .join(", ");
+  const caseHref = f.case_id ? ROUTES.case(f.case_id) : null;
+  const trailHref = f.case_id && caseHref ? (hasReport ? ROUTES.caseReport(f.case_id) : `${caseHref}#case-log`) : null;
+  const place = f.region?.district_name ? shortDistrictName(f.region.district_name) : t("public.findings.unknownDistrict");
+  // "Berasal dari 9 laporan warga dan 2 item bukti." (Card temuan): reports of the case and the evidence items.
+  const evidence = f.evidence_count > 0 ? count(t, "evidence", f.evidence_count) : null;
+  const basis =
+    reports !== null && reports !== undefined
+      ? evidence
+        ? t(reports === 1 ? "public.findings.basedOnWith.one" : "public.findings.basedOnWith.other", { n: reports, evidence })
+        : `${t(reports === 1 ? "public.findings.basedOn.one" : "public.findings.basedOn.other", { n: reports })}. ${t("public.findings.noEvidence")}`
+      : (evidence ?? t("public.findings.noEvidence"));
   return (
-    <li className="card pub-finding" data-testid="finding">
+    <li className="pub-finding" data-testid="finding">
       <div className="pub-finding__top">
-        <div className="finding-head">
-          <EvidenceBadge status={f.status} lang={lang} />
-          <ValidationBadge t={t} validation={f.validation} />
-          {f.synthetic ? <span className="badge badge--neutral">{t("public.findings.synthetic")}</span> : null}
-        </div>
-        {meta ? <span className="muted small">{meta}</span> : null}
+        <EvidenceBadge status={f.status} lang={lang} />
+        <span className="pub-finding__meta">
+          {category ? <span>{category}</span> : null}
+          {category && f.case_id && caseHref ? <span aria-hidden="true"> · </span> : null}
+          {f.case_id && caseHref ? <Link href={caseHref}>{t("public.findings.case", { id: f.case_id })}</Link> : null}
+        </span>
       </div>
-      <h3 className="finding-statement" lang={statement.lang}>
+      <h3 className="pub-finding__statement" lang={statement.lang}>
         {statement.text || "—"}
       </h3>
-      <p className="muted small pub-finding__basis">{count(t, "evidence", f.evidence_count)}</p>
+      <p className="pub-finding__basis">
+        {basis}.{" "}
+        <span data-testid="validation-status">{validationText(t, f.validation, f.validation_state)}</span>.
+      </p>
       <ValidatedBy validation={f.validation} lang={lang} />
       <div className="pub-finding__foot">
-        <p className="muted small pub-place">
+        <p className="pub-place">
           <MapPin aria-hidden size={14} strokeWidth={2} />
           <span>{place}</span>
-          {f.case_id && caseHref ? (
-            <>
-              <span aria-hidden="true">·</span>
-              <Link href={caseHref}>{t("public.findings.case", { id: f.case_id })}</Link>
-            </>
-          ) : null}
         </p>
         {trailHref ? (
           <Link className="pub-more" href={trailHref}>

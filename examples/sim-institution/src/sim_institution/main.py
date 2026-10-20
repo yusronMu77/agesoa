@@ -16,7 +16,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import ValidationError
 
 from sim_institution import __version__, pages
-from sim_institution.models import FollowUpStatus, SettingsUpdate, WebhookBody
+from sim_institution.models import SettingsUpdate, WebhookBody, resolve_follow_up
 from sim_institution.signature import parse_timestamp, signature_matches, timestamp_fresh
 from sim_institution.store import Store
 
@@ -124,7 +124,7 @@ def build_app(
     def api_webhook_log() -> dict[str, Any]:
         return {"entries": store.list_log()}
 
-    # HTML pages (SCR-080 inbox + detail, SCR-081 status and right of reply)
+    # HTML pages (SCR-080 inbox, SCR-081 follow-up status and right of reply)
 
     def item_or_404(ticket: str) -> dict[str, Any]:
         item = store.get_item(ticket)
@@ -133,8 +133,16 @@ def build_app(
         return item
 
     @app.get("/", response_class=HTMLResponse)
-    def inbox_html() -> str:
-        return pages.inbox_page(store.list_items())
+    def inbox_html(tab: str = "perlu", category: str | None = None, region: str | None = None) -> str:
+        return pages.inbox_page(store.list_items(), tab=tab, category=category or None, region=region or None)
+
+    @app.get("/replies", response_class=HTMLResponse)
+    def replies_html() -> str:
+        return pages.replies_page(store.list_items())
+
+    @app.get("/staff", response_class=HTMLResponse)
+    def staff_html() -> str:
+        return pages.staff_page()
 
     @app.get("/webhook-log", response_class=HTMLResponse)
     def webhook_log_html() -> str:
@@ -144,6 +152,19 @@ def build_app(
     def ticket_html(ticket: str) -> str:
         return pages.ticket_page(item_or_404(ticket))
 
+    def follow_up_or_422(choice: str, detail: str) -> tuple[str, str | None]:
+        try:
+            return resolve_follow_up(choice, detail)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    def status_payload(status: str, detail: str | None, note: str, ticket: str) -> dict[str, Any]:
+        """Delivery StatusUpdate; ``detail`` only when set."""
+        payload: dict[str, Any] = {"status": status, "note": note, "internal_ticket": ticket}
+        if detail:
+            payload["detail"] = detail
+        return payload
+
     async def call_agesoa(action: str, case_id: str, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         base = store.config.agesoa_api_url
         key = store.config.api_key
@@ -152,7 +173,7 @@ def build_app(
                 "action": action,
                 "ok": False,
                 "status_code": None,
-                "message": "AGESOA API URL or API key not configured (see Settings).",
+                "message": "URL API AGESOA atau API key belum diatur (lihat Integrasi).",
             }
         url = f"{base}/api/v1/cases/{quote(case_id, safe='')}/{path}"
         try:
@@ -163,7 +184,7 @@ def build_app(
                 "action": action,
                 "ok": False,
                 "status_code": None,
-                "message": f"Request failed: {type(exc).__name__}",
+                "message": f"Permintaan gagal: {type(exc).__name__}",
             }
         ok = response.is_success
         message = f"HTTP {response.status_code} {response.reason_phrase}".strip()
@@ -173,13 +194,17 @@ def build_app(
 
     @app.post("/tickets/{ticket}/status", response_class=HTMLResponse)
     async def send_status(
-        ticket: str, status: Annotated[FollowUpStatus, Form()], note: Annotated[str, Form()] = ""
+        ticket: str,
+        status: Annotated[str, Form()],
+        note: Annotated[str, Form()] = "",
+        detail: Annotated[str, Form()] = "",
     ) -> HTMLResponse:
         item = item_or_404(ticket)
-        payload = {"status": status, "note": note, "internal_ticket": ticket}
-        result = await call_agesoa("Follow-up status", item["case"]["id"], "status", payload)
+        status, sent_detail = follow_up_or_422(status, detail)
+        payload = status_payload(status, sent_detail, note, ticket)
+        result = await call_agesoa("Status tindak lanjut", item["case"]["id"], "status", payload)
         if result["ok"]:
-            store.set_status(ticket, status, note or None)
+            store.set_status(ticket, status, note or None, sent_detail)
             item = item_or_404(ticket)
         return HTMLResponse(pages.ticket_page(item, result))
 
@@ -187,9 +212,61 @@ def build_app(
     async def send_reply(ticket: str, body: Annotated[str, Form(min_length=1)]) -> HTMLResponse:
         item = item_or_404(ticket)
         result = await call_agesoa(
-            "Right of reply", item["case"]["id"], "reply", {"body": body, "attachments": []}
+            "Hak jawab", item["case"]["id"], "reply", {"body": body, "attachments": []}
         )
+        if result["ok"]:
+            store.set_reply(ticket, body, [])
+            item = item_or_404(ticket)
         return HTMLResponse(pages.ticket_page(item, result))
+
+    @app.post("/tickets/{ticket}/respond", response_class=HTMLResponse)
+    async def respond(
+        ticket: str,
+        status: Annotated[str, Form()],
+        body: Annotated[str, Form()] = "",
+        detail: Annotated[str, Form()] = "",
+        attachment_name: Annotated[str, Form()] = "",
+        attachment_url: Annotated[str, Form()] = "",
+    ) -> HTMLResponse:
+        """SCR-081 form: the follow-up status, then the official response (right of reply) when one is written.
+
+        ``status`` is an AGESOA status or a status preset (models.STATUS_PRESETS) that also carries a status
+        detail; a typed ``detail`` replaces the preset's. Stops at the first failed call, so a failed status is
+        never followed by a published reply.
+        """
+        item = item_or_404(ticket)
+        status, sent_detail = follow_up_or_422(status, detail)
+        case_id = item["case"]["id"]
+        body = body.strip()
+        calls = [
+            await call_agesoa(
+                "Status tindak lanjut",
+                case_id,
+                "status",
+                status_payload(status, sent_detail, "", ticket),
+            )
+        ]
+        if calls[0]["ok"]:
+            store.set_status(ticket, status, None, sent_detail)
+            if body:
+                url = attachment_url.strip()
+                attachments = [{"name": attachment_name.strip() or "Dokumen", "url": url}] if url else []
+                calls.append(
+                    await call_agesoa(
+                        "Hak jawab", case_id, "reply", {"body": body, "attachments": attachments}
+                    )
+                )
+                if calls[-1]["ok"]:
+                    store.set_reply(ticket, body, attachments)
+        ok = all(c["ok"] for c in calls)
+        result = {
+            "action": "Tanggapan dan tindak lanjut",
+            "ok": ok,
+            "status_code": calls[-1]["status_code"],
+            "message": "Terkirim ke AGESOA." if ok else "Belum terkirim seluruhnya ke AGESOA.",
+            "lines": [f"{c['action']}: {c['message']}" for c in calls],
+        }
+        return HTMLResponse(pages.ticket_page(item_or_404(ticket), result))
 
     return app
 

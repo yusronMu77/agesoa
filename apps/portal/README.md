@@ -3,22 +3,44 @@
 Public web portal of AGESOA (Next.js 16, App Router, TypeScript). Server-rendered pages read the backend
 services on the server; the browser never talks to a service or a database directly.
 
-At CP0 the portal has:
+## Routes
 
-| Route | What it shows |
-|---|---|
-| `/` | What AGESOA is, links to the log and the status page, evidence status legend |
-| `/log` | Public hash-chained decision log (`transparency` `GET /v1/log`), 50 entries per page via `?after=<seq>`, chain verification badge (`GET /v1/log/verify`) |
-| `/log/[seq]` | One log entry: fields, full hash, previous hash linked to the previous entry (and checked against it), the hashed entry as JSON |
-| `/status` | Readiness of the five services (`GET /readyz`, called in parallel, 3 s timeout each; unreachable = down) |
-| `GET /api/status` | The same status report as JSON (always 200; the state is in `overall` and per service) |
-| `GET /api/healthz` | `{service: "portal", status: "ok", release, environment, demo_mode}` |
+Four separate surfaces (DESIGN-BRIEF §1 in the design repository), each with its own shell and, for validators and
+institutions, its own sign-in page; a reader never sees another surface's menu. Paths are built in
+`src/lib/routes.ts` (`ROUTES`), never typed as literals.
+
+| Surface | Route | Screen | What it shows |
+|---|---|---|---|
+| Public | `/` | SCR-040 | Public dashboard: context pickers, trending, nearby, findings, latest log |
+| Public | `/temuan/[caseId]` | SCR-043 | Case page: who validated, the institution's follow-up and right of reply, the case's log. A finding id redirects (308) to its case |
+| Public | `/temuan/[caseId]/laporan` | SCR-041 | Audit report of the case |
+| Public | `/log`, `/log/[seq]` | SCR-042 | Hash-chained decision log (`transparency`), 50 entries per page via `?after=<seq>`; one entry with its hashes |
+| Public | `/about`, `/status` | | What AGESOA is and the ways in for validators and institutions; readiness of the five services |
+| Validator | `/validator/masuk` | SCR-023 | Validator sign-in (`?next=` limited to `/validator/*`) |
+| Validator | `/validator` | SCR-022 | Queue (`?filter=decided` = my decisions) |
+| Validator | `/validator/temuan/[findingId]` | SCR-020 | Basis of the finding and the decision |
+| Validator | `/validator/daftar` | SCR-021, 024–026 | Registration wizard |
+| Institution | `/instansi/masuk` | SCR-063 | Organisation sign-in (`?signup=1` creates an account; `?next=` limited to `/instansi/*`) |
+| Institution | `/instansi` | SCR-060 | Register an organisation, the admin's organisations |
+| Institution | `/instansi/[organizationId]` | SCR-061, 062, 064, 065 | Domain verification, newsroom staff confirmation, agency integration |
+| Institution | `/instansi/[organizationId]/riwayat` | SCR-062 | Every delivery to the agency |
+| Operator | `/ops` | SCR-090 | Machine status, events, outbox, demo reset; sign-in at `/login?next=/ops` |
+| | `/login` | | Operator and public-header sign-in. `/login` without `next` → 308 `/validator/masuk`; `next=/validate…` → 308 `/validator/masuk?next=…`; `next=/organizations…` → 308 `/instansi/masuk?next=…` |
+| | `POST /logout?to=<path>` | | Clears the session, 303 to `to` (the console's sign-in page) or `/` |
+| | `GET /api/status`, `GET /api/healthz` | | Status report as JSON; `{service: "portal", status: "ok", release, environment, demo_mode}` |
+
+Old paths answer with a permanent **308** to the new route, query string kept, relative `Location`
+(`LEGACY_REDIRECTS` in `src/lib/routes.ts`, served by `next.config.ts`): `/dashboard` → `/`, `/findings/[id]` and
+`/cases/[id]` → `/temuan/[id]`, `/cases/[id]/report` → `/temuan/[id]/laporan`, `/validate` → `/validator`,
+`/validate/[id]` → `/validator/temuan/[id]`, `/validators/register` → `/validator/daftar`, `/organizations` →
+`/instansi`, `/organizations/[id]` → `/instansi/[id]`, `/organizations/[id]/deliveries` → `/instansi/[id]/riwayat`.
+
+Dates and times follow the reader's language, always in Western Indonesia Time (`src/lib/i18n/core.ts`):
+`16 Okt 2026, 10.42 WIB` / `Oct 16, 2026, 10:42 AM WIB`.
 
 Every page renders when services are down: data sections show an error state instead of failing.
 When `DEMO_MODE=true`, every page shows a fixed `SIMULASI — synthetic data for demonstration` band
 (`role="status"`).
-
-Later checkpoints add the public dashboard (map, findings), validator, institution and operator views.
 
 ## Run locally
 
@@ -36,7 +58,7 @@ the portal still runs and shows the services as down.
 Other commands (from `apps/portal`):
 
 ```sh
-bun test              # unit tests: config validation, status aggregation
+bun test              # unit tests: config, status, routes and redirects, i18n formats, view helpers
 bun run typecheck     # tsc --noEmit
 bun run build         # production build (standalone output)
 bun run start         # serve the build with next start (port 3000, or --port <n>)

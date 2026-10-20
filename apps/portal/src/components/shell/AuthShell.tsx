@@ -2,7 +2,7 @@ import { CircleCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { SimulationBand } from "@/components/SimulationBand";
 import { loadConfig } from "@/lib/config";
-import { getT } from "@/lib/i18n/server";
+import { getLangPreference, getT } from "@/lib/i18n/server";
 import { LanguagePicker } from "./LanguagePicker";
 import { Logo } from "./Logo";
 
@@ -43,12 +43,12 @@ export async function AuthShell({
       </aside>
       <div className="auth-body">
         <div className="auth-body__tools">
-          <LanguagePicker />
+          <LanguagePicker preference={await getLangPreference()} />
         </div>
         <main id="main" className="auth-main" tabIndex={-1}>
           {children}
         </main>
-        <p className="auth-body__privacy">{t("common.footer.privacy")}</p>
+        <p className="auth-body__privacy">{demo ? t("signin.privacyDemo") : t("signin.privacy")}</p>
       </div>
     </div>
   );

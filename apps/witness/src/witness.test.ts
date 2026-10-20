@@ -3,17 +3,27 @@ import { ApiError, CaseAuditClient, errorDetail, IngestionClient } from "./api";
 import type { KeyValueStore } from "./auth";
 import { bearerToken, deviceId } from "./auth";
 import { orderPacks } from "./App";
-import { ISSUE_TYPE_KEY, saveIssueType, savedIssueType } from "./issueType";
 import { ConfigError, loadConfig } from "./config";
 import { ID, LANGUAGES, language, pick, setLanguage, T, t } from "./copy";
 import { EN } from "./copy.en";
 import { EmptyRecording, LocationUnavailable, locationError, PermissionDenied, recordingResult } from "./device";
 import { appendDictated, dictationSupported, startDictation } from "./dictation";
 import { errorText } from "./errors";
-import { LANGUAGE_KEY, saveLanguage, savedLanguage, suggestedLanguage } from "./language";
+import {
+  LANGUAGE_CATALOG,
+  LANGUAGE_KEY,
+  REGION_KEY,
+  saveLanguage,
+  savedLanguage,
+  savedPreference,
+  savedRegion,
+  saveRegion,
+  searchLanguages,
+  suggestedLanguage,
+} from "./language";
 import { LAST_REPORT_KEY, lastReportId, MAX_REPORTS, rememberReport, reportCodeOf, reportIds, REPORTS_KEY } from "./reports";
-import { splitFirstSentence } from "./screens/DraftReview";
-import { reportTitle } from "./screens/MyReports";
+import { evidenceRow, splitFirstSentence } from "./screens/DraftReview";
+import { questionsReport, reportTitle } from "./screens/MyReports";
 import {
   canonicalWord,
   fieldInError,
@@ -92,8 +102,13 @@ describe("field values", () => {
     expect(toLocalInput("2026-10-04T20:00:00Z")).toBe("2026-10-05T03:00");
     expect(fromLocalInput("2026-10-05T09:30")).toBe("2026-10-05T09:30:00+07:00");
     expect(fromLocalInput("09:30")).toBeNull();
-    expect(formatWib("2026-10-07T03:00:00+07:00")).toBe("Rab, 7 Okt 2026 03.00 WIB");
-    expect(formatWib("2026-10-07T03:00:00+07:00", "en")).toBe("Wed, 7 Oct 2026 03:00 WIB");
+    // Locale formats of agesoa-uiux DESIGN-BRIEF: "16 Okt 2026, 10.42 WIB" / "Oct 16, 2026, 10:42 AM WIB".
+    expect(formatWib("2026-10-16T03:42:00Z")).toBe("16 Okt 2026, 10.42 WIB");
+    expect(formatWib("2026-10-16T03:42:00Z", "en")).toBe("Oct 16, 2026, 10:42 AM WIB");
+    expect(formatWib("2026-10-07T15:05:00+07:00", "en")).toBe("Oct 7, 2026, 3:05 PM WIB");
+    // Deadlines carry the day name (SCR-005 mockup).
+    expect(formatWib("2026-10-17T10:30:00+07:00", "id", { weekday: true })).toBe("Sabtu, 17 Okt 2026, 10.30 WIB");
+    expect(formatWib("2026-10-17T10:30:00+07:00", "en", { weekday: true })).toBe("Saturday, Oct 17, 2026, 10:30 AM WIB");
   });
 
   test("list values use the pack's local words and map back to canonical ids", () => {
@@ -127,9 +142,41 @@ describe("field values", () => {
 describe("copy", () => {
   test("placeholders are filled", () => {
     expect(t("TXT-WIT-020", { detik: 3 })).toBe("Rekaman suara (3 detik)");
-    expect(t("TXT-WIT-114", { tenggat: "Rab, 7 Okt 2026 03.00 WIB" })).toBe(
-      "Amankan bukti sebelum Rab, 7 Okt 2026 03.00 WIB",
+    expect(t("TXT-WIT-114", { tenggat: "Sabtu, 17 Okt 2026, 10.30 WIB" })).toBe(
+      "Amankan bukti sebelum Sabtu, 17 Okt 2026, 10.30 WIB",
     );
+    expect(t("TXT-WIT-162", { n: 1 })).toBe("1 pertanyaan menunggu");
+  });
+
+  test("microcopy ids keep the design text (agesoa-uiux copy/microcopy.md, mockups of 18 Oct 2026)", () => {
+    const expected: Partial<Record<keyof typeof ID, string>> = {
+      "TXT-WIT-170": "Bahasa dan wilayah",
+      "TXT-WIT-188": "Cerita kejadian",
+      "TXT-WIT-189": "Lengkapi draf sesuai kejadian yang Anda ketahui.",
+      "TXT-WIT-191": "Formulir laporan belum bisa dimuat. Coba lagi.",
+      "TXT-WIT-192": "Coba lagi",
+      "TXT-WIT-193": "Perlu dilengkapi untuk audit",
+      "TXT-WIT-194": "Informasi tambahan (opsional)",
+      "TXT-WIT-196": "Belum ada kolom tambahan.",
+      "TXT-WIT-197": "Kolom tambahan {nomor}",
+      "TXT-WIT-198": "Nama kolom",
+      "TXT-WIT-199": "Contoh: Kondisi sekitar",
+      "TXT-WIT-200": "Isi",
+      "TXT-WIT-201": "Tulis informasi yang Anda ketahui",
+      "TXT-WIT-202": "Hapus kolom tambahan {nomor}",
+      "TXT-WIT-203": "Lengkapi nama dan isi kolom tambahan, atau hapus kolom yang tidak dipakai.",
+      "TXT-WIT-204": "Nama kolom tambahan sudah dipakai. Gunakan nama yang berbeda.",
+      "TXT-WIT-205": "Tambah kolom",
+      "TXT-WIT-206": "Hapus kolom",
+      "TXT-WIT-207": "kolom tambahan",
+      "TXT-WIT-208": "Cari bahasa",
+      "TXT-WIT-209": "Bahasa pilihan",
+      "TXT-WIT-211": "Sesuai bahasa perangkat",
+      "TXT-WIT-212": "Terjemahan belum tersedia",
+      "TXT-WIT-213": "Bahasa tidak ditemukan. Coba nama atau kode lain.",
+      "TXT-WIT-214": "Simpan", // mockup SCR-009 (the table says "Simpan pengaturan")
+    };
+    for (const [id, text] of Object.entries(expected)) expect(ID[id as keyof typeof ID] as string).toBe(text);
   });
 
   test("no screen asks for identity", () => {
@@ -367,6 +414,22 @@ describe("SCR-008 reports sent from this device", () => {
     expect(reportIds(mixed)).toEqual(["ok_1", "ok-2"]);
   });
 
+  test("waiting questions are shown on a report only when they surely belong to it (TXT-WIT-162)", () => {
+    const ok = (id: string, status: "draft" | "submitted") => ({ state: "ok", report: { id, status } }) as never;
+    const entries = { a: ok("a", "submitted"), b: ok("b", "draft") };
+    expect(questionsReport(["a", "b"], entries, 2)).toBe("a");
+    expect(questionsReport(["a", "b"], entries, 0)).toBeNull();
+    // Two submitted reports: the service does not say which case a question comes from.
+    expect(questionsReport(["a", "c"], { a: entries.a, c: ok("c", "submitted") }, 1)).toBeNull();
+    // A row still loading or failed could be another submitted report.
+    expect(questionsReport(["a", "d"], { a: entries.a, d: { state: "error" } }, 1)).toBeNull();
+    expect(questionsReport(["a", "d"], { a: entries.a }, 1)).toBeNull();
+    // A full list may have dropped older reports of this device.
+    const full = Array.from({ length: MAX_REPORTS }, (_, i) => (i === 0 ? "a" : `x${i}`));
+    const fullEntries = Object.fromEntries(full.map((id) => [id, ok(id, id === "a" ? "submitted" : "draft")]));
+    expect(questionsReport(full, fullEntries, 1)).toBeNull();
+  });
+
   test("report code and row title", () => {
     expect(reportCodeOf("0123456789abcdef")).toBe("RPT-0123456789ab");
     const pack = { categories: [{ id: "keracunan", label: { id: "Keracunan", en: "Poisoning" } }] };
@@ -383,7 +446,7 @@ describe("SCR-008 reports sent from this device", () => {
 
   test("the day of a report is shown in WIB per language", () => {
     expect(formatDay("2026-10-15T20:00:00Z")).toBe("16 Okt 2026");
-    expect(formatDay("2026-10-15T20:00:00Z", "en")).toBe("16 Oct 2026");
+    expect(formatDay("2026-10-15T20:00:00Z", "en")).toBe("Oct 16, 2026");
   });
 });
 
@@ -396,6 +459,34 @@ describe("SCR-009 language", () => {
     expect(savedLanguage(store)).toBe("en");
     store.setItem(LANGUAGE_KEY, "fr");
     expect(savedLanguage(store)).toBe("id");
+  });
+
+  test("any catalogue language can be kept; only languages with texts change the UI", () => {
+    const store = memory();
+    expect(savedPreference(store)).toBe("id");
+    saveLanguage("su", store);
+    expect(savedPreference(store)).toBe("su");
+    expect(savedLanguage(store)).toBe("id"); // no Sundanese texts yet: the UI stays Indonesian
+    saveLanguage("xx", store); // not in the catalogue: ignored
+    expect(savedPreference(store)).toBe("su");
+    expect(LANGUAGE_CATALOG.length).toBe(11);
+  });
+
+  test("the catalogue is searched by own name, Indonesian name or code", () => {
+    expect(searchLanguages("").length).toBe(LANGUAGE_CATALOG.length);
+    expect(searchLanguages("inggris").map((l) => l.code)).toEqual(["en"]);
+    expect(searchLanguages("EN").map((l) => l.code)).toEqual(["en"]);
+    expect(searchLanguages("sunda").map((l) => l.code)).toEqual(["su"]);
+    expect(searchLanguages("klingon")).toEqual([]);
+  });
+
+  test("only a region name is kept, never coordinates", () => {
+    const store = memory();
+    expect(savedRegion(store)).toBeNull();
+    saveRegion("Kabupaten Sukamaju (fictional)", store);
+    expect(store.values.get(REGION_KEY)).toBe("Kabupaten Sukamaju (fictional)");
+    saveRegion(null, store);
+    expect(savedRegion(store)).toBeNull();
   });
 
   test("the device language is only a suggestion", () => {
@@ -424,7 +515,7 @@ describe("SCR-009 language", () => {
 
   test("English covers the shell, tabs, SCR-008, SCR-009 and Bantuan", () => {
     expect(LANGUAGES).toEqual(["id", "en"]);
-    const required = Object.keys(ID).filter((k) => /^TXT-WIT-(00[0-3]|16[01]|2\d\d)$/.test(k));
+    const required = Object.keys(ID).filter((k) => /^TXT-WIT-(00[0-3]|1[6-9]\d|2\d\d|4\d\d)$/.test(k));
     expect(required.filter((k) => !(k in EN))).toEqual([]);
     expect(Object.keys(EN).filter((k) => !(k in ID))).toEqual([]); // no stray keys
   });
@@ -432,35 +523,62 @@ describe("SCR-009 language", () => {
   test("the AI marker splits into a title and its text", () => {
     expect(splitFirstSentence(T["TXT-WIT-081"])).toEqual([
       "Hasil AI (Agen Intake)",
-      "Periksa dan perbaiki kalau ada yang salah.",
+      "Periksa isinya. Perbaiki bagian yang belum tepat.",
     ]);
+    expect(splitFirstSentence(T["TXT-WIT-050"])).toEqual(["Izin lokasi tidak diberikan", "Pilih kecamatan sendiri."]);
     expect(splitFirstSentence("Satu kalimat")).toEqual(["Satu kalimat", ""]);
   });
 
   test("no tab or button reads as a sign-in (anonymity, E2E /login|masuk/i)", () => {
-    for (const id of ["TXT-WIT-205", "TXT-WIT-206", "TXT-WIT-160", "TXT-WIT-207", "TXT-WIT-208", "TXT-WIT-219"] as const) {
+    for (const id of ["TXT-WIT-405", "TXT-WIT-406", "TXT-WIT-160", "TXT-WIT-407", "TXT-WIT-408", "TXT-WIT-419"] as const) {
       expect(ID[id]).not.toMatch(/login|masuk/i);
       expect(EN[id] ?? "").not.toMatch(/login|sign.?in/i);
     }
   });
 });
 
-describe("issue types (domain packs)", () => {
+describe("SCR-004 attached evidence", () => {
+  const evidence = (kind: "photo" | "audio" | "screenshot", id = "e1") => ({
+    evidence_id: id,
+    kind,
+    media_type: "image/jpeg",
+    sha256: "a".repeat(64),
+    size_bytes: 1,
+    metadata_removed: true,
+  });
+  const local = (kind: "photo" | "audio" | "screenshot", name: string, seconds?: number) => ({
+    key: "k",
+    kind,
+    blob: new Blob(),
+    name,
+    previewUrl: "",
+    seconds,
+    evidenceId: "e1",
+  });
+
+  test("files picked on this device show their name; the service only knows the kind", () => {
+    expect(evidenceRow(evidence("photo"), local("photo", "foto-1.jpg"))).toEqual({
+      icon: "image",
+      name: "foto-1.jpg",
+      meta: "Info lokasi dan merek HP dihapus",
+    });
+    expect(evidenceRow(evidence("photo")).name).toBe("Foto");
+    expect(evidenceRow(evidence("audio"), local("audio", "voice.webm", 14))).toEqual({
+      icon: "mic",
+      name: "Rekaman suara",
+      meta: "14 detik",
+    });
+    expect(evidenceRow(evidence("screenshot"), local("screenshot", "post.png")).meta).toBe("Nama akun disamarkan");
+  });
+});
+
+describe("domain packs", () => {
   const summary = (id: string) => ({ id, version: "1.0.0", name: { id, en: id }, categories: [], rules: [] });
 
   test("the configured default comes first, the others keep a stable order", () => {
     const ids = orderPacks([summary("general"), summary("bencana"), summary("mbg")], "general").map((p) => p.id);
     expect(ids).toEqual(["general", "bencana", "mbg"]);
     expect(orderPacks([summary("general"), summary("mbg")], "mbg").map((p) => p.id)).toEqual(["mbg", "general"]);
-  });
-
-  test("the last chosen issue type is remembered on the device; a malformed value is ignored", () => {
-    const store = memory();
-    expect(savedIssueType(store)).toBeNull();
-    saveIssueType("mbg", store);
-    expect(savedIssueType(store)).toBe("mbg");
-    store.setItem(ISSUE_TYPE_KEY, "../etc");
-    expect(savedIssueType(store)).toBeNull();
   });
 
   test("an unknown default does not drop any pack", () => {

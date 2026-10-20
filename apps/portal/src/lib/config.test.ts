@@ -45,6 +45,12 @@ describe("loadConfig", () => {
 
   test("rejects invalid values", () => {
     expect(() => loadConfig({ APP_ENV: "production" })).toThrow(ConfigError);
+  });
+
+  test("the Witness URL is optional and must be an http(s) URL", () => {
+    expect(loadConfig({}).witnessUrl).toBeNull();
+    expect(loadConfig({ WITNESS_URL: "https://witness.example.test" }).witnessUrl).toMatch(/^https:\/\/witness\.example\.test/);
+    expect(() => loadConfig({ WITNESS_URL: "javascript:alert(1)" })).toThrow(ConfigError);
     expect(() => loadConfig({ DEMO_MODE: "maybe" })).toThrow(ConfigError);
     expect(() => loadConfig({ SERVICE_URL_INGESTION: "not a url" })).toThrow(ConfigError);
     expect(() => loadConfig({ SERVICE_URL_DELIVERY: "ftp://example.com" })).toThrow(ConfigError);

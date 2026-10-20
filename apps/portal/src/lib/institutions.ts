@@ -12,6 +12,20 @@ export interface Subscription {
   category: string | null;
   active: boolean;
   created_at: string;
+  /** Delivery paused by the agency: audit reports are held (not sent, not dropped) until resumed. */
+  paused?: boolean;
+  /** When the current pause started; null when not paused. */
+  paused_at?: string | null;
+  /** When delivery was last resumed. */
+  resumed_at?: string | null;
+  /** Deliveries waiting for the resume (status held). */
+  held_deliveries?: number;
+}
+
+export interface SubscriptionResumed {
+  subscription: Subscription;
+  /** Delivery ids released, oldest first (sent in this order). */
+  released: string[];
 }
 
 export interface Institution {
@@ -54,7 +68,8 @@ export interface DeliveryAttempt {
   attempted_at: string;
 }
 
-export type DeliveryStatus = "pending" | "delivered" | "failed";
+/** `held` = waiting for a paused webhook to resume (no attempt made yet). */
+export type DeliveryStatus = "pending" | "delivered" | "failed" | "held";
 
 export interface Delivery {
   delivery_id: string;
@@ -62,6 +77,8 @@ export interface Delivery {
   event: "audit_report.final" | "test_event";
   case_id: string;
   status: DeliveryStatus;
+  /** Set when a pause held the delivery; kept after it is released. */
+  held_at?: string | null;
   internal_ticket: string | null;
   created_at: string;
   attempts: DeliveryAttempt[];
@@ -98,6 +115,26 @@ export function saveSubscription(
   return fetchJson(`${base(config, id)}/subscription`, { ...bearer(token, options), method: "PUT", body });
 }
 
+/** "Jeda webhook" (PRV-pause): new audit reports are held until resumed. Idempotent; 409 without a webhook. */
+export function pauseSubscription(
+  config: PortalConfig,
+  token: string,
+  id: string,
+  options: CallOptions = {},
+): Promise<FetchResult<Subscription>> {
+  return fetchJson(`${base(config, id)}/subscription/pause`, { ...bearer(token, options), method: "POST" });
+}
+
+/** "Aktifkan kembali" (PRV-paused): held deliveries are sent oldest first. Idempotent; 409 without a webhook. */
+export function resumeSubscription(
+  config: PortalConfig,
+  token: string,
+  id: string,
+  options: CallOptions = {},
+): Promise<FetchResult<SubscriptionResumed>> {
+  return fetchJson(`${base(config, id)}/subscription/resume`, { ...bearer(token, options), method: "POST" });
+}
+
 export function createApiKey(
   config: PortalConfig,
   token: string,
@@ -129,6 +166,7 @@ export const DELIVERY_STATUS_LABEL: Record<DeliveryStatus, string> = {
   pending: "Pending",
   delivered: "Delivered",
   failed: "Failed",
+  held: "Held",
 };
 
 export const DELIVERY_EVENT_LABEL: Record<Delivery["event"], string> = {

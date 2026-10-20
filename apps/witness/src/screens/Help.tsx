@@ -7,7 +7,7 @@ import { Icon } from "../icons";
 export function Help({ onLanguage }: { onLanguage: () => void }) {
   return (
     <main className="screen" data-screen="help">
-      <h1>{T["TXT-WIT-208"]}</h1>
+      <h1>{T["TXT-WIT-408"]}</h1>
 
       <section className="card" aria-labelledby="help-how">
         <h2 id="help-how">{T["TXT-WIT-240"]}</h2>
@@ -37,7 +37,7 @@ export function Help({ onLanguage }: { onLanguage: () => void }) {
         <h2 id="help-settings">{T["TXT-WIT-247"]}</h2>
         <button type="button" className="button start" onClick={onLanguage}>
           <Icon name="globe" />
-          <span className="grow">{T["TXT-WIT-250"]}</span>
+          <span className="grow">{T["TXT-WIT-170"]}</span>
           <Icon name="chevronRight" />
         </button>
       </section>

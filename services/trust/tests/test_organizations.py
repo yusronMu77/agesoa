@@ -176,7 +176,38 @@ def test_seeded_demo_organizations_are_announced_once(client):
     assert {(e["data"]["organization_id"], e["data"]["admin_ref"]) for e in seeded()} == {
         ("ORG-DEMO-NEWS", "demo-org-admin-1"),
         ("ORG-DEMO-AGENCY", "demo-agency-admin-1"),
+        ("ORG-DEMO-TRY", "demo-account-1"),
     }
     client.portal.call(seed_demo_validators, client.app.state.db)
     client.portal.call(client.app.state.outbox.dispatch)
-    assert len(seeded()) == 2
+    assert len(seeded()) == 3
+
+
+async def test_contact_email_is_kept_privately_for_the_admin(client, zone):
+    created = register(client, contact_email=" Kontak@Warta.Example.ORG ")
+    assert created.status_code == 201, created.text
+    org = created.json()
+    assert org["contact_email"] == "Kontak@warta.example.org"
+    one = client.get(f"/v1/organizations/{org['organization_id']}", headers=ADMIN).json()
+    assert one["contact_email"] == "Kontak@warta.example.org"
+    assert [o["contact_email"] for o in client.get("/v1/organizations", headers=ADMIN).json()] == [
+        "Kontak@warta.example.org"
+    ]
+    assert client.get(f"/v1/organizations/{org['organization_id']}", headers=OTHER_ADMIN).status_code == 404
+
+    zone.txt["warta.example.org"] = [org["txt_record"]]
+    assert (await check(client, org["organization_id"]))["organization"]["contact_email"]
+    client.portal.call(client.app.state.outbox.dispatch)
+    published = json.dumps(client.app.state.test_publisher.sent)
+    assert "Kontak@" not in published and "contact_email" not in published  # never in an event or the log
+    newsrooms = client.get("/v1/organizations/newsrooms", headers=VALIDATOR).json()
+    assert "contact_email" not in json.dumps(newsrooms)
+
+
+def test_contact_email_is_optional_and_validated(client):
+    plain = register(client)
+    assert plain.status_code == 201 and plain.json()["contact_email"] is None
+    blank = register(client, domain="blank.example.org", contact_email="")
+    assert blank.status_code == 201 and blank.json()["contact_email"] is None
+    bad = register(client, domain="bad.example.org", contact_email="kontak@dinas")
+    assert bad.status_code == 422

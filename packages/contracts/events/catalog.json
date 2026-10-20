@@ -38,6 +38,13 @@
       "description": "Validation of a finding reached quorum (approved) or was rejected."
     },
     {
+      "type": "validation.updated",
+      "schema": "validation.updated.v1.schema.json",
+      "producer": "trust",
+      "consumers": ["transparency"],
+      "description": "An open validation changed: opened with its decision deadline, or a validator decided without closing it (state awaiting_decisions or needs_evidence). Never a final outcome."
+    },
+    {
       "type": "organization.verified",
       "schema": "organization.verified.v1.schema.json",
       "producer": "trust",

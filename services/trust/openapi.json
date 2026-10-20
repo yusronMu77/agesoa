@@ -199,7 +199,7 @@
         "tags": [
           "validation"
         ],
-        "summary": "Findings waiting for validation that are routed to me (role, regency, no conflict)",
+        "summary": "Findings waiting for validation that are routed to me (role, regency, no conflict), nearest deadline first",
         "operationId": "list_requests_v1_validation_requests_get",
         "responses": {
           "200": {
@@ -272,7 +272,7 @@
         "tags": [
           "validation"
         ],
-        "summary": "Approve or reject a finding; quorum is evaluated by code",
+        "summary": "Approve, reject or ask for more evidence (needs_evidence); quorum is evaluated by code",
         "operationId": "decide_v1_validation_requests__finding_id__decisions_post",
         "parameters": [
           {
@@ -313,17 +313,10 @@
             "description": "Not an active validator"
           },
           "409": {
-            "description": "Already decided, validation closed, or conflict of interest"
+            "description": "Already decided (approve/reject are final; needs_evidence may be replaced once by approve or reject), validation closed, or conflict of interest"
           },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "Invalid body, e.g. needs_evidence without a note"
           },
           "400": {
             "description": "Malformed request body (not valid JSON)"
@@ -814,14 +807,17 @@
             "type": "string",
             "enum": [
               "approve",
-              "reject"
+              "reject",
+              "needs_evidence"
             ],
-            "title": "Decision"
+            "title": "Decision",
+            "description": "approve | reject | needs_evidence (ask for more evidence before deciding: recorded and logged, never counted toward quorum; the same validator may later replace it once with approve or reject)"
           },
           "note": {
             "type": "string",
             "maxLength": 4000,
             "title": "Note",
+            "description": "Required (not blank) for needs_evidence: what is missing",
             "default": ""
           },
           "confidence": {
@@ -860,13 +856,20 @@
             "type": "string",
             "enum": [
               "approve",
-              "reject"
+              "reject",
+              "needs_evidence"
             ],
             "title": "Decision"
           },
           "counted": {
             "type": "boolean",
             "title": "Counted"
+          },
+          "replaced": {
+            "type": "boolean",
+            "title": "Replaced",
+            "description": "True when this decision replaced your earlier needs_evidence",
+            "default": false
           },
           "quorum_reached": {
             "type": "boolean",
@@ -886,6 +889,22 @@
               }
             ],
             "title": "Outcome"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "awaiting_decisions",
+                  "needs_evidence"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State",
+            "description": "State of the still open validation; null once closed"
           },
           "quorum": {
             "$ref": "#/components/schemas/QuorumStatus"
@@ -1232,6 +1251,18 @@
             "title": "Txt Record",
             "description": "The TXT value to publish on the domain"
           },
+          "contact_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Email",
+            "description": "Private contact address (only the admin sees it)"
+          },
           "verified_at": {
             "anyOf": [
               {
@@ -1295,6 +1326,21 @@
           },
           "region": {
             "$ref": "#/components/schemas/Region"
+          },
+          "contact_email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 254,
+                "minLength": 6,
+                "pattern": "^\\s*[^@\\s]+@[^@\\s]+\\s*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Email",
+            "description": "Optional contact address for finding notifications (Email kontak), separate from the admin account's sign-in email. Private: returned only to the organization's admin, never published."
           }
         },
         "type": "object",
@@ -1351,6 +1397,12 @@
           "rejections": {
             "type": "integer",
             "title": "Rejections"
+          },
+          "evidence_requests": {
+            "type": "integer",
+            "title": "Evidence Requests",
+            "description": "Counted validators whose current decision is needs_evidence (never counted in quorum)",
+            "default": 0
           }
         },
         "type": "object",
@@ -1829,8 +1881,34 @@
             ],
             "title": "Completed At"
           },
-          "quorum": {
-            "$ref": "#/components/schemas/QuorumStatus"
+          "deadline_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline At",
+            "description": "Decision deadline (Tenggat): ready time + the domain pack's validation.decision_window_hours; null when the pack sets none. The queue is sorted by it, nearest first, requests without one last."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "awaiting_decisions",
+              "needs_evidence"
+            ],
+            "title": "State",
+            "description": "needs_evidence while a counted validator's current decision asks for more evidence (chip 'Butuh bukti'); not a verdict, see outcome",
+            "default": "awaiting_decisions"
+          },
+          "evidence_requests": {
+            "type": "integer",
+            "title": "Evidence Requests",
+            "description": "Counted validators whose current decision is needs_evidence",
+            "default": 0
           },
           "my_decision": {
             "anyOf": [
@@ -1838,14 +1916,19 @@
                 "type": "string",
                 "enum": [
                   "approve",
-                  "reject"
+                  "reject",
+                  "needs_evidence"
                 ]
               },
               {
                 "type": "null"
               }
             ],
-            "title": "My Decision"
+            "title": "My Decision",
+            "description": "The signed-in validator's current decision; null when they have not decided yet"
+          },
+          "quorum": {
+            "$ref": "#/components/schemas/QuorumStatus"
           }
         },
         "type": "object",
@@ -1860,8 +1943,7 @@
           "outcome",
           "synthetic",
           "received_at",
-          "quorum",
-          "my_decision"
+          "quorum"
         ],
         "title": "ValidationDetail"
       },
@@ -2008,6 +2090,52 @@
               }
             ],
             "title": "Completed At"
+          },
+          "deadline_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline At",
+            "description": "Decision deadline (Tenggat): ready time + the domain pack's validation.decision_window_hours; null when the pack sets none. The queue is sorted by it, nearest first, requests without one last."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "awaiting_decisions",
+              "needs_evidence"
+            ],
+            "title": "State",
+            "description": "needs_evidence while a counted validator's current decision asks for more evidence (chip 'Butuh bukti'); not a verdict, see outcome",
+            "default": "awaiting_decisions"
+          },
+          "evidence_requests": {
+            "type": "integer",
+            "title": "Evidence Requests",
+            "description": "Counted validators whose current decision is needs_evidence",
+            "default": 0
+          },
+          "my_decision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject",
+                  "needs_evidence"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "My Decision",
+            "description": "The signed-in validator's current decision; null when they have not decided yet"
           }
         },
         "type": "object",

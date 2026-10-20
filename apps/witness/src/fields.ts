@@ -33,34 +33,44 @@ export function fromLocalInput(value: string): string | null {
   return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) ? `${value}:00${TZ_OFFSET}` : null;
 }
 
-const longOptions: Intl.DateTimeFormatOptions = {
-  timeZone: TZ,
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-};
-const longDates = {
-  id: new Intl.DateTimeFormat("id-ID", longOptions),
-  en: new Intl.DateTimeFormat("en-GB", longOptions),
-};
+type Lang = "id" | "en";
 
-/** "Sen, 5 Okt 2026 03.00 WIB" / "Mon, 5 Oct 2026 03:00 WIB" */
-export function formatWib(iso: string, lang: "id" | "en" = "id"): string {
-  return `${longDates[lang].format(new Date(iso)).replace(/,(?= \d{2}[.:]\d{2}$)/, "")} WIB`;
+const LOCALE: Record<Lang, string> = { id: "id-ID", en: "en-US" };
+const partFormats = new Map<string, Intl.DateTimeFormat>();
+
+/** Named parts of a date in WIB ("16", "Okt", "2026", "10", "42", "Jumat"; en also "AM"). */
+function wibParts(iso: string, lang: Lang): Record<string, string> {
+  let format = partFormats.get(lang);
+  if (!format) {
+    format = new Intl.DateTimeFormat(LOCALE[lang], {
+      timeZone: TZ,
+      weekday: "long",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: lang === "en" ? "numeric" : "2-digit",
+      minute: "2-digit",
+      hourCycle: lang === "en" ? "h12" : "h23",
+    });
+    partFormats.set(lang, format);
+  }
+  return Object.fromEntries(format.formatToParts(new Date(iso)).map((p) => [p.type, p.value]));
 }
 
-const dayFormats = {
-  id: new Intl.DateTimeFormat("id-ID", { timeZone: TZ, day: "numeric", month: "short", year: "numeric" }),
-  en: new Intl.DateTimeFormat("en-GB", { timeZone: TZ, day: "numeric", month: "short", year: "numeric" }),
-};
+/** The calendar day in WIB per locale (agesoa-uiux DESIGN-BRIEF): "16 Okt 2026" / "Oct 16, 2026". */
+export function formatDay(iso: string, lang: Lang = "id"): string {
+  const p = wibParts(iso, lang);
+  return lang === "en" ? `${p.month} ${p.day}, ${p.year}` : `${p.day} ${p.month} ${p.year}`;
+}
 
-/** "16 Okt 2026" / "16 Oct 2026", the calendar day in WIB. */
-export function formatDay(iso: string, lang: "id" | "en" = "id"): string {
-  return dayFormats[lang].format(new Date(iso));
+/**
+ * Date and time in WIB per locale: "16 Okt 2026, 10.42 WIB" / "Oct 16, 2026, 10:42 AM WIB". `weekday` prefixes the
+ * day name, for deadlines (SCR-005 mockup "Sabtu, 17 Okt 2026 10.30 WIB").
+ */
+export function formatWib(iso: string, lang: Lang = "id", { weekday = false } = {}): string {
+  const p = wibParts(iso, lang);
+  const time = lang === "en" ? `${p.hour}:${p.minute} ${p.dayPeriod}` : `${p.hour}.${p.minute}`;
+  return `${weekday ? `${p.weekday}, ` : ""}${formatDay(iso, lang)}, ${time} WIB`;
 }
 
 type Vocabulary = Record<string, string[]>;

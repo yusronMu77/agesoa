@@ -6,6 +6,11 @@ the stored body with the subscription secret (HMAC-SHA256 over `<timestamp>.<bod
 either finishes the job or schedules the next retry (30 s, 2 min, 10 min by default). Retries keep the event id, so
 the receiver deduplicates them.
 
+An agency can pause delivery of its subscription (SCR-062). While paused, audit reports are staged as `held` jobs
+(no attempt, nothing counted, nothing dropped), and an attempt that comes due for a report is held instead of sent.
+Resuming releases the held jobs oldest first through the normal attempt path (same signing, same retries). Test
+events are not held: they are how the agency checks its endpoint before resuming.
+
 Attempts run on Cloud Tasks outside local (the task calls `/internal/webhooks/{delivery_id}/attempts/{n}`), and on an
 in-process scheduler in the devenv and tests. A task that runs twice is harmless: an attempt only counts when the job
 is still pending at the expected attempt number.
@@ -28,7 +33,7 @@ from agesoa_platform.events import isoformat, new_event, utc_now
 from agesoa_platform.hmac import sign_webhook
 from agesoa_platform.outbox import add_event
 from fastapi import FastAPI
-from sqlalchemy import and_, or_, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agesoa_delivery import SERVICE
@@ -111,12 +116,15 @@ def test_body(portal_url: str, event_id: str, institution_name: str) -> tuple[st
 
 
 async def stage_report(session: AsyncSession, report: dict[str, Any], portal_url: str) -> list[str]:
-    """One job per active agency subscription matching the report's region and category. Returns delivery ids."""
+    """One job per active agency subscription matching the report's region and category. Returns the delivery ids
+    to schedule now (jobs of a paused subscription are staged as held and released on resume)."""
     region_code = (report.get("region") or {}).get("regency_code")
     category = report.get("category")
+    # FOR SHARE: a concurrent pause/resume waits for this transaction (and vice versa), so a job is never staged as
+    # held after its subscription's held jobs were released.
     rows = (
         await session.execute(
-            select(subscriptions.c.id, subscriptions.c.organization_id)
+            select(subscriptions.c.id, subscriptions.c.organization_id, subscriptions.c.paused_at)
             .join(institutions, institutions.c.organization_id == subscriptions.c.organization_id)
             .where(
                 subscriptions.c.active.is_(True),
@@ -124,12 +132,15 @@ async def stage_report(session: AsyncSession, report: dict[str, Any], portal_url
                 or_(subscriptions.c.region_code.is_(None), subscriptions.c.region_code == region_code),
                 or_(subscriptions.c.category.is_(None), subscriptions.c.category == category),
             )
+            .with_for_update(read=True, of=subscriptions)
         )
     ).all()
     staged = []
-    for subscription_id, organization_id in rows:
+    now = utc_now()
+    for subscription_id, organization_id, paused_at in rows:
         event_id = str(uuid.uuid4())
         delivery_id = new_id("DLV-")
+        held = paused_at is not None
         await session.execute(
             webhook_jobs.insert().values(
                 delivery_id=delivery_id,
@@ -141,9 +152,12 @@ async def stage_report(session: AsyncSession, report: dict[str, Any], portal_url
                 audit_report_id=report["id"],
                 body=await report_body(session, report, portal_url, event_id),
                 synthetic=bool(report.get("synthetic")),
+                status="held" if held else "pending",
+                held_at=now if held else None,
             )
         )
-        staged.append(delivery_id)
+        if not held:
+            staged.append(delivery_id)
     return staged
 
 
@@ -209,6 +223,13 @@ async def attempt(app: FastAPI, delivery_id: str, number: int) -> str:
             .mappings()
             .one()
         )
+    # Paused: hold the report instead of sending it (False = resumed in between: send now).
+    if (
+        job["event"] == "audit_report.final"
+        and subscription["paused_at"] is not None
+        and await _hold(db, job, number)
+    ):
+        return "held"
     timestamp = int(time.time())
     body = job["body"].encode("utf-8")
     http_status: int | None = None
@@ -335,6 +356,55 @@ async def attempt(app: FastAPI, delivery_id: str, number: int) -> str:
         },
     )
     return result
+
+
+async def _hold(db, job: dict[str, Any], number: int) -> bool:
+    """Park a due attempt of a paused subscription's job: status held, attempt not counted. False if the subscription
+    was resumed meanwhile (the caller then sends it)."""
+    async with db.transaction() as session:
+        paused_at = (
+            await session.execute(
+                select(subscriptions.c.paused_at)
+                .where(subscriptions.c.id == job["subscription_id"])
+                .with_for_update(read=True)
+            )
+        ).scalar()
+        if paused_at is None:
+            return False
+        await session.execute(
+            update(webhook_jobs)
+            .where(
+                webhook_jobs.c.delivery_id == job["delivery_id"],
+                webhook_jobs.c.status == "pending",
+                webhook_jobs.c.attempts == number - 1,
+            )
+            .values(status="held", held_at=func.coalesce(webhook_jobs.c.held_at, utc_now()))
+        )
+    log.info("webhook held", extra={"detail": {"delivery_id": job["delivery_id"], "attempt": number}})
+    return True
+
+
+# --- Pause / resume (inside the caller's transaction) ---
+
+
+async def release_held(session: AsyncSession, subscription_id: str) -> list[tuple[str, int]]:
+    """Held jobs of a subscription back to pending, oldest first. Returns (delivery_id, next attempt number)."""
+    rows = (
+        await session.execute(
+            update(webhook_jobs)
+            .where(webhook_jobs.c.subscription_id == subscription_id, webhook_jobs.c.status == "held")
+            .values(status="pending")
+            .returning(webhook_jobs.c.delivery_id, webhook_jobs.c.attempts, webhook_jobs.c.created_at)
+        )
+    ).all()
+    return [(d, attempts + 1) for d, attempts, _ in sorted(rows, key=lambda r: (r[2], r[0]))]
+
+
+async def schedule_released(app: FastAPI, released: list[tuple[str, int]]) -> None:
+    """After commit: one attempt per released job, spaced `WEBHOOK_RESUME_SPACING` apart so they go out in order."""
+    spacing = app.state.settings.webhook_resume_spacing
+    for index, (delivery_id, number) in enumerate(released):
+        await app.state.webhook_scheduler.schedule(delivery_id, number, index * spacing)
 
 
 # --- Schedulers ---

@@ -116,6 +116,8 @@ class Store:
                     "received_at": utc_now_iso(),
                     "status": "new",
                     "note": None,
+                    "detail": None,
+                    "reply": None,
                 }
             )
             self._save()
@@ -160,12 +162,22 @@ class Store:
         with self._lock:
             return next((dict(item) for item in self.items if item["ticket"] == ticket), None)
 
-    def set_status(self, ticket: str, status: str, note: str | None) -> None:
+    def set_status(self, ticket: str, status: str, note: str | None, detail: str | None = None) -> None:
+        """Remember the follow-up status accepted by AGESOA, with the status detail that was sent (if any)."""
         with self._lock:
             for item in self.items:
                 if item["ticket"] == ticket:
                     item["status"] = status
                     item["note"] = note
+                    item["detail"] = detail
+            self._save()
+
+    def set_reply(self, ticket: str, body: str, attachments: list[dict[str, str]]) -> None:
+        """Remember the right of reply accepted by AGESOA (the inbox tab "Sudah ditanggapi")."""
+        with self._lock:
+            for item in self.items:
+                if item["ticket"] == ticket:
+                    item["reply"] = {"body": body, "attachments": attachments, "sent_at": utc_now_iso()}
             self._save()
 
     # persistence

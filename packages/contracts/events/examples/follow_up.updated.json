@@ -11,6 +11,7 @@
     "case_id": "K-2026-0007",
     "organization_id": "O-0002",
     "status": "in_progress",
+    "detail": "Re-inspection scheduled",
     "note": "Kitchen inspection scheduled.",
     "internal_ticket": "SIM-118",
     "updated_at": "2026-10-14T03:15:00Z",

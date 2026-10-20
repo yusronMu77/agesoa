@@ -10,6 +10,7 @@ case, not the product: everything MBG-specific lives in [`pack.json`](pack.json)
 | `report_fields` | school, kitchen (SPPG), menu, cooked at (from the tray label), eaten at, meal date, symptoms, people affected, tray label text |
 | `rules` | `consume_within_4h`: eaten at most 240 minutes after cooking (exactly 4:00 passes) |
 | `evidence_deadline` | food samples are kept 2×24 h **counted from cooking time** (fallback: 00:00 of the meal date); after that the highest reachable finding status is *supported* |
+| `validation` | validators have 72 h to decide on a finding (`decision_window_hours`, counted from when it became ready for validation) |
 | `cause_framework` | fishbone: ingredients, process, people, facility, distribution, oversight, with hypothesis seeds, witness questions and cross-case metrics for the Audit agent |
 | `pattern_metrics` | cross-case metrics per kitchen (reports, distinct schools, meal days, minutes from cooking to eating, 4-hour violations). No supplier metric: reports carry no supplier field yet |
 | `validator_roles` | nutritionist, health worker, journalist, education watchdog NGO |

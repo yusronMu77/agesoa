@@ -30,10 +30,18 @@ export function optional(t: Translate, key: string, fallback: string, vars?: Var
   return has(key) ? t(key, vars) : fallback;
 }
 
-/** Validation state of a finding, the text of the `validation-status` badge. */
-export function validationText(t: Translate, validation: PublicFinding["validation"]): string {
-  if (!validation) return t("public.validation.waiting");
+/**
+ * Validation state of a finding, the text of the `validation-status` badge: "Divalidasi {n} validator" (approvals of
+ * the final validation), "Dikembalikan ke audit", "Validator meminta bukti tambahan" (open, evidence requested) or
+ * "Menunggu validasi".
+ */
+export function validationText(
+  t: Translate,
+  validation: PublicFinding["validation"],
+  state?: PublicFinding["validation_state"],
+): string {
+  if (!validation) return state === "needs_evidence" ? t("public.validation.needsEvidence") : t("public.validation.waiting");
   return validation.outcome === "approved"
-    ? t("public.validation.approved", { n: validation.decisions.length })
+    ? t("public.validation.approved", { n: validation.decisions.filter((d) => d.decision === "approve").length })
     : t("public.validation.returned");
 }

@@ -69,6 +69,7 @@
     "hours": 48,
     "after_deadline_max_status": "supported"
   },
+  "validation": { "decision_window_hours": 72 },
   "evidence_ladder": [
     { "status": "proven", "evidence": [{ "en": "Lab result of a food sample and patient specimens", "id": "Hasil lab sampel makanan dan spesimen" }] },
     {

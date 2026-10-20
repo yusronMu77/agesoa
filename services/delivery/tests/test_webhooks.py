@@ -319,3 +319,162 @@ def test_delivered_report_then_follow_up_and_right_of_reply(client, receiver):
             404,
             405,
         )
+
+
+# --- Pause / resume (SCR-062 "Jeda webhook") ---
+
+
+def report(case_id):
+    return {**REPORT, "case_id": case_id}
+
+
+def pause(client, headers=ADMIN, org=AGENCY):
+    return client.post(f"/v1/institutions/{org}/subscription/pause", headers=headers)
+
+
+def resume(client, headers=ADMIN, org=AGENCY):
+    return client.post(f"/v1/institutions/{org}/subscription/resume", headers=headers)
+
+
+def settled(rows):
+    return rows and all(r["status"] in ("delivered", "failed") for r in rows)
+
+
+def test_paused_webhook_holds_reports_then_resume_sends_them_in_order(client, receiver):
+    subscribe(client)
+    paused = pause(client)
+    assert paused.status_code == 200, paused.text
+    assert paused.json()["paused"] is True and paused.json()["paused_at"]
+    for case_id in ("CASE-HOLD-1", "CASE-HOLD-2", "CASE-HOLD-3"):
+        assert client.post("/internal/demo/audit-reports", json=report(case_id)).status_code == 201
+    client.portal.call(client.app.state.webhook_scheduler.idle)
+    time.sleep(0.2)
+    rows = client.get(f"/v1/institutions/{AGENCY}/deliveries", headers=ADMIN).json()
+    assert [r["status"] for r in rows] == ["held"] * 3
+    assert all(r["held_at"] and r["attempts"] == [] for r in rows)  # nothing sent, nothing counted
+    assert receiver.calls == []
+    assert sent(client, "audit_report.sent") == []
+    shown = client.get(f"/v1/institutions/{AGENCY}", headers=ADMIN).json()["subscription"]
+    assert shown["paused"] is True and shown["held_deliveries"] == 3
+
+    resumed = resume(client)
+    assert resumed.status_code == 200, resumed.text
+    oldest_first = [r["delivery_id"] for r in reversed(rows)]
+    assert resumed.json()["released"] == oldest_first
+    view = resumed.json()["subscription"]
+    assert view["paused"] is False and view["paused_at"] is None and view["resumed_at"]
+    rows = history(client, until=lambda d: len(d) == 3 and settled(d))
+    assert [r["status"] for r in rows] == ["delivered"] * 3
+    assert all(r["held_at"] for r in rows)  # the history still marks them as held once
+    assert all([(a["attempt"], a["http_status"]) for a in r["attempts"]] == [(1, 200)] for r in rows)
+    cases = [json.loads(c.content)["case"]["id"] for c in receiver.calls]
+    assert cases == ["CASE-HOLD-1", "CASE-HOLD-2", "CASE-HOLD-3"]
+    secret_ok = [c.headers["x-agesoa-signature"].startswith("v1=") for c in receiver.calls]
+    assert all(secret_ok)
+    assert {c.headers["x-agesoa-event-id"] for c in receiver.calls} == {r["event_id"] for r in rows}
+    assert len(sent(client, "audit_report.sent")) == 3
+
+
+def test_pause_and_resume_are_idempotent_and_admin_only(client, receiver):
+    assert pause(client).status_code == 409  # no subscription yet
+    assert resume(client).status_code == 409
+    subscribe(client)
+    assert pause(client, headers=OTHER_ADMIN).status_code == 404
+    assert pause(client, headers={"Authorization": "Bearer dev:agency-admin:validator"}).status_code == 403
+    assert resume(client).json()["released"] == []  # not paused: nothing to do
+    first = pause(client).json()
+    again = pause(client).json()
+    assert again["paused_at"] == first["paused_at"]
+    client.post("/internal/demo/audit-reports", json=report("CASE-IDEM-1"))
+    assert resume(client).json()["released"] != []
+    assert resume(client).json()["released"] == []
+    history(client, until=settled)
+    time.sleep(0.3)
+    assert len(receiver.calls) == 1  # released once, sent once
+
+
+def test_test_event_is_sent_while_paused(client, receiver):
+    subscribe(client)
+    pause(client)
+    client.post(f"/v1/institutions/{AGENCY}/test-event", headers=ADMIN)
+    (row,) = history(client)
+    assert row["status"] == "delivered" and row["held_at"] is None
+    assert len(receiver.calls) == 1
+
+
+@pytest.mark.parametrize("receiver", [Receiver([500, 503])], indirect=False)
+def test_held_report_keeps_the_normal_retries_after_resume(client, receiver):
+    subscribe(client)
+    pause(client)
+    client.post("/internal/demo/audit-reports", json=report("CASE-RETRY-1"))
+    resume(client)
+    (row,) = history(client, until=settled)
+    assert row["status"] == "delivered" and row["held_at"]
+    assert [(a["attempt"], a["http_status"]) for a in row["attempts"]] == [(1, 500), (2, 503), (3, 200)]
+    assert len({r.headers["x-agesoa-event-id"] for r in receiver.calls}) == 1
+
+
+@pytest.mark.parametrize("receiver", [Receiver([500])], indirect=False)
+def test_retry_that_comes_due_while_paused_is_held_without_counting(client, receiver):
+    client.app.state.settings.webhook_retry_delays = "0.6,0.6,0.6"
+    subscribe(client)
+    client.post("/internal/demo/audit-reports", json=report("CASE-RETRY-2"))
+    history(client, until=lambda d: d and len(d[0]["attempts"]) == 1)
+    pause(client)
+    (row,) = history(client, until=lambda d: d and d[0]["status"] == "held")
+    assert row["status"] == "held"
+    assert [(a["attempt"], a["http_status"]) for a in row["attempts"]] == [(1, 500)]
+    assert len(receiver.calls) == 1
+    assert resume(client).json()["released"] == [row["delivery_id"]]
+    (row,) = history(client, until=settled)
+    assert [(a["attempt"], a["http_status"]) for a in row["attempts"]] == [(1, 500), (2, 200)]
+
+
+def test_replacing_a_paused_subscription_keeps_the_pause_and_the_held_reports(client, receiver):
+    subscribe(client)
+    pause(client)
+    client.post("/internal/demo/audit-reports", json=report("CASE-MOVE-1"))
+    replaced = client.put(
+        f"/v1/institutions/{AGENCY}/subscription",
+        json={"webhook_url": "http://new.example/hook"},
+        headers=ADMIN,
+    ).json()
+    assert replaced["subscription"]["paused"] is True and replaced["subscription"]["held_deliveries"] == 1
+    resume(client)
+    (row,) = history(client, until=settled)
+    assert row["status"] == "delivered"
+    (request,) = receiver.calls
+    assert str(request.url) == "http://new.example/hook"
+    assert verify_webhook(
+        replaced["secret"],
+        request.headers["x-agesoa-timestamp"],
+        request.headers["x-agesoa-signature"],
+        request.content,
+    )
+
+
+# --- Follow-up status detail (SCR-081 "Pemeriksaan ulang dijadwalkan") ---
+
+
+def test_follow_up_status_carries_a_short_public_detail(client, receiver):
+    subscribe(client)
+    key = client.post(f"/v1/institutions/{AGENCY}/api-key", headers=ADMIN).json()["api_key"]
+    client.post("/internal/demo/audit-reports", json=REPORT)
+    history(client, until=settled)
+    auth = {"Authorization": f"Bearer {key}"}
+    url = f"/api/v1/cases/{REPORT['case_id']}/status"
+    ok = client.post(
+        url,
+        json={"status": "in_progress", "detail": "  Pemeriksaan ulang dijadwalkan ", "note": "internal"},
+        headers=auth,
+    )
+    assert ok.status_code == 202, ok.text
+    assert client.post(url, json={"status": "received", "detail": "   "}, headers=auth).status_code == 202
+    assert client.post(url, json={"status": "done", "detail": "x" * 161}, headers=auth).status_code == 422
+    assert client.post(url, json={"status": "done", "detail": "two\nlines"}, headers=auth).status_code == 422
+    first, blank = sent(client, "follow_up.updated")
+    for event in (first, blank):
+        validate_event(event)
+    assert first["data"]["detail"] == "Pemeriksaan ulang dijadwalkan"
+    assert first["data"]["status"] == "in_progress"
+    assert "detail" not in blank["data"]  # blank = no detail; consumers read it with a default

@@ -32,6 +32,24 @@ def test_general_form_has_no_food_fields_rules_or_expiry():
     assert result["missing_required"] == []
 
 
+def test_general_form_texts_follow_the_report_form_design():
+    # agesoa-uiux design-system/scripts/witness-general.penpot.js, SCR-004 (normal and Intake-unavailable states).
+    with client() as c:
+        pack = c.get("/v1/domain-packs/general").json()
+    fields = {f["id"]: f for f in pack["report_fields"]}
+    labels = {c["id"]: c["label"]["id"] for c in pack["categories"]}
+    assert labels["infrastructure"] == "Jalan dan infrastruktur"
+    assert pack["category_hint"]["id"] == "Pilih Lainnya / belum tahu jika belum sesuai."
+    assert fields["place"]["hint"]["id"] == "Tidak perlu alamat rumah pribadi."
+    assert fields["place"]["placeholder"]["id"] == "Nama tempat atau patokan"
+    assert fields["occurred_at"]["hint"]["id"] == "Boleh dikosongkan jika belum tahu."
+    assert fields["occurred_at"]["placeholder"]["id"] == "Tanggal dan waktu kejadian"
+    assert fields["impact"]["placeholder"]["id"] == "Apa yang terganggu?"
+    assert fields["affected_count"]["placeholder"]["id"] == "Boleh dikosongkan"
+    assert "hint" not in fields["impact"] and "hint" not in fields["affected_count"]
+    assert all(f["placeholder"]["en"] for f in fields.values())
+
+
 def test_unknown_pack_is_404():
     with client() as c:
         assert c.get("/v1/domain-packs/roads").status_code == 404

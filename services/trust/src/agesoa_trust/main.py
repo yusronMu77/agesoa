@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from agesoa_trust import __version__, organizations, validators
 from agesoa_trust.api import router
 from agesoa_trust.demo import seed_demo_accounts, seed_demo_validators
-from agesoa_trust.events import HANDLERS
+from agesoa_trust.events import OutboxFlush, build_handlers
 from agesoa_trust.identity import IdentityAdmin
 from agesoa_trust.role_agent import RoleAgent
 from agesoa_trust.settings import Settings, get_settings
@@ -36,18 +36,23 @@ def build_app(settings: Settings | None = None) -> FastAPI:
                 except Exception:  # the emulator may start after trust; sign-in waits for the next restart
                     log.exception("demo validator accounts not created")
 
+    # Validator role labels for the decision log and the validation deadline come from the domain packs
+    # (fail fast on a broken pack).
+    packs = load_packs(settings.domain_packs_dir)
+    # Events staged by push handlers go out right after the inbox commit (app.state.outbox exists once built).
+    flush = OutboxFlush(lambda: app.state.outbox.dispatch())
     app = create_app(
         settings=settings,
         title="AGESOA trust",
         description=DESCRIPTION,
         version=__version__,
         routers=[router, validators.router, organizations.router],
-        event_handlers=HANDLERS,
+        event_handlers=build_handlers(packs, flush),
         on_startup=seed_demo,
         on_demo_reset=seed_demo,
     )
-    # Validator role labels for the decision log come from the domain packs (fail fast on a broken pack).
-    app.state.packs = load_packs(settings.domain_packs_dir)
+    app.state.packs = packs
+    app.state.outbox_flush = flush
     model = settings.effective_role_model
     app.state.role_agent = (
         RoleAgent.rules() if model == "rules" else RoleAgent([model, *settings.role_fallback_models])

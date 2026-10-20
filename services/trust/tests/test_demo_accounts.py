@@ -49,6 +49,12 @@ async def test_demo_accounts_are_created_in_identity_platform_outside_local():
     )
     assert identity.accounts["demo-org-admin-1"][2] == {"org_admin"}
     assert sum(roles == {"validator"} for _, _, roles in identity.accounts.values()) == 3
+    # The README's demo account: every role, its own published password (demo_mode only).
+    assert identity.accounts["demo-account-1"] == (
+        "demo@demo.agesoa.local",
+        "AgesoaDemo-2026!",
+        {"validator", "org_admin", "operator"},
+    )
 
 
 async def test_no_demo_accounts_without_a_password():

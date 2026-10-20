@@ -19,6 +19,7 @@
         "additionalProperties": false
       }
     },
+    "category_hint": { "$ref": "#/$defs/label", "description": "Help text shown under the category picker of the report form." },
     "report_fields": {
       "type": "array", "minItems": 1,
       "items": {
@@ -30,7 +31,8 @@
           "required": { "type": "boolean", "description": "Core field: the Intake agent must ask for it when missing." },
           "sources": { "type": "array", "items": { "enum": ["voice", "text", "photo", "photo_label", "shared_post"] }, "description": "Where the Intake agent is expected to find the value." },
           "options": { "type": "array", "items": { "$ref": "#/$defs/slug" }, "minItems": 1, "description": "Allowed values when type = enum." },
-          "hint": { "$ref": "#/$defs/label" }
+          "hint": { "$ref": "#/$defs/label", "description": "Help text shown under the input." },
+          "placeholder": { "$ref": "#/$defs/label", "description": "Example text shown in the empty input; never stored as a value." }
         },
         "additionalProperties": false,
         "if": { "properties": { "type": { "const": "enum" } } },
@@ -79,6 +81,14 @@
         "fallback_anchor_field": { "$ref": "#/$defs/slug", "description": "Used when anchor_field is missing; a date field counts from 00:00 local time." },
         "hours": { "type": "integer", "minimum": 1 },
         "after_deadline_max_status": { "enum": ["alleged", "supported"], "description": "Highest finding status still reachable once physical evidence is likely gone." }
+      },
+      "additionalProperties": false
+    },
+    "validation": {
+      "type": "object",
+      "description": "Optional human-validation settings of this domain (trust). Absent: validation requests carry no decision deadline.",
+      "properties": {
+        "decision_window_hours": { "type": "integer", "minimum": 1, "maximum": 720, "description": "Hours validators have to decide, counted from the moment the finding became ready for validation; trust stores the resulting deadline_at per request." }
       },
       "additionalProperties": false
     },

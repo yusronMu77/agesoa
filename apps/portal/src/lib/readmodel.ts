@@ -104,6 +104,8 @@ export interface PublicFollowUp {
   status: FollowUpStatus;
   note: string | null;
   internal_ticket?: string | null;
+  /** The institution's own short status statement (≤ 160 chars), shown as written, never edited or translated. */
+  detail?: string | null;
   updated_at: string;
 }
 
@@ -147,6 +149,20 @@ export interface PublicFinding {
     completed_at: string;
     decisions: { tier: string; decision: string; role_label?: string | null; regency_name?: string | null }[];
   } | null;
+  /** Open or final validation state (absent in documents projected before it existed). */
+  validation_state?: ValidationState | null;
+  /** Counts of the open validation (validation.updated): no validator reference, never names. */
+  validation_progress?: ValidationProgress | null;
+}
+
+export type ValidationState = "awaiting_decisions" | "needs_evidence" | "approved" | "rejected";
+
+export interface ValidationProgress {
+  state: ValidationState;
+  approvals: number;
+  evidence_requests: number;
+  deadline_at: string | null;
+  updated_at: string;
 }
 
 export interface PublicDistrict {

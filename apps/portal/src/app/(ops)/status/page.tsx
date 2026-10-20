@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Badge, type BadgeTone } from "@/components/Badge";
+import { OpsConsole } from "@/components/console/Consoles";
 import { KpiTiles } from "@/components/console/KpiTiles";
 import { loadConfig } from "@/lib/config";
 import { formatDateTime } from "@/lib/i18n/core";
@@ -30,7 +31,7 @@ export default async function StatusPage() {
   const [checkedBefore, checkedAfter = ""] = t("status.checked").split("{at}");
 
   return (
-    <>
+    <OpsConsole section="status">
       <div className="page-intro page-intro--split">
         <div>
           <h1>{t("status.title")}</h1>
@@ -100,6 +101,6 @@ export default async function StatusPage() {
       <p className="muted callout--after">
         {t("status.machine")} <a href="/api/status">/api/status</a>
       </p>
-    </>
+    </OpsConsole>
   );
 }

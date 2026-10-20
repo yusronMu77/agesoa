@@ -8,6 +8,8 @@ import {
   getInstitution,
   listDeliveries,
   optionalField,
+  pauseSubscription,
+  resumeSubscription,
   saveSubscription,
   sendTestEvent,
 } from "./institutions";
@@ -98,7 +100,7 @@ describe("dashboard formatting", () => {
   });
 
   test("labels delivery statuses", () => {
-    expect(DELIVERY_STATUS_LABEL).toEqual({ pending: "Pending", delivered: "Delivered", failed: "Failed" });
+    expect(DELIVERY_STATUS_LABEL).toEqual({ pending: "Pending", delivered: "Delivered", failed: "Failed", held: "Held" });
   });
 
   test("reads FastAPI error details", () => {
@@ -115,5 +117,31 @@ describe("dashboard formatting", () => {
     expect(optionalField("  3201 ")).toBe("3201");
     expect(optionalField("   ")).toBeNull();
     expect(optionalField(null)).toBeNull();
+  });
+});
+
+describe("webhook pause and resume (SCR-062)", () => {
+  test("pause POSTs to the subscription and returns the paused view", async () => {
+    const { fetchImpl, calls } = stub(200, { id: "SUB-1", paused: true, paused_at: "2026-10-20T03:00:00Z", held_deliveries: 0 });
+    const result = await pauseSubscription(config, "tok", "ORG-1", { fetchImpl });
+    expect(calls[0].url).toBe("http://localhost:8004/v1/institutions/ORG-1/subscription/pause");
+    expect(calls[0].init?.method).toBe("POST");
+    expect(header(calls[0].init, "authorization")).toBe("Bearer tok");
+    expect(result.ok && result.data.paused).toBe(true);
+  });
+
+  test("resume returns the released deliveries, oldest first", async () => {
+    const { fetchImpl, calls } = stub(200, { subscription: { id: "SUB-1", paused: false }, released: ["D-1", "D-2"] });
+    const result = await resumeSubscription(config, "tok", "ORG-1", { fetchImpl });
+    expect(calls[0].url).toBe("http://localhost:8004/v1/institutions/ORG-1/subscription/resume");
+    expect(calls[0].init?.method).toBe("POST");
+    expect(result.ok && result.data.released).toEqual(["D-1", "D-2"]);
+  });
+
+  test("409 without a webhook is returned, not thrown", async () => {
+    const { fetchImpl } = stub(409, { detail: "no active webhook subscription" });
+    const result = await pauseSubscription(config, "tok", "ORG-1", { fetchImpl });
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(409);
   });
 });

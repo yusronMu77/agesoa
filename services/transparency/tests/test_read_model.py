@@ -30,6 +30,7 @@ PRODUCERS = {
     "case.updated": "case-audit",
     "finding.ready_for_validation": "case-audit",
     "validation.completed": "trust",
+    "validation.updated": "trust",
     "audit_report.created": "delivery",
     "follow_up.updated": "delivery",
     "right_of_reply.received": "delivery",
@@ -121,6 +122,53 @@ def test_finding_shows_validators_only_as_role_label_regency_tier_and_decision()
         assert private not in text
 
 
+def test_open_validation_shows_needs_evidence_and_its_deadline_until_the_outcome():
+    ready = row("finding.ready_for_validation", example_data("finding.ready_for_validation"), 0, 1)
+    opened = row(
+        "validation.updated",
+        example_data("validation.updated", state="awaiting_decisions", approvals=0, evidence_requests=0),
+        1,
+        2,
+    )
+    asked = row("validation.updated", example_data("validation.updated"), 5, 3)  # state needs_evidence
+    assert build_finding("F-2026-0011", [ready])["validation_state"] is None
+    assert build_finding("F-2026-0011", [ready])["validation_progress"] is None
+    # latest progress wins whatever the delivery order
+    doc = build_finding("F-2026-0011", [asked, ready, opened])
+    assert doc["validation_state"] == "needs_evidence"
+    assert doc["validation_progress"] == {
+        "state": "needs_evidence",
+        "approvals": 1,
+        "evidence_requests": 1,
+        "deadline_at": "2026-10-17T03:15:00Z",
+        "updated_at": "2026-10-14T02:40:00Z",
+    }
+    assert doc["validation"] is None  # no verdict while open
+    done = row("validation.completed", example_data("validation.completed"), 10, 4)
+    closed = build_finding("F-2026-0011", [ready, opened, asked, done])
+    assert closed["validation_state"] == "approved" and closed["validation"]["outcome"] == "approved"
+
+
+def test_progress_alone_still_names_the_case():
+    doc = build_finding("F-2026-0011", [row("validation.updated", example_data("validation.updated"))])
+    assert doc["case_id"] == "K-2026-0007" and doc["statement"] is None
+
+
+def test_follow_up_detail_is_projected_and_stays_null_on_older_events():
+    fu = "follow_up.updated"
+    older = example_data(fu, organization_id="O-1")
+    older.pop("detail", None)
+    rows = [
+        row(fu, older, 0, 1),
+        row(fu, example_data(fu, organization_id="O-2", detail="Kitchen inspection on Friday."), 1, 2),
+    ]
+    follow_ups = build_case("K-2026-0007", rows)["follow_ups"]
+    assert [(f["organization_id"], f["detail"]) for f in follow_ups] == [
+        ("O-1", None),
+        ("O-2", "Kitchen inspection on Friday."),
+    ]
+
+
 def test_finding_text_is_projected_per_language_and_falls_back_without_it():
     both = {"id": "Satu dapur melayani 34 sekolah.", "en": "One kitchen serves 34 schools.", "fr": "x"}
     ready = row(
@@ -210,6 +258,7 @@ def feed(client):
         example("signal.received"),
         example("case.updated"),
         example("finding.ready_for_validation", parties_mentioned=[PERSON]),
+        example("validation.updated"),
         example("validation.completed"),
         example("audit_report.created"),
         example("follow_up.updated"),
@@ -264,7 +313,7 @@ def test_redelivery_does_not_duplicate_and_rebuild_reproduces_the_same_documents
     sync(client)
     before = {c: dict(d) for c, d in store.docs.items() if c != "public_stats"}
     result = client.post("/internal/read-model/rebuild").json()
-    # case + finding + signal + 1 log entry + stats (9 events, 5 documents)
+    # case + finding + signal + 1 log entry + stats (10 events, 5 documents)
     assert result["cleared"] == 5
     after = {c: dict(d) for c, d in store.docs.items() if c != "public_stats"}
     assert after == before

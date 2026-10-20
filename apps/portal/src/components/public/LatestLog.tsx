@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { formatDateTime, type Lang, type Translate } from "@/lib/i18n/core";
-import { actorCategory, middleHash } from "@/lib/publicview";
+import { formatDateTime, formatTime, type Lang, type Translate } from "@/lib/i18n/core";
+import { actorCategory, entryNumber, middleHash } from "@/lib/publicview";
 import type { LogEntry } from "@/lib/transparency";
 import { actionLabel, actorLabel } from "./text";
 
@@ -8,7 +8,7 @@ import { actionLabel, actorLabel } from "./text";
 export function LatestLog({ t, lang, entries }: { t: Translate; lang: Lang; entries: LogEntry[] | null }) {
   return (
     <aside className="pub-ink-panel" aria-labelledby="latest-log-heading">
-      <div className="pub-section-head">
+      <div className="pub-ink-panel__head">
         <h2 id="latest-log-heading">{t("public.log.title")}</h2>
         <Link href="/log" className="pub-ink-panel__all">
           {t("public.log.seeAll")}
@@ -24,10 +24,14 @@ export function LatestLog({ t, lang, entries }: { t: Translate; lang: Lang; entr
             <li key={e.seq}>
               <Link href={`/log/${e.seq}`} className="pub-mini-log__link">
                 <span className="pub-mini-log__meta">
-                  <span className="mono pub-mini-log__seq">#{e.seq}</span>
-                  <time dateTime={e.recorded_at}>{formatDateTime(lang, e.recorded_at)}</time>
-                  <span aria-hidden="true">·</span>
-                  <span>{actorLabel(t, actorCategory(e))}</span>
+                  <span className="pub-mini-log__seq">{entryNumber(e.seq)}</span>
+                  <span>
+                    <time dateTime={e.recorded_at} title={formatDateTime(lang, e.recorded_at)}>
+                      {formatTime(lang, e.recorded_at)}
+                    </time>
+                    {" · "}
+                    {actorLabel(t, actorCategory(e))}
+                  </span>
                 </span>
                 <span className="pub-mini-log__title">{actionLabel(t, e.action)}</span>
                 <code className="pub-mini-log__hash" title={e.hash}>

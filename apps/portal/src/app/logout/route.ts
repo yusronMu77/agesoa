@@ -1,9 +1,13 @@
 import { seeOther } from "@/lib/redirect";
 import { SESSION_COOKIE } from "@/lib/session";
 
-/** Sign-out link/button target: clears the session cookie and returns to the home page. */
-export async function POST() {
-  const response = seeOther("/");
+/**
+ * Sign-out button target: clears the session cookie, then goes to `?to=` (a same-site path: the console's own
+ * sign-in page, e.g. `/validator/masuk`) or the home page.
+ */
+export async function POST(request: Request) {
+  const to = new URL(request.url).searchParams.get("to");
+  const response = seeOther(to ?? "/");
   response.cookies.delete(SESSION_COOKIE);
   return response;
 }

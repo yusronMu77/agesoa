@@ -57,6 +57,7 @@ SOURCES: dict[str, Source] = {
     "right_of_reply.received": Source("case", "case_id", "received_at"),
     "finding.ready_for_validation": Source("finding", "finding_id", None),
     "validation.completed": Source("finding", "finding_id", "completed_at"),
+    "validation.updated": Source("finding", "finding_id", "updated_at"),
     "signal.received": Source("signal", "signal_id", None),
     "report.received": Source("report", "report_id", "received_at"),
     "region.updated": Source("region", "district_code", "updated_at"),
@@ -174,6 +175,7 @@ def build_case(case_id: str, rows: list[Row]) -> dict[str, Any]:
             "organization_id": org,
             "status": r.data["status"],
             "note": r.data["note"],
+            "detail": r.data.get("detail"),  # optional (older events lack it)
             "updated_at": r.data["updated_at"],
         }
         for org, r in sorted(latest_follow_up.items())
@@ -196,10 +198,12 @@ def build_case(case_id: str, rows: list[Row]) -> dict[str, Any]:
 def build_finding(finding_id: str, rows: list[Row]) -> dict[str, Any]:
     ready = _latest(rows, "finding.ready_for_validation")
     done = _latest(rows, "validation.completed")
+    progress = _latest(rows, "validation.updated")
+    first = ready or done or progress
     doc: dict[str, Any] = {
         "finding_id": finding_id,
         "synthetic": any(r.data.get("synthetic") for r in rows),
-        "case_id": (ready or done).data["case_id"] if (ready or done) else None,
+        "case_id": first.data["case_id"] if first else None,
         "domain": None,
         "statement": None,
         "statement_i18n": None,
@@ -234,6 +238,20 @@ def build_finding(finding_id: str, rows: list[Row]) -> dict[str, Any]:
             ],
         }
         if done
+        else None
+    )
+    # Open validation progress (validation.updated): state, counts and the decision deadline, no validator
+    # reference. Once validation.completed exists, its outcome is the state.
+    doc["validation_state"] = done.data["outcome"] if done else progress.data["state"] if progress else None
+    doc["validation_progress"] = (
+        {
+            "state": progress.data["state"],
+            "approvals": progress.data["approvals"],
+            "evidence_requests": progress.data["evidence_requests"],
+            "deadline_at": progress.data["deadline_at"],
+            "updated_at": progress.data["updated_at"],
+        }
+        if progress
         else None
     )
     return doc

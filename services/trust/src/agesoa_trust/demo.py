@@ -25,15 +25,18 @@ DEMO_FILE = Path(__file__).resolve().parents[2] / "demo" / "validators.json"
 
 async def seed_demo_accounts(admin: IdentityAdmin, password: str, path: Path = DEMO_FILE) -> int:
     """Sign-in accounts (Firebase Auth emulator or Identity Platform): demo validators (uid = validator auth_uid),
-    the demo organization admin and the demo operator."""
+    the demo organization admins, the demo operator and the all-roles demo account. An account may carry extra
+    `roles` next to its validator and its own published `password` (the README's demo account); the others use the
+    environment's demo password."""
     data = json.loads(await asyncio.to_thread(path.read_text, encoding="utf-8"))
     uids = {v["id"]: v["auth_uid"] for v in data["validators"]}
     for account in data["accounts"]:
         if "validator_id" in account:
             uid, roles = uids[account["validator_id"]], {"validator"}
         else:  # e.g. the demo organization admin (role org_admin)
-            uid, roles = account["auth_uid"], set(account["roles"])
-        await admin.ensure_account(uid, account["email"], password, roles)
+            uid, roles = account["auth_uid"], set()
+        roles |= set(account.get("roles", []))
+        await admin.ensure_account(uid, account["email"], account.get("password", password), roles)
     return len(data["accounts"])
 
 

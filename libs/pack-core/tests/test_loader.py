@@ -77,6 +77,18 @@ def test_second_domain_loads_without_core_changes():
     assert result.violated is True
 
 
+def test_report_form_texts_are_optional_labels():
+    doc = copy.deepcopy(MINIMAL)
+    doc["category_hint"] = {"en": "Pick Other if unsure.", "id": "Pilih Lainnya jika ragu."}
+    doc["report_fields"][0] |= {
+        "hint": {"en": "Leave blank if unknown.", "id": "Boleh dikosongkan."},
+        "placeholder": {"en": "Date and time", "id": "Tanggal dan waktu"},
+    }
+    pack = parse_pack(doc)
+    assert pack.document["report_fields"][0]["placeholder"]["id"] == "Tanggal dan waktu"
+    assert parse_pack(MINIMAL).document.get("category_hint") is None  # both stay optional
+
+
 def test_a_domain_can_explicitly_have_no_evidence_expiry():
     from agesoa_packs.engine import evidence_anchor
 
@@ -135,6 +147,8 @@ def test_a_domain_can_explicitly_have_no_evidence_expiry():
             lambda d: d.update(intake_hints={"fields": {"reported_at": {"pattern": "("}}}),
             "intake_hints/fields/reported_at/pattern",
         ),
+        (lambda d: d["report_fields"][0].update(placeholder={"en": "When"}), "'id' is a required property"),
+        (lambda d: d.update(category_hint="Pick one"), "category_hint: 'Pick one' is not of type 'object'"),
     ],
 )
 def test_broken_pack_is_rejected_with_a_clear_message(mutate, expected):

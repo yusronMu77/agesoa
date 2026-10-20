@@ -92,3 +92,65 @@ export async function getLogForSubject(
   }
   return { ok: true, status: 200, data: items, latencyMs: latency };
 }
+
+/** Every log entry about one kind of subject (e.g. all validator registrations), oldest first. */
+export async function getLogForSubjectKind(
+  config: PortalConfig,
+  subjectKind: string,
+  options?: FetchOptions,
+): Promise<FetchResult<LogEntry[]>> {
+  const items: LogEntry[] = [];
+  let after = 0;
+  let latency = 0;
+  for (let page = 0; page < 20; page++) {
+    const query = new URLSearchParams({ subject_kind: subjectKind, limit: "200" });
+    if (after > 0) query.set("after", String(after));
+    const result = await fetchJson<LogPage>(`${base(config)}?${query}`, options);
+    if (!result.ok) return result;
+    latency += result.latencyMs;
+    items.push(...result.data.items);
+    if (result.data.next_after === null) break;
+    after = result.data.next_after;
+  }
+  return { ok: true, status: 200, data: items, latencyMs: latency };
+}
+
+export interface RecentLog {
+  /** Entries recorded at or after `since`, oldest first. */
+  items: LogEntry[];
+  /** False when the page limit was reached before the start of the window: counts are then a lower bound. */
+  complete: boolean;
+}
+
+/**
+ * The log entries recorded since `since` (ISO time), read backwards from the head in pages of 200 (the service's
+ * maximum) and stopping at the first page that starts before the window or at `maxPages`.
+ */
+export async function getRecentLog(
+  config: PortalConfig,
+  since: string,
+  maxPages = 15,
+  options?: FetchOptions,
+): Promise<FetchResult<RecentLog>> {
+  const head = await getLogHead(config, options);
+  if (!head.ok) return head;
+  const pages: LogEntry[][] = [];
+  let upper = head.data.seq;
+  let latency = head.latencyMs;
+  let complete = upper <= 0;
+  for (let page = 0; page < maxPages && upper > 0; page++) {
+    const after = Math.max(0, upper - 200);
+    const result = await getLogPage(config, { after, limit: upper - after }, options);
+    if (!result.ok) return result;
+    latency += result.latencyMs;
+    const items = result.data.items.filter((e) => e.seq <= upper);
+    pages.unshift(items);
+    upper = after;
+    if (after === 0 || (items[0] && items[0].recorded_at < since)) {
+      complete = true;
+      break;
+    }
+  }
+  const items = pages.flat().filter((e) => e.recorded_at >= since);
+  return { ok: true, status: 200, data: { items, complete }, latencyMs: latency };
+}

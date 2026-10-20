@@ -1,7 +1,7 @@
 /** Signed-in validator calls to trust (validation) and case-audit (audit trail). The token comes from the session. */
 
 import type { PortalConfig } from "./config";
-import { type FetchResult, fetchJson } from "./http";
+import { type FetchLike, type FetchResult, fetchJson } from "./http";
 import type { EvidenceStatus } from "./readmodel";
 import type { LocalizedText } from "./localized";
 
@@ -25,7 +25,13 @@ export interface QuorumStatus {
   reason: string;
   approvals: number;
   rejections: number;
+  /** Counted validators whose current decision asks for more evidence (never counted toward quorum). */
+  evidence_requests?: number;
 }
+
+export type Decision = "approve" | "reject" | "needs_evidence";
+/** State of an open validation; `needs_evidence` = chip "Butuh bukti". */
+export type ValidationState = "awaiting_decisions" | "needs_evidence";
 
 export interface ValidationRequest {
   finding_id: string;
@@ -41,17 +47,27 @@ export interface ValidationRequest {
   synthetic: boolean;
   received_at: string;
   completed_at: string | null;
+  /** Decision deadline ("Tenggat", UTC) from the domain pack; null when the pack sets none. */
+  deadline_at?: string | null;
+  state?: ValidationState;
+  evidence_requests?: number;
+  /** The signed-in validator's current decision. */
+  my_decision?: Decision | null;
 }
 
 export interface ValidationDetail extends ValidationRequest {
   quorum: QuorumStatus;
-  my_decision: "approve" | "reject" | null;
+  my_decision: Decision | null;
 }
 
 export interface DecisionResult {
   finding_id: string;
-  decision: "approve" | "reject";
+  decision: Decision;
   counted: boolean;
+  /** True when this decision replaced the validator's earlier needs_evidence. */
+  replaced?: boolean;
+  /** State of the still open validation; null once closed. */
+  state?: ValidationState | null;
   quorum_reached: boolean;
   outcome: "approved" | "rejected" | null;
   quorum: QuorumStatus;
@@ -74,8 +90,12 @@ export function getMyProfile(config: PortalConfig, token: string): Promise<Fetch
   return fetchJson(`${config.serviceUrls.trust}/v1/validators/me`, bearer(token));
 }
 
-export function listValidationRequests(config: PortalConfig, token: string): Promise<FetchResult<ValidationRequest[]>> {
-  return fetchJson(`${config.serviceUrls.trust}/v1/validation-requests`, bearer(token));
+export function listValidationRequests(
+  config: PortalConfig,
+  token: string,
+  options: { fetchImpl?: FetchLike } = {},
+): Promise<FetchResult<ValidationRequest[]>> {
+  return fetchJson(`${config.serviceUrls.trust}/v1/validation-requests`, { ...bearer(token), fetchImpl: options.fetchImpl });
 }
 
 export function getValidationRequest(
@@ -90,12 +110,14 @@ export function decide(
   config: PortalConfig,
   token: string,
   findingId: string,
-  body: { decision: "approve" | "reject"; note: string; conflict: boolean; confidence: number | null },
+  body: { decision: Decision; note: string; conflict: boolean; confidence: number | null },
+  options: { fetchImpl?: FetchLike } = {},
 ): Promise<FetchResult<DecisionResult>> {
   return fetchJson(`${config.serviceUrls.trust}/v1/validation-requests/${encodeURIComponent(findingId)}/decisions`, {
     ...bearer(token),
     method: "POST",
     body,
+    fetchImpl: options.fetchImpl,
   });
 }
 

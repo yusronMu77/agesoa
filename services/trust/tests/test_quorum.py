@@ -1,7 +1,7 @@
 """Quorum rule (decision table of test case TC-111) and its boundaries."""
 
 import pytest
-from agesoa_trust.quorum import Vote, evaluate
+from agesoa_trust.quorum import Vote, evaluate, evidence_requests, may_decide, state
 
 
 def vote(vid, org, tier, decision="approve", status="active", conflict=False):
@@ -59,3 +59,57 @@ def test_probation_validators_count():
 def test_pending_reason_names_what_is_missing():
     reason = evaluate([vote("v1", "ORG-A", "medium")]).reason
     assert "2 different organizations" in reason and "high-tier" in reason
+
+
+# --- needs_evidence ("Butuh bukti"): recorded, never counted toward quorum ------------------------------
+
+
+def test_asking_for_evidence_never_counts_toward_quorum():
+    asks = [vote("v1", "ORG-A", "high", "needs_evidence"), vote("v2", "ORG-B", "medium", "needs_evidence")]
+    assert evaluate(asks).outcome == "pending"
+    # it neither blocks nor replaces an approval: two approvals from two parties still close the validation
+    votes = [*asks, vote("v3", "ORG-C", "high"), vote("v4", None, "medium")]
+    assert evaluate(votes).outcome == "approved"
+    # and it is not a rejection
+    assert evaluate([vote("v1", "ORG-A", "high"), vote("v2", "ORG-B", "high", "needs_evidence")]).outcome == (
+        "pending"
+    )
+
+
+def test_open_validation_needs_evidence_while_a_counted_validator_asks_for_it():
+    assert state([]) == "awaiting_decisions"
+    assert state([vote("v1", "ORG-A", "high")]) == "awaiting_decisions"
+    votes = [vote("v1", "ORG-A", "high"), vote("v2", "ORG-B", "medium", "needs_evidence")]
+    assert (state(votes), evidence_requests(votes)) == ("needs_evidence", 1)
+
+
+@pytest.mark.parametrize(
+    "uncounted",
+    [
+        vote("v2", "ORG-B", "medium", "needs_evidence", conflict=True),
+        vote("v2", "ORG-B", "medium", "needs_evidence", status="awaiting_confirmation"),
+    ],
+    ids=["declared-conflict", "inactive"],
+)
+def test_an_uncounted_evidence_request_does_not_change_the_state(uncounted):
+    assert state([uncounted]) == "awaiting_decisions"
+    assert evidence_requests([uncounted]) == 0
+
+
+@pytest.mark.parametrize(
+    ("previous", "decision", "allowed"),
+    [
+        (None, "approve", True),
+        (None, "reject", True),
+        (None, "needs_evidence", True),
+        ("needs_evidence", "approve", True),  # replaces the request for evidence
+        ("needs_evidence", "reject", True),
+        ("needs_evidence", "needs_evidence", False),  # asked already
+        ("approve", "reject", False),  # approve / reject are final
+        ("approve", "needs_evidence", False),
+        ("reject", "approve", False),
+        ("reject", "needs_evidence", False),
+    ],
+)
+def test_one_final_decision_per_validator(previous, decision, allowed):
+    assert may_decide(previous, decision) is allowed

@@ -5,7 +5,10 @@ integrates with AGESOA: it receives signed audit reports by webhook, keeps them 
 ticket number, and sends the follow-up status and a right of reply back through the AGESOA institution API.
 
 Not part of the product and a fictional organisation: every page carries the band
-`SIMULASI – organisasi fiktif`. It is standalone on purpose (no AGESOA packages; HMAC is checked with the
+`SIMULASI – organisasi fiktif`. The pages follow the agesoa-uiux mockups SCR-080/SCR-081 (portal-like agency shell,
+Indonesian UI text from `agesoa-uiux/copy/microcopy.md`, design tokens 0.4.0 inlined as CSS; IBM Plex Sans from
+Google Fonts with a system-font fallback when offline). Plain HTML without JavaScript: the pickers are `<details>`
+menus and the send confirmation (PRV-response-confirm) is an HTML `popover`. It is standalone on purpose (no AGESOA packages; HMAC is checked with the
 standard library) and is not a member of the root uv workspace, so it has its own `uv.lock`.
 
 Contract: [`packages/contracts/webhook/README.md`](../../packages/contracts/webhook/README.md).
@@ -36,20 +39,23 @@ in `SIM_DATA_FILE` when it is set.
 
 1. Start this system where AGESOA can reach it.
 2. AGESOA portal → organisation page of the agency → add a webhook subscription with URL `<sim>/webhook`.
-3. Copy the secret (shown once) into **Settings → Webhook secret** of this system.
-4. Create an API key for the organisation and paste it into **Settings → API key**; set **AGESOA API URL**.
-5. Send a test event from the subscription screen: it appears in the inbox marked "Test event".
+3. Copy the secret (shown once) into **Integrasi → Rahasia webhook** of this system.
+4. Create an API key for the organisation and paste it into **Integrasi → API key**; set **URL API AGESOA**.
+5. Send a test event from the subscription screen: it appears in the inbox marked "Event uji".
 
 ## Endpoints
 
 | Method + path | Purpose |
 |---|---|
 | `POST /webhook` | webhook receiver (rules below) |
-| `GET /` | SCR-080 inbox (internal ticket, case, status) |
-| `GET /tickets/{ticket}` | SCR-080 detail + SCR-081 follow-up status and right-of-reply forms |
-| `POST /tickets/{ticket}/status`, `POST /tickets/{ticket}/reply` | form targets; call `POST {AGESOA}/api/v1/cases/{case_id}/status` / `.../reply` and show the HTTP result |
+| `GET /?tab=&category=&region=` | SCR-080 inbox ("Temuan masuk"). `tab`: `perlu` (default, follow-up not `done`), `sudah` (a right of reply was sent), `semua`; `category`/`region` filter by the case values |
+| `GET /tickets/{ticket}` | SCR-081: finding summary, root causes, form "Tanggapan dan tindak lanjut" |
+| `POST /tickets/{ticket}/respond` | SCR-081 form (`status`, optional `detail`, `body`, `attachment_name`, `attachment_url`): `status` is `received`/`in_progress`/`done` or a status preset that also sets the status detail (`reinspection_scheduled` → `in_progress` + "Pemeriksaan ulang dijadwalkan"); a typed `detail` (one line, max 160 chars) replaces the preset's and `detail` is sent only when set. Sends `POST {AGESOA}/api/v1/cases/{case_id}/status`, then, when `body` is not empty and the status call succeeded, `.../reply`; shows the HTTP results |
+| `POST /tickets/{ticket}/status`, `POST /tickets/{ticket}/reply` | single calls (`status` + `note` + optional `detail`, or `body`), kept for scripts; no longer used by the page |
+| `GET /replies` | "Hak jawab": tickets with a right of reply sent |
+| `GET /staff` | "Konfirmasi staf": placeholder, staff confirmation happens in the AGESOA portal |
 | `GET /webhook-log` | every webhook request: accepted / duplicate / rejected + reason |
-| `GET /settings`, `POST /settings` | demo settings form |
+| `GET /settings`, `POST /settings` | "Integrasi": demo settings form |
 | `GET /api/settings`, `POST /api/settings` | settings as JSON; never returns the secret or key, only `*_set` flags |
 | `GET /api/inbox`, `GET /api/webhook-log` | JSON for tests, newest first |
 | `GET /healthz` | liveness |
@@ -71,5 +77,5 @@ Checked in this order; every request is written to the webhook log.
 | body not valid against the schema, or `event`/`event_id` differ from the headers | `400` | `rejected` / `invalid_body` |
 | valid | `200 {"internal_ticket": "SIM-<n>"}`, report added to the inbox | `accepted` |
 
-Fail mode lets you test AGESOA's retries: set **Fail next deliveries** to 2, send an event, and watch two
+Fail mode lets you test AGESOA's retries: set **Gagalkan pengiriman berikutnya** to 2, send an event, and watch two
 `forced_failure` rows followed by `accepted` once the retry arrives.

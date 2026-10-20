@@ -27,7 +27,7 @@ contents and reporter references are never projected, only counted).
 | Collection | From |
 |---|---|
 | `public_cases/{case_id}` | `case.updated`, `audit_report.created`, `follow_up.updated`, `right_of_reply.received` |
-| `public_findings/{finding_id}` | `finding.ready_for_validation`, `validation.completed` |
+| `public_findings/{finding_id}` | `finding.ready_for_validation`, `validation.updated` (open progress: `validation_state` `awaiting_decisions` / `needs_evidence`, `validation_progress` with counts + `deadline_at`), `validation.completed` (`validation_state` = outcome) |
 | `public_signals/{signal_id}` | `signal.received` |
 | `public_log/{seq}` | `decision_log` |
 | `public_stats/summary` | aggregates |

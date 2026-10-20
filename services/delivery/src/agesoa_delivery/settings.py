@@ -22,6 +22,10 @@ class Settings(ServiceSettings):
         "30,120,600", description="Seconds before each retry of a failed webhook (contract: 3 retries)."
     )
     webhook_timeout: float = 10.0
+    webhook_resume_spacing: float = Field(
+        1.0,
+        description="Seconds between the first attempts of webhooks released by a resume (keeps them in order).",
+    )
     webhook_queue: str | None = Field(
         None,
         description="Cloud Tasks queue (projects/<p>/locations/<r>/queues/<q>) that runs webhook attempts; "

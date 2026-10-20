@@ -35,6 +35,8 @@ organizations = Table(
     Column(
         "admin_uid", String(128), index=True
     ),  # account that registered it (role org_admin); null for seeds
+    # Where finding notifications go (SCR-060 "Email kontak"); private: never in an event or a public page.
+    Column("contact_email", String(254)),
 )
 
 # Validators: extracted document fields only; document images are deleted after the Role agent reads them.
@@ -89,6 +91,8 @@ validation_requests = Table(
     Column("synthetic", Boolean, nullable=False, server_default="false"),
     Column("received_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("completed_at", DateTime(timezone=True)),
+    # Decision deadline (deadline.py): ready time + the pack's validation.decision_window_hours; null without it.
+    Column("deadline_at", DateTime(timezone=True)),
 )
 
 validation_decisions = Table(
@@ -101,7 +105,8 @@ validation_decisions = Table(
         nullable=False,
     ),
     Column("validator_id", String(32), ForeignKey("validators.id"), nullable=False),
-    Column("decision", String(16), nullable=False),  # approve | reject
+    # approve | reject | needs_evidence; approve/reject may replace the validator's own needs_evidence once
+    Column("decision", String(16), nullable=False),
     Column("note", Text),
     Column("confidence", Float),
     Column("conflict", Boolean, nullable=False, server_default="false"),

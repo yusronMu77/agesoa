@@ -1,110 +1,172 @@
-import { ArrowLeft, Building2, Gauge, Hash, LayoutGrid, LogOut, type LucideIcon, Server, ShieldCheck, UserRound, Wrench } from "lucide-react";
+import {
+  Activity,
+  Bell,
+  Building2,
+  CircleCheck,
+  FileText,
+  Hash,
+  Inbox,
+  LayoutGrid,
+  List,
+  LogOut,
+  type LucideIcon,
+  Send,
+  Settings,
+  ShieldCheck,
+  Tablet,
+  GitBranch,
+  UsersRound,
+} from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
-import { NavLink } from "@/components/NavLink";
 import { SimulationBand } from "@/components/SimulationBand";
 import { loadConfig } from "@/lib/config";
-import type { MessageKey } from "@/lib/i18n/messages";
 import { getT } from "@/lib/i18n/server";
+import { ROUTES } from "@/lib/routes";
 import { sessionToken } from "@/lib/session";
 import { LanguagePicker } from "./LanguagePicker";
 import { Logo } from "./Logo";
 
 export type ConsoleSurface = "validator" | "institution" | "ops";
 
-interface NavItem {
+/** Icons of the console navigation by name, so pages can describe their sidebar without importing lucide. */
+export const CONSOLE_ICONS = {
+  queue: LayoutGrid,
+  decisions: CircleCheck,
+  log: Hash,
+  role: UsersRound,
+  inbox: Inbox,
+  staff: UsersRound,
+  reply: Send,
+  integration: Activity,
+  register: FileText,
+  profile: Tablet,
+  organizations: Building2,
+  machine: Activity,
+  events: Inbox,
+  outbox: List,
+  demo: GitBranch,
+} satisfies Record<string, LucideIcon>;
+
+export interface ConsoleNavItem {
   href: string;
-  label: MessageKey;
-  icon: LucideIcon;
-  also?: string[];
+  label: string;
+  icon: keyof typeof CONSOLE_ICONS;
+  current?: boolean;
 }
 
-const SURFACES: Record<ConsoleSurface, { role: MessageKey; title: MessageKey; icon: LucideIcon; home: string; nav: NavItem[] }> = {
-  validator: {
-    role: "common.role.validator",
-    title: "console.validator.title",
-    icon: ShieldCheck,
-    home: "/validate",
-    nav: [
-      { href: "/validate", label: "console.validator.nav.queue", icon: LayoutGrid },
-      { href: "/validators/register", label: "console.validator.nav.register", icon: UserRound },
-      { href: "/log", label: "console.validator.nav.log", icon: Hash },
-    ],
-  },
-  institution: {
-    role: "common.role.institution",
-    title: "console.institution.title",
-    icon: Building2,
-    home: "/organizations",
-    nav: [
-      { href: "/organizations", label: "console.institution.nav.organizations", icon: Building2 },
-      { href: "/log", label: "console.institution.nav.log", icon: Hash },
-    ],
-  },
-  ops: {
-    role: "common.role.operator",
-    title: "console.ops.title",
-    icon: Wrench,
-    home: "/ops",
-    nav: [
-      { href: "/ops", label: "console.ops.nav.ops", icon: Gauge },
-      { href: "/status", label: "console.ops.nav.status", icon: Server },
-      { href: "/log", label: "console.ops.nav.log", icon: Hash },
-    ],
-  },
+/** Who is signed in, without a person's name (agesoa-uiux "Identitas" card at the bottom of the sidebar). */
+export interface ConsoleIdentity {
+  title: ReactNode;
+  sub?: ReactNode;
+  /** Extra content inside the card (status badge, screen-reader details). */
+  extra?: ReactNode;
+  testId?: string;
+}
+
+const ROLE_ICON: Record<ConsoleSurface, LucideIcon> = { validator: ShieldCheck, institution: Tablet, ops: Settings };
+
+/** Signing out of a console returns to that surface's own sign-in page. */
+const SIGN_OUT_TO: Record<ConsoleSurface, string> = {
+  validator: ROUTES.validatorSignIn,
+  institution: ROUTES.institutionSignIn,
+  ops: ROUTES.opsSignIn,
 };
 
 /**
- * Shell of the signed-in surfaces (SCR-020–026 validator, SCR-060–065 institution, SCR-090 operator): sidebar with
- * that surface's sections only + topbar with the language picker. Each surface has its own sign-in page.
+ * Shell of the signed-in surfaces (SCR-020/022 validator, SCR-060–062 institution, SCR-090 operator): sidebar with
+ * logo, role chip, the surface's sections and the identity card; topbar with the context selectors of the page, the
+ * language picker and the notifications link. Each page renders the shell itself, because the context selectors,
+ * the current section and the identity depend on the page's data.
  */
-export async function ConsoleShell({ surface, children }: { surface: ConsoleSurface; children: ReactNode }) {
+export async function ConsoleShell({
+  surface,
+  nav,
+  role,
+  context,
+  identity,
+  home,
+  children,
+}: {
+  surface: ConsoleSurface;
+  nav: ConsoleNavItem[];
+  /** Role chip text ("Validator", "Redaksi", "Instansi", "Operator"). */
+  role: string;
+  /** Topbar context selectors (ConsoleContext). */
+  context?: ReactNode;
+  identity?: ConsoleIdentity;
+  /** Where the logo and the notifications link lead. */
+  home: string;
+  children: ReactNode;
+}) {
   const { t } = await getT();
-  const spec = SURFACES[surface];
   const signedIn = (await sessionToken()) !== null;
-  const RoleIcon = spec.icon;
+  const RoleIcon = ROLE_ICON[surface];
   // Organizations are always simulated in the prototype; validators and operators only under demo_mode.
   const demo = loadConfig().demoMode;
   const band = surface === "institution" || (surface === "validator" && demo) ? "org" : demo ? "data" : null;
+  const IdentityIcon = ROLE_ICON[surface];
   return (
     <div className={`shell shell--console shell--${surface}`}>
       {band ? <SimulationBand variant={band} /> : null}
       <aside className="console-sidebar">
-        <Logo href={spec.home} />
+        <Logo href={home} />
         <span className={`role-chip role-chip--${surface}`}>
           <RoleIcon aria-hidden size={14} strokeWidth={2} />
-          {t(spec.role)}
+          {role}
         </span>
-        <nav className="console-nav" aria-label={t("nav.console", { surface: t(spec.title) })}>
+        <nav className="console-nav" aria-label={t("nav.console", { surface: role })}>
           <ul>
-            {spec.nav.map(({ href, label, icon: Icon, also }) => (
-              <li key={href}>
-                <NavLink href={href} also={also}>
-                  <Icon aria-hidden size={18} strokeWidth={2} />
-                  {t(label)}
-                </NavLink>
-              </li>
-            ))}
+            {nav.map(({ href, label, icon, current }) => {
+              const Icon = CONSOLE_ICONS[icon];
+              return (
+                <li key={`${href}-${label}`}>
+                  <Link href={href} aria-current={current ? "page" : undefined}>
+                    <Icon aria-hidden size={20} strokeWidth={1.75} />
+                    {label}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
-        <div className="console-sidebar__foot">
-          <a href="/dashboard" className="console-back">
-            <ArrowLeft aria-hidden size={16} strokeWidth={2} />
-            {t("console.backPublic")}
-          </a>
-          {signedIn ? (
-            <form method="post" action="/logout">
-              <button type="submit" className="console-signout">
-                <LogOut aria-hidden size={16} strokeWidth={2} />
-                {t("common.signOut")}
-              </button>
-            </form>
-          ) : null}
-        </div>
+        {identity || signedIn ? (
+          <div className="console-identity" data-testid={identity?.testId}>
+            <span className={`console-identity__icon console-identity__icon--${surface}`} aria-hidden="true">
+              <IdentityIcon size={22} strokeWidth={1.75} />
+            </span>
+            <div className="console-identity__body">
+              {identity ? (
+                <>
+                  <p className="console-identity__title">{identity.title}</p>
+                  {identity.sub ? <p className="console-identity__sub">{identity.sub}</p> : null}
+                  {identity.extra}
+                </>
+              ) : (
+                <p className="console-identity__title">{role}</p>
+              )}
+            </div>
+            {signedIn ? (
+              <form method="post" action={`/logout?to=${encodeURIComponent(SIGN_OUT_TO[surface])}`} className="console-identity__out">
+                <button type="submit" className="console-signout" title={t("common.signOut")}>
+                  <LogOut aria-hidden size={18} strokeWidth={2} />
+                  <span className="sr-only">{t("common.signOut")}</span>
+                </button>
+              </form>
+            ) : null}
+          </div>
+        ) : null}
       </aside>
       <div className="console-body">
         <header className="console-topbar">
-          <p className="console-topbar__title">{t(spec.title)}</p>
-          <LanguagePicker />
+          <div className="console-topbar__context">{context}</div>
+          <div className="console-topbar__tools">
+            <LanguagePicker />
+            <Link href={home} className="console-bell" title={t("console.notifications")}>
+              <Bell aria-hidden size={20} strokeWidth={1.75} />
+              <span className="sr-only">{t("console.notifications")}</span>
+            </Link>
+          </div>
         </header>
         <main id="main" className="console-main" tabIndex={-1}>
           {children}
