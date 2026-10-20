@@ -8,7 +8,7 @@ export interface Label {
   id: string;
 }
 
-export type FieldType = "string" | "string_list" | "datetime" | "date" | "integer" | "enum";
+export type FieldType = "string" | "string_list" | "datetime" | "date" | "integer";
 
 export interface PackField {
   id: string;
@@ -16,12 +16,6 @@ export interface PackField {
   required: boolean;
   label: Label;
   hint?: Label;
-  options?: string[];
-}
-
-export interface PackSummary {
-  id: string;
-  name: Label;
 }
 
 export interface PackDocument {
@@ -32,6 +26,15 @@ export interface PackDocument {
   rules: { id: string; label: Label }[];
   evidence_tips: Label[];
   intake_hints?: { fields?: Record<string, { vocabulary?: Record<string, string[]> }> };
+}
+
+/** One entry of GET /v1/domain-packs: what the issue type picker needs. */
+export interface PackSummary {
+  id: string;
+  version: string;
+  name: Label;
+  categories: string[];
+  rules: string[];
 }
 
 export interface District {
@@ -55,6 +58,7 @@ export interface Evidence {
 
 export type FieldValue = string | number | string[];
 
+/** Reporter-defined text field of a report (label + value), separate from the pack's fields and rules. */
 export interface CustomReportField {
   label: string;
   value: string;
@@ -67,7 +71,6 @@ export interface Report {
   category: string | null;
   narrative: string | null;
   fields: Record<string, FieldValue>;
-  custom_fields: CustomReportField[];
   missing_required: string[];
   rule_results: { rule_id: string; violated: boolean | null; detail: string }[];
   evidence_status: {
@@ -90,6 +93,7 @@ export interface Report {
   created_at: string;
   updated_at: string;
   submitted_at: string | null;
+  custom_fields?: CustomReportField[];
 }
 
 export interface SharedPostInput {
@@ -105,10 +109,12 @@ export interface ReportCreate {
 }
 
 export interface ReportPatch {
+  /** Another loaded domain pack (issue type): clears category, fields and the intake result. */
   domain?: string;
+  /** Replaces the list; [] removes all; omit to keep. */
+  custom_fields?: CustomReportField[];
   category?: string | null;
   fields?: Record<string, FieldValue | null>;
-  custom_fields?: CustomReportField[];
   narrative?: string | null;
   district_code?: string | null;
   shared_post?: SharedPostInput | null;
@@ -166,12 +172,12 @@ export class IngestionClient extends ServiceClient {
     super(config, config.ingestionUrl, fetchImpl);
   }
 
-  pack(id: string) {
-    return this.request<PackDocument>("GET", `/v1/domain-packs/${encodeURIComponent(id)}`);
-  }
-
   packs() {
     return this.request<PackSummary[]>("GET", "/v1/domain-packs");
+  }
+
+  pack(id: string) {
+    return this.request<PackDocument>("GET", `/v1/domain-packs/${encodeURIComponent(id)}`);
   }
 
   districts() {

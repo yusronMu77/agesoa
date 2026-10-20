@@ -2,15 +2,22 @@ import { describe, expect, test } from "bun:test";
 import { ApiError, CaseAuditClient, errorDetail, IngestionClient } from "./api";
 import type { KeyValueStore } from "./auth";
 import { bearerToken, deviceId } from "./auth";
+import { orderPacks } from "./App";
+import { ISSUE_TYPE_KEY, saveIssueType, savedIssueType } from "./issueType";
 import { ConfigError, loadConfig } from "./config";
-import { T, t } from "./copy";
+import { ID, LANGUAGES, language, pick, setLanguage, T, t } from "./copy";
+import { EN } from "./copy.en";
 import { EmptyRecording, LocationUnavailable, locationError, PermissionDenied, recordingResult } from "./device";
 import { appendDictated, dictationSupported, startDictation } from "./dictation";
 import { errorText } from "./errors";
-import { lastReportId, rememberReport, reportIds } from "./reports";
+import { LANGUAGE_KEY, saveLanguage, savedLanguage, suggestedLanguage } from "./language";
+import { LAST_REPORT_KEY, lastReportId, MAX_REPORTS, rememberReport, reportCodeOf, reportIds, REPORTS_KEY } from "./reports";
+import { splitFirstSentence } from "./screens/DraftReview";
+import { reportTitle } from "./screens/MyReports";
 import {
   canonicalWord,
   fieldInError,
+  formatDay,
   formatWib,
   fromInput,
   fromLocalInput,
@@ -37,9 +44,9 @@ describe("config", () => {
     });
   });
 
-  test("a legacy domain preset cannot replace the general public reporting fields", () => {
+  test("reports start on the general pack; the legacy VITE_DOMAIN is ignored", () => {
+    expect(loadConfig({}).domain).toBe("general");
     expect(loadConfig({ VITE_DOMAIN: "mbg" }).domain).toBe("general");
-    expect(loadConfig({ VITE_DOMAIN: "unavailable" }).domain).toBe("general");
   });
 
   test("demo mode is refused in prod", () => {
@@ -304,24 +311,168 @@ describe("SCR-006 voice answers by dictation + report status (#49)", () => {
     expect(ended).toBe("network");
   });
 
-  test("the device remembers only the ids of its reports, newest first", () => {
+  test("the device remembers only the id of its last report", () => {
     const store = memory();
     expect(lastReportId(store)).toBeNull();
     rememberReport("0b8c1d2e3f40", store);
-    rememberReport("1c9d2e3f4051", store);
-    rememberReport("0b8c1d2e3f40", store); // seen again: moves to the front, not listed twice
-    expect(reportIds(store)).toEqual(["0b8c1d2e3f40", "1c9d2e3f4051"]);
     expect(lastReportId(store)).toBe("0b8c1d2e3f40");
-    // A tampered value is ignored, never used as a path.
-    store.setItem("agesoa.witness.last-report", "../etc/passwd");
-    store.setItem("agesoa.witness.reports", JSON.stringify(["../etc/passwd", 42]));
-    expect(reportIds(store)).toEqual([]);
+    store.setItem(REPORTS_KEY, JSON.stringify(["../etc/passwd"]));
     expect(lastReportId(store)).toBeNull();
   });
+});
 
-  test("a report id kept by an earlier version is still listed", () => {
+describe("SCR-008 reports sent from this device", () => {
+  test("newest first, no duplicates, capped", () => {
     const store = memory();
-    store.setItem("agesoa.witness.last-report", "0b8c1d2e3f40");
+    expect(reportIds(store)).toEqual([]);
+    rememberReport("aaa", store);
+    rememberReport("bbb", store);
+    rememberReport("aaa", store);
+    expect(reportIds(store)).toEqual(["aaa", "bbb"]);
+    expect(lastReportId(store)).toBe("aaa");
+    for (let i = 0; i < MAX_REPORTS + 5; i++) rememberReport(`r${i}`, store);
+    const ids = reportIds(store);
+    expect(ids).toHaveLength(MAX_REPORTS);
+    expect(ids[0]).toBe(`r${MAX_REPORTS + 4}`);
+    expect(ids).not.toContain("aaa");
+  });
+
+  test("the single id of earlier builds is migrated into the list", () => {
+    const store = memory();
+    store.setItem(LAST_REPORT_KEY, "0b8c1d2e3f40");
     expect(reportIds(store)).toEqual(["0b8c1d2e3f40"]);
+    expect(JSON.parse(store.values.get(REPORTS_KEY)!)).toEqual(["0b8c1d2e3f40"]);
+    rememberReport("1c9d", store);
+    expect(reportIds(store)).toEqual(["1c9d", "0b8c1d2e3f40"]);
+    expect(store.values.get(LAST_REPORT_KEY)).toBe("1c9d"); // still written for older builds
+  });
+
+  test("a tampered legacy id or list is not trusted", () => {
+    const legacy = memory();
+    legacy.setItem(LAST_REPORT_KEY, "../etc/passwd");
+    expect(reportIds(legacy)).toEqual([]);
+    expect(lastReportId(legacy)).toBeNull();
+
+    const broken = memory();
+    broken.setItem(REPORTS_KEY, "{not json");
+    broken.setItem(LAST_REPORT_KEY, "abc");
+    expect(reportIds(broken)).toEqual(["abc"]); // unreadable list: start again from the legacy id
+
+    const mixed = memory();
+    mixed.setItem(REPORTS_KEY, JSON.stringify(["ok_1", 42, "<script>", "x".repeat(65), "ok-2", "ok_1"]));
+    expect(reportIds(mixed)).toEqual(["ok_1", "ok-2"]);
+
+    rememberReport("bad id!", mixed);
+    expect(reportIds(mixed)).toEqual(["ok_1", "ok-2"]);
+  });
+
+  test("report code and row title", () => {
+    expect(reportCodeOf("0123456789abcdef")).toBe("RPT-0123456789ab");
+    const pack = { categories: [{ id: "keracunan", label: { id: "Keracunan", en: "Poisoning" } }] };
+    const report = {
+      category: "keracunan",
+      region: { district_name: "Kecamatan Cibening (fictional)", regency_name: "Kabupaten Sukamaju" },
+    };
+    // Test doubles carry only the fields reportTitle reads.
+    const title = (r: object, p: object | null) => reportTitle(r as never, p as never);
+    expect(title(report, pack)).toBe("Keracunan di Kecamatan Cibening (fictional)");
+    expect(title({ category: null, region: null }, pack)).toBe("Laporan");
+    expect(title({ category: "unknown", region: null }, null)).toBe("unknown");
+  });
+
+  test("the day of a report is shown in WIB per language", () => {
+    expect(formatDay("2026-10-15T20:00:00Z")).toBe("16 Okt 2026");
+    expect(formatDay("2026-10-15T20:00:00Z", "en")).toBe("16 Oct 2026");
+  });
+});
+
+describe("SCR-009 language", () => {
+  test("Indonesian by default, whatever the browser says; the choice is remembered", () => {
+    const store = memory();
+    expect(savedLanguage(store)).toBe("id");
+    saveLanguage("en", store);
+    expect(store.values.get(LANGUAGE_KEY)).toBe("en");
+    expect(savedLanguage(store)).toBe("en");
+    store.setItem(LANGUAGE_KEY, "fr");
+    expect(savedLanguage(store)).toBe("id");
+  });
+
+  test("the device language is only a suggestion", () => {
+    expect(suggestedLanguage(["en-US", "id"])).toBe("en");
+    expect(suggestedLanguage(["fr-FR", "id-ID"])).toBe("id");
+    expect(suggestedLanguage(["de"])).toBe("id");
+    expect(suggestedLanguage([])).toBe("id");
+  });
+
+  test("switching swaps the texts; a missing English text falls back to Indonesian", () => {
+    try {
+      setLanguage("en");
+      expect(language()).toBe("en");
+      expect(T["TXT-WIT-160"]).toBe("My reports");
+      expect(t("TXT-WIT-020", { detik: 3 })).toBe("Voice note (3 seconds)");
+      expect(pick({ id: "Keracunan", en: "Poisoning" })).toBe("Poisoning");
+      expect(pick({ id: "Keracunan", en: "" })).toBe("Keracunan");
+      const missing = (Object.keys(ID) as (keyof typeof ID)[]).filter((k) => !(k in EN));
+      for (const key of missing) expect(T[key]).toBe(ID[key]);
+    } finally {
+      setLanguage("id");
+    }
+    expect(T["TXT-WIT-010"]).toBe("Laporkan kejadian");
+    expect(pick({ id: "Keracunan", en: "Poisoning" })).toBe("Keracunan");
+  });
+
+  test("English covers the shell, tabs, SCR-008, SCR-009 and Bantuan", () => {
+    expect(LANGUAGES).toEqual(["id", "en"]);
+    const required = Object.keys(ID).filter((k) => /^TXT-WIT-(00[0-3]|16[01]|2\d\d)$/.test(k));
+    expect(required.filter((k) => !(k in EN))).toEqual([]);
+    expect(Object.keys(EN).filter((k) => !(k in ID))).toEqual([]); // no stray keys
+  });
+
+  test("the AI marker splits into a title and its text", () => {
+    expect(splitFirstSentence(T["TXT-WIT-081"])).toEqual([
+      "Hasil AI (Agen Intake)",
+      "Periksa dan perbaiki kalau ada yang salah.",
+    ]);
+    expect(splitFirstSentence("Satu kalimat")).toEqual(["Satu kalimat", ""]);
+  });
+
+  test("no tab or button reads as a sign-in (anonymity, E2E /login|masuk/i)", () => {
+    for (const id of ["TXT-WIT-205", "TXT-WIT-206", "TXT-WIT-160", "TXT-WIT-207", "TXT-WIT-208", "TXT-WIT-219"] as const) {
+      expect(ID[id]).not.toMatch(/login|masuk/i);
+      expect(EN[id] ?? "").not.toMatch(/login|sign.?in/i);
+    }
+  });
+});
+
+describe("issue types (domain packs)", () => {
+  const summary = (id: string) => ({ id, version: "1.0.0", name: { id, en: id }, categories: [], rules: [] });
+
+  test("the configured default comes first, the others keep a stable order", () => {
+    const ids = orderPacks([summary("general"), summary("bencana"), summary("mbg")], "general").map((p) => p.id);
+    expect(ids).toEqual(["general", "bencana", "mbg"]);
+    expect(orderPacks([summary("general"), summary("mbg")], "mbg").map((p) => p.id)).toEqual(["mbg", "general"]);
+  });
+
+  test("the last chosen issue type is remembered on the device; a malformed value is ignored", () => {
+    const store = memory();
+    expect(savedIssueType(store)).toBeNull();
+    saveIssueType("mbg", store);
+    expect(savedIssueType(store)).toBe("mbg");
+    store.setItem(ISSUE_TYPE_KEY, "../etc");
+    expect(savedIssueType(store)).toBeNull();
+  });
+
+  test("an unknown default does not drop any pack", () => {
+    expect(orderPacks([summary("mbg"), summary("general")], "roads").map((p) => p.id)).toEqual(["general", "mbg"]);
+  });
+
+  test("the list comes from GET /v1/domain-packs", async () => {
+    const calls: string[] = [];
+    const client = new IngestionClient(loadConfig({}), async (input) => {
+      calls.push(String(input));
+      return new Response(JSON.stringify([summary("general")]), { status: 200 });
+    });
+    expect((await client.packs()).map((p) => p.id)).toEqual(["general"]);
+    expect(calls[0]).toBe("http://localhost:8001/v1/domain-packs");
   });
 });

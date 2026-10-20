@@ -1,19 +1,15 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "jsx": "react-jsx",
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
     "isolatedModules": true,
-    "types": ["bun"],
-    "paths": {
-      "@agesoa/ui/*": ["./src/*"]
-    }
+    "types": ["bun"]
   },
-  "include": ["src", "scripts"],
+  "include": ["scripts"],
   "exclude": ["node_modules"]
 }

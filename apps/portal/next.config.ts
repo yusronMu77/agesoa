@@ -10,8 +10,6 @@ const nextConfig: NextConfig = {
   turbopack: { root: monorepoRoot },
   poweredByHeader: false,
   reactStrictMode: true,
-  // @agesoa/ui ships TypeScript sources (shared shadcn components), compiled by the app.
-  transpilePackages: ["@agesoa/ui"],
 };
 
 export default nextConfig;

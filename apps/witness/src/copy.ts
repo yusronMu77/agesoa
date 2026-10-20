@@ -1,9 +1,20 @@
 /**
- * UI text (Indonesian). Source of truth: agesoa-uiux/copy/microcopy.md; the E2E tests expect the same text, so
+ * UI text. Source of truth: agesoa-uiux/copy/microcopy.md (Indonesian); the E2E tests expect the same text, so
  * change the microcopy first, then here. Keys are the microcopy text ids.
+ *
+ * Indonesian (`ID`) is the base language and the default on every device; English lives in `copy.en.ts` and falls
+ * back to Indonesian for any missing key. `T` always holds the active language: screens read `T[...]` while they
+ * render, and the app re-renders after `setLanguage`.
+ *
+ * TXT-WIT-2xx are ids added with the 13B redesign (shell, tabs, SCR-008, SCR-009, Bantuan). They are not in the
+ * microcopy table yet; SCR-009 there reuses TXT-WIT-170..173, which this app already uses for SCR-006, so the
+ * SCR-009 texts are kept under 2xx ids here.
  */
 
-export const T = {
+import type { Label } from "./api";
+import { EN } from "./copy.en";
+
+export const ID = {
   "TXT-EVD-001": "Dugaan",
   "TXT-EVD-002": "Didukung bukti",
   "TXT-EVD-003": "Terbukti",
@@ -23,7 +34,7 @@ export const T = {
   "TXT-WIT-019": "Berhenti merekam",
   "TXT-WIT-020": "Rekaman suara ({detik} detik)",
   "TXT-WIT-021": "Ceritakan kejadiannya",
-  "TXT-WIT-022": "Ceritakan dengan kata-kata Anda sendiri.",
+  "TXT-WIT-022": "Apa yang terjadi, di mana, jam berapa, dan berapa orang yang terdampak.",
   "TXT-WIT-023": "Lokasi",
   "TXT-WIT-024": "Pakai lokasi saya",
   "TXT-WIT-025": "Pilih kecamatan sendiri",
@@ -62,10 +73,10 @@ export const T = {
   "TXT-WIT-068": "Kembali",
   "TXT-WIT-069": "Link terlampir",
   "TXT-WIT-080": "Periksa draf laporan",
-  "TXT-WIT-081": "Hasil AI (Agen Intake)",
+  "TXT-WIT-081": "Hasil AI (Agen Intake). Periksa dan perbaiki kalau ada yang salah.",
   "TXT-WIT-082": "Agen Intake sedang tidak bisa dipakai. Isi draf sendiri.",
-  "TXT-WIT-083": "Jenis masalah",
-  "TXT-WIT-084": "Pilih jenis masalah",
+  "TXT-WIT-083": "Kategori",
+  "TXT-WIT-084": "Pilih kategori",
   "TXT-WIT-085": "wajib",
   "TXT-WIT-086": "Pisahkan dengan koma",
   "TXT-WIT-087": "Cek aturan",
@@ -76,41 +87,15 @@ export const T = {
   "TXT-WIT-092": "Bukti terlampir",
   "TXT-WIT-093": "Simpan dan cek ulang",
   "TXT-WIT-094": "Kirim laporan",
-  "TXT-WIT-095": "Pilih jenis masalah sebelum mengirim.",
+  "TXT-WIT-095": "Pilih kategori dulu sebelum mengirim.",
   "TXT-WIT-096": "Transkrip suara (hasil AI)",
   "TXT-WIT-097": "Diubah dari usulan AI",
   "TXT-WIT-098": "Isian {kolom} belum benar. Periksa lagi formatnya.",
-  "TXT-WIT-099": "Detail untuk audit yang belum terisi: {kolom}",
-  "TXT-WIT-185": "Detail kejadian",
-  "TXT-WIT-186": "Isi yang Anda ketahui. Detail yang belum diketahui boleh dikosongkan.",
-  "TXT-WIT-188": "Cerita kejadian",
-  "TXT-WIT-189": "Lengkapi draf sesuai kejadian yang Anda ketahui.",
-  "TXT-WIT-190": "Perubahan tersimpan. Pemeriksaan diperbarui.",
-  "TXT-WIT-191": "Formulir laporan belum bisa dimuat. Coba lagi.",
-  "TXT-WIT-192": "Coba lagi",
-  "TXT-WIT-193": "Perlu dilengkapi untuk audit",
-  "TXT-WIT-160": "Laporan saya",
-  "TXT-WIT-161": "Tersimpan di perangkat ini. Anda tetap anonim.",
-  "TXT-WIT-194": "Cari bahasa",
-  "TXT-WIT-199": "Bahasa tidak ditemukan. Coba nama atau kode lain.",
-  "TXT-WIT-254": "Informasi tambahan (opsional)",
-  "TXT-WIT-255": "Tambahkan informasi yang belum ada di formulir. Tulis nama kolom dan isinya sebagai teks.",
-  "TXT-WIT-256": "Belum ada kolom tambahan.",
-  "TXT-WIT-257": "Kolom tambahan {nomor}",
-  "TXT-WIT-258": "Nama kolom",
-  "TXT-WIT-259": "Contoh: Kondisi sekitar",
-  "TXT-WIT-260": "Isi",
-  "TXT-WIT-261": "Tulis informasi yang Anda ketahui",
-  "TXT-WIT-262": "Hapus kolom tambahan {nomor}",
-  "TXT-WIT-263": "Lengkapi nama dan isi kolom tambahan, atau hapus kolom yang tidak dipakai.",
-  "TXT-WIT-264": "Nama kolom tambahan sudah dipakai. Gunakan nama yang berbeda.",
-  "TXT-WIT-265": "Tambah kolom",
-  "TXT-WIT-266": "Hapus kolom",
-  "TXT-WIT-267": "kolom tambahan",
+  "TXT-WIT-099": "Kolom wajib yang masih kosong: {kolom}",
   "TXT-WIT-110": "Laporan terkirim",
   "TXT-WIT-111": "Kode laporan",
   "TXT-WIT-112": "Sidik jari bukti (SHA-256)",
-  "TXT-WIT-113": "Gunakan sidik jari ini untuk memeriksa perubahan file. Simpan kode laporan untuk melihat statusnya.",
+  "TXT-WIT-113": "Sidik jari ini membuktikan file tidak berubah setelah dikirim. Simpan kode laporan ini.",
   "TXT-WIT-114": "Amankan bukti sebelum {tenggat}",
   "TXT-WIT-115": "Tenggat bukti fisik sudah lewat. Laporan tetap diproses dengan bukti yang ada.",
   "TXT-WIT-116": "Status bukti",
@@ -120,7 +105,8 @@ export const T = {
   "TXT-WIT-120": "Rekaman suara",
   "TXT-WIT-121": "Screenshot medsos",
   "TXT-WIT-140": "Pertanyaan dari audit",
-  "TXT-WIT-141": "Pertanyaan ini muncul dari kasus laporan Anda. Jawaban dicatat sebagai dugaan dan tidak menaikkan status bukti.",
+  "TXT-WIT-141":
+    "Pertanyaan ini muncul dari kasus laporan Anda. Anda tetap anonim. Jawaban dicatat sebagai dugaan dan tidak menaikkan status bukti.",
   "TXT-WIT-142": "Jawaban Anda",
   "TXT-WIT-143": "Kirim jawaban",
   "TXT-WIT-144": "Tulis jawaban dulu.",
@@ -129,10 +115,12 @@ export const T = {
   "TXT-WIT-147": "Ada {jumlah} pertanyaan audit untuk Anda",
   "TXT-WIT-148": "Jawab pertanyaan",
   "TXT-WIT-149": "Pertanyaan ini sudah dijawab.",
+  "TXT-WIT-160": "Laporan saya",
+  "TXT-WIT-161": "Tersimpan di perangkat ini. Anda tetap anonim.",
   "TXT-WIT-170": "Status laporan Anda",
   "TXT-WIT-171": "Kode laporan",
   "TXT-WIT-172": "Terkirim",
-  "TXT-WIT-173": "Rekam suara",
+  "TXT-WIT-173": "Jawab dengan suara",
   "TXT-WIT-174": "Selesai bicara",
   "TXT-WIT-175": "Suara Anda diubah jadi teks oleh fitur dikte di browser. Yang dikirim ke AGESOA hanya teks, bukan suara.",
   "TXT-WIT-176": "Dikte suara tidak berhasil. Ketik jawaban Anda.",
@@ -141,68 +129,129 @@ export const T = {
   "TXT-WIT-132": "File terlalu besar (maksimal 20 MB).",
   "TXT-WIT-133": "Terjadi kesalahan. Coba lagi.",
 
-  // Shell and shared parts of the Penpot mockups (agesoa-uiux@129155d). Ids 201+ are new; the microcopy table lists them.
-  "TXT-WIT-201": "Anonim",
+  // Shell and tabs (13B).
+  "TXT-WIT-200": "Anonim",
+  "TXT-WIT-201": "Langkah laporan",
   "TXT-WIT-202": "Bukti",
   "TXT-WIT-203": "Periksa",
   "TXT-WIT-204": "Terkirim",
-  "TXT-WIT-205": "Lapor",
-  "TXT-WIT-206": "Laporan saya",
+  "TXT-WIT-205": "Navigasi utama",
+  "TXT-WIT-206": "Lapor",
   "TXT-WIT-207": "Pertanyaan",
   "TXT-WIT-208": "Bantuan",
-  "TXT-WIT-209": "Menu Witness",
-  "TXT-WIT-210": "Ketuk lalu ceritakan kejadiannya",
-  "TXT-WIT-211": "Apa yang terjadi, di mana, jam berapa?",
-  "TXT-WIT-212": "Pilih kecamatan",
-  "TXT-WIT-213": "Info lokasi dan merek HP dihapus",
-  "TXT-WIT-214": "Nama akun disamarkan",
-  "TXT-WIT-215": "Link atau screenshot",
-  "TXT-WIT-216": "Anda tetap bisa lanjut",
-  "TXT-WIT-217": "Tanpa izin kamera, Anda tetap bisa memilih foto dari galeri.",
-  "TXT-WIT-218": "Tanpa izin mikrofon, Anda tetap bisa mengetik ceritanya.",
-  "TXT-WIT-219": "Tanpa izin lokasi, Anda tetap bisa memilih kecamatan sendiri.",
-  "TXT-WIT-220": "Yang kami simpan",
-  "TXT-WIT-221": "Teks kutipan dan link. Nama akun pengunggah tidak disimpan.",
-  "TXT-WIT-222": "https://",
-  "TXT-WIT-223": "Salin bagian postingan yang relevan",
-  "TXT-WIT-224": "Periksa isinya. Perbaiki bagian yang belum tepat.",
-  "TXT-WIT-225": "Usulan AI dari cerita Anda. Ubah jika kurang tepat.",
-  "TXT-WIT-226": "Dari cerita Anda. Boleh diisi perkiraan.",
-  "TXT-WIT-227": "Diubah dari usulan AI (semula {nilai}).",
-  "TXT-WIT-228": "Lihat laporan saya",
-  "TXT-WIT-229": "Anda tetap anonim",
-  "TXT-WIT-230": "Pertanyaan {nomor} dari {jumlah} · Kasus {kasus}",
-  "TXT-WIT-231": "Hasil AI",
-  "TXT-WIT-232": "Dari Agen Audit, berdasarkan laporan Anda.",
-  "TXT-WIT-233": "Boleh singkat. Tidak perlu menyebut nama.",
-  "TXT-WIT-234": "Belum ada laporan",
-  "TXT-WIT-235": "Laporan yang Anda kirim dari perangkat ini muncul di sini, lengkap dengan status bukti dan pertanyaan dari audit.",
-  "TXT-WIT-236": "Bahasa dan wilayah",
-  "TXT-WIT-237": "Sesuaikan bahasa dan wilayah agar informasi lebih mudah Anda pahami.",
-  "TXT-WIT-238": "Disarankan",
-  "TXT-WIT-239": "Hanya nama wilayah dan pilihan bahasa, di perangkat ini. Titik lokasi Anda tidak disimpan.",
-  "TXT-WIT-240": "Bahasa",
-  "TXT-WIT-241": "Wilayah",
-  "TXT-WIT-242": "Simpan",
-  "TXT-WIT-243": "Batal",
-  "TXT-WIT-245": "Terjemahan belum tersedia",
-  "TXT-WIT-246": "Memuat laporan…",
-  "TXT-WIT-247": "Laporan ini tidak bisa dimuat sekarang.",
-  "TXT-WIT-248": "Putar rekaman suara",
-  "TXT-WIT-249": "Jeda rekaman suara",
-  "TXT-WIT-251": "Tulis jawaban Anda di sini",
-  "TXT-WIT-252": "Transkrip suara",
-  "TXT-WIT-253": "{kategori} di {wilayah}",
+  // SCR-001 to SCR-006 additions.
+  "TXT-WIT-210": "Info lokasi dan merek HP dihapus",
+  "TXT-WIT-211": "Ketuk lalu ceritakan kejadiannya",
+  "TXT-WIT-212": "Anda tetap bisa lanjut",
+  "TXT-WIT-213": "Tanpa izin kamera, Anda tetap bisa memilih foto dari galeri.",
+  "TXT-WIT-214": "Tanpa izin mikrofon, Anda tetap bisa mengetik ceritanya.",
+  "TXT-WIT-215": "Tanpa izin lokasi, Anda tetap bisa memilih kecamatan sendiri.",
+  "TXT-WIT-216": "Yang kami simpan",
+  "TXT-WIT-217": "Teks kutipan, link postingan, dan screenshot yang Anda unggah.",
+  "TXT-WIT-218": "Salin bagian postingan yang relevan",
+  "TXT-WIT-219": "Lihat laporan saya",
+  "TXT-WIT-220": "Anda tetap anonim",
+  "TXT-WIT-221": "Pertanyaan ini muncul dari kasus laporan Anda. Jawaban dicatat sebagai dugaan dan tidak menaikkan status bukti.",
+  "TXT-WIT-222": "Pertanyaan {n} dari {total}",
+  "TXT-WIT-223": "Hasil AI",
+  "TXT-WIT-224": "Tulis jawaban Anda di sini",
+  "TXT-WIT-225": "Kalau audit butuh keterangan lagi, pertanyaannya muncul di sini.",
+  "TXT-WIT-226": "Boleh singkat, dengan kata-kata Anda sendiri.",
+  "TXT-WIT-227": "Apa yang terjadi, di mana, jam berapa?",
+  // SCR-008 Laporan saya.
+  "TXT-WIT-230": "Belum ada laporan",
+  "TXT-WIT-231":
+    "Laporan yang Anda kirim dari perangkat ini muncul di sini, lengkap dengan status bukti dan pertanyaan dari audit.",
+  "TXT-WIT-232": "{kategori} di {wilayah}",
+  "TXT-WIT-233": "Laporan",
+  "TXT-WIT-234": "{n} bukti",
+  "TXT-WIT-235": "Memuat laporan…",
+  "TXT-WIT-236": "Laporan ini belum bisa dimuat. Coba lagi nanti.",
+  "TXT-WIT-237": "Coba lagi",
+  "TXT-WIT-238": "Tenggat bukti lewat",
+  "TXT-WIT-239": "Draf",
+  // Bantuan.
+  "TXT-WIT-240": "Cara melapor",
+  "TXT-WIT-241": "Rekam bukti: foto, suara, atau cerita, lalu pilih kecamatannya.",
+  "TXT-WIT-242": "Periksa draf dari Agen Intake dan perbaiki kalau ada yang salah.",
+  "TXT-WIT-243": "Kirim, lalu simpan kode laporan dan sidik jari buktinya.",
+  "TXT-WIT-244": "Anonim dan aman",
+  "TXT-WIT-245":
+    "Witness tidak punya akun. Perangkat ini menyimpan kode acak supaya status laporan dan pertanyaan audit sampai ke Anda tanpa data diri.",
+  "TXT-WIT-246":
+    "Dugaan: baru dilaporkan. Didukung bukti: ada foto atau dokumen pendukung. Terbukti: disetujui kuorum validator.",
+  "TXT-WIT-247": "Pengaturan",
+  // SCR-009 Bahasa dan wilayah.
+  "TXT-WIT-250": "Bahasa dan wilayah",
+  "TXT-WIT-251": "Bahasa awal aplikasi adalah Bahasa Indonesia. Anda bisa mengubahnya kapan saja.",
+  "TXT-WIT-252": "Disarankan",
+  "TXT-WIT-253": "Bahasa",
+  "TXT-WIT-254": "Wilayah",
+  "TXT-WIT-255": "Kecamatan dipilih setiap kali Anda melapor, dari lokasi perkiraan atau pilihan sendiri.",
+  "TXT-WIT-256":
+    "Di perangkat ini hanya tersimpan pilihan bahasa, kode acak perangkat, dan kode laporan Anda. Titik lokasi Anda tidak disimpan.",
+  "TXT-WIT-257": "Batal",
+  // SCR-001 issue type (domain pack) picker.
+  "TXT-WIT-260": "Jenis masalah",
+  "TXT-WIT-261": "Pilih yang paling dekat. Kategori dan kolom di bawah mengikuti pilihan ini.",
+  "TXT-WIT-262": "Draf disusun ulang untuk jenis masalah ini. Periksa lagi kategori dan kolomnya.",
+  // SCR-004 reporter-defined extra fields (same text as the design microcopy).
+  "TXT-WIT-270": "Informasi tambahan (opsional)",
+  "TXT-WIT-271": "Tambahkan informasi yang belum ada di formulir. Tulis nama kolom dan isinya sebagai teks.",
+  "TXT-WIT-272": "Belum ada kolom tambahan.",
+  "TXT-WIT-273": "Kolom tambahan {nomor}",
+  "TXT-WIT-274": "Nama kolom",
+  "TXT-WIT-275": "Contoh: Kondisi sekitar",
+  "TXT-WIT-276": "Isi",
+  "TXT-WIT-277": "Tulis informasi yang Anda ketahui",
+  "TXT-WIT-278": "Hapus kolom tambahan {nomor}",
+  "TXT-WIT-279": "kolom tambahan",
+  "TXT-WIT-280": "Lengkapi nama dan isi kolom tambahan, atau hapus kolom yang tidak dipakai.",
+  "TXT-WIT-281": "Nama kolom tambahan sudah dipakai. Gunakan nama yang berbeda.",
+  "TXT-WIT-282": "Tambah kolom",
+  "TXT-WIT-283": "Hapus kolom",
 } as const;
 
-export type TextId = keyof typeof T;
+export type TextId = keyof typeof ID;
+
+export const LANGUAGES = ["id", "en"] as const;
+export type Language = (typeof LANGUAGES)[number];
+
+/** Names of the languages in their own language (not translated). */
+export const LANGUAGE_NAME: Record<Language, string> = { id: "Bahasa Indonesia", en: "English" };
+
+const TRANSLATIONS: Record<Language, Partial<Record<TextId, string>>> = { id: {}, en: EN };
+
+/** The texts of the active language; every key is present (missing translations fall back to Indonesian). */
+export const T: Record<TextId, string> = { ...ID };
+
+let active: Language = "id";
+
+export function isLanguage(value: unknown): value is Language {
+  return typeof value === "string" && (LANGUAGES as readonly string[]).includes(value);
+}
+
+/** Switches the texts in `T`. The caller re-renders the screens. */
+export function setLanguage(lang: Language): void {
+  active = lang;
+  Object.assign(T, ID, TRANSLATIONS[lang]);
+  if (typeof document !== "undefined") document.documentElement.lang = lang;
+}
+
+export function language(): Language {
+  return active;
+}
+
+/** A label from a domain pack or service in the active language, falling back to the other one. */
+export function pick(label: Label | undefined | null): string {
+  if (!label) return "";
+  return active === "en" ? label.en || label.id : label.id || label.en;
+}
 
 /** Label of an evidence kind as stored by the service. */
-export const EVIDENCE_KIND: Record<"photo" | "audio" | "screenshot", string> = {
-  photo: T["TXT-WIT-119"],
-  audio: T["TXT-WIT-120"],
-  screenshot: T["TXT-WIT-121"],
-};
+export function evidenceKind(kind: "photo" | "audio" | "screenshot"): string {
+  return T[kind === "photo" ? "TXT-WIT-119" : kind === "audio" ? "TXT-WIT-120" : "TXT-WIT-121"];
+}
 
 /** Text with `{name}` placeholders filled in. */
 export function t(id: TextId, values: Record<string, string | number> = {}): string {

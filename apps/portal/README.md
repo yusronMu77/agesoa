@@ -15,7 +15,7 @@ At CP0 the portal has:
 | `GET /api/healthz` | `{service: "portal", status: "ok", release, environment, demo_mode}` |
 
 Every page renders when services are down: data sections show an error state instead of failing.
-When `DEMO_MODE=true`, every page shows a fixed `SIMULATION — synthetic data for demonstration` band
+When `DEMO_MODE=true`, every page shows a fixed `SIMULASI — synthetic data for demonstration` band
 (`role="status"`).
 
 Later checkpoints add the public dashboard (map, findings), validator, institution and operator views.
@@ -36,7 +36,7 @@ the portal still runs and shows the services as down.
 Other commands (from `apps/portal`):
 
 ```sh
-bun test              # unit tests: config, services, routes, feature helpers
+bun test              # unit tests: config validation, status aggregation
 bun run typecheck     # tsc --noEmit
 bun run build         # production build (standalone output)
 bun run start         # serve the build with next start (port 3000, or --port <n>)
@@ -45,54 +45,9 @@ bun run start         # serve the build with next start (port 3000, or --port <n
 `next start` prints a warning because the build uses `output: "standalone"`; it still serves the build and is
 fine locally. Deployments run the standalone server instead (see the Dockerfile).
 
-## Code layout
-
-Pages are thin: a route file reads its params, loads data through its feature, and renders a view. Feature code
-lives next to the other code of the same feature, and the backend calls live in one layer per service.
-
-```text
-src/
-  app/                      routes only; route groups do not change URLs
-    (public)/               no account: home, dashboard, cases, decision log, status
-    (auth)/                 login, logout
-    (validator)/            validation queue, finding decision, validator registration
-    (organization)/         organizations, one organization (DNS, staff, integration)
-    (operator)/             operations
-    api/                    healthz, session, status (route handlers)
-    layout.tsx              <html>, metadata, AppShell; error.tsx, global-error.tsx, not-found.tsx
-  features/<feature>/       auth, home, dashboard, cases, decision-log, service-status, validation,
-                            organizations, ops
-    views/*.view.tsx        a whole page body, rendered by the route file
-    components/             parts used only by this feature ("use client" only where needed)
-    server/load-*.ts        server-side data loading for the views (sign-in redirects, notFound)
-    actions.ts              server actions ("use server")
-    hooks/ lib/ constants.ts  feature hooks, pure helpers (unit tested), labels
-  services/                 backend layer, one folder per service
-    http/                   fetchJson (timeouts, errors) and createApiClient (base URL + bearer token)
-    <service>/*.model.ts    response and request types
-    <service>/*.service.ts  createXService(client): one function per endpoint
-    backend.ts              createBackend(config, { token }): every service client for one request
-    platform/               cross-service calls (readiness, ops events, demo reset)
-  components/
-    ui/                     design-system primitives (badge, button, callout, table-wrap, pagination)
-    layout/                 app shell, header, footer, nav link, page header
-    shared/                 AGESOA concepts used by several features (evidence badge, SIMULASI band, ...)
-  configs/                  env.config.ts (environment), routes.config.ts (every URL), site.config.ts (nav)
-  hooks/                    shared client hooks (use-*.hook.ts)
-  lib/                      framework-free helpers (format, page props, form data, safe links, cn)
-```
-
-Rules:
-
-- Links and redirects use `ROUTES` from `configs/routes.config.ts`; no hard-coded paths in features. The planned
-  move to the UI/UX paths is listed there and only changes that file, the route folders and redirects.
-- Only `services/` calls the backend. Public data (decision log, read model) never gets the session token.
-- Domain wording stays generic: domain-pack specifics come from the backend, not from portal code.
-- No barrel files; import a module by its path.
-
 ## Configuration
 
-Server-side environment variables only, validated in `src/configs/env.config.ts`. Values are read at request time,
+Server-side environment variables only, validated in `src/lib/config.ts`. Values are read at request time,
 so changing them needs a restart, not a rebuild.
 
 | Variable | Default | Notes |

@@ -4,9 +4,6 @@
  * The colour mappings below only point Tailwind utilities (bg-primary, text-muted-foreground, ...) at the variables.
  */
 
-/* Let the apps' Tailwind build see the classes used by the shared components. */
-@source "./src";
-
 :root {
   --background: #FEFAF0;
     --foreground: #2A1A18;
