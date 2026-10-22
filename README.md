@@ -82,9 +82,10 @@ and the operator role can reset the demo data. Witness needs no account (anonymo
 
 ## Frontend naming
 
-Use English for frontend documentation, source paths and identifiers. Public URL segments follow the Indonesian
-product vocabulary and stay independent of the selected UI language. Use **organization** for the shared workspace
-concept; newsrooms and government agencies are organization types. See the
+Use English for frontend documentation, source paths, identifiers and canonical URL segments. The selected UI
+language does not change URLs. Use **organization** for the shared workspace concept; newsrooms and government
+agencies are organization types. Existing Indonesian URL segments are temporary compatibility routes and will
+redirect permanently to their English replacements when the route migration lands. See the
 [portal README](apps/portal/README.md#routes-and-naming) for the full route map.
 
 ## Quick start (local)

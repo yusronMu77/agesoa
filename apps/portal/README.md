@@ -5,9 +5,11 @@ services on the server; the browser never talks to a service or a database direc
 
 ## Routes and naming
 
-Use English for documentation, source paths and identifiers. Use **organization** as the shared term for newsrooms
-and government agencies. Public URL segments follow the Indonesian product vocabulary and do not change with the
-selected UI language. Paths are built in `src/lib/routes.ts` (`ROUTES`), never typed as literals.
+Use English for documentation, source paths, identifiers and canonical URL segments. Use **organization** as the
+shared term for newsrooms and government agencies. The selected UI language does not change URLs. The table below
+documents the current implementation; its Indonesian URL segments are temporary compatibility routes until the
+English-route migration lands, after which they will return permanent 308 redirects. Paths are built in
+`src/lib/routes.ts` (`ROUTES`), never typed as literals.
 
 Four separate surfaces (DESIGN-BRIEF §1 in the design repository), each with its own shell and, for validators and
 institutions, its own sign-in page; a reader never sees another surface's menu.
