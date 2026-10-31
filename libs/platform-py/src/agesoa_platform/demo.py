@@ -10,8 +10,9 @@ from sqlalchemy.exc import DBAPIError
 
 from agesoa_platform.db import Database
 
-# Not owned by the service: the migration version and PostGIS's reference table.
-RESET_KEEP_TABLES = ("alembic_version", "spatial_ref_sys")
+# Not owned by the service: the migration version, PostGIS's reference table and the schema-version row of ADK's session
+# tables (without it ADK refuses every session call as a malformed database).
+RESET_KEEP_TABLES = ("alembic_version", "spatial_ref_sys", "adk_internal_metadata")
 RESET_ATTEMPTS = 3
 
 

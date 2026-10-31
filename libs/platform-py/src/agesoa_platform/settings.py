@@ -27,6 +27,11 @@ class ServiceSettings(BaseSettings):
     )
     db_pool_size: int = 2
     db_max_overflow: int = 2
+    db_reserved_connections: int = Field(
+        2,
+        description="Connections of the pool that event handlers never take, so a long handler cannot starve "
+        "/readyz, the API or a nested session (ADK).",
+    )
     db_search_path: str | None = Field(
         None, description="Postgres search_path override (isolated test schemas)."
     )

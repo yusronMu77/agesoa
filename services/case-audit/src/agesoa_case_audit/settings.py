@@ -13,6 +13,10 @@ REPO_DOMAIN_PACKS = Path(__file__).resolve().parents[4] / "domain-packs"
 
 class Settings(ServiceSettings):
     service_name: str = SERVICE
+    # Audit rounds hold a connection while the model answers, so this service takes a larger pool than the others
+    # (event handlers still leave `db_reserved_connections` of it free).
+    db_pool_size: int = 3
+    db_max_overflow: int = 3
     domain_packs_dir: Path = REPO_DOMAIN_PACKS
     gemini_model: str = "gemini-3.8-flash"
     audit_model: str = Field(

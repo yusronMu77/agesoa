@@ -136,6 +136,20 @@ async def _handler(session, event):
     return None
 
 
+async def test_demo_reset_keeps_the_adk_schema_version(db):
+    from agesoa_platform import demo
+
+    async with db.transaction() as session:
+        await session.execute(text("create table adk_internal_metadata (key text primary key, value text)"))
+        await session.execute(text("insert into adk_internal_metadata values ('schema_version', '1')"))
+    names = await demo.reset_tables(db)
+    assert "adk_internal_metadata" not in names
+    async with db.sessions() as session:
+        assert (await session.execute(text("select value from adk_internal_metadata"))).scalars().all() == [
+            "1"
+        ]
+
+
 async def test_demo_reset_runs_again_after_a_deadlock(db, monkeypatch):
     from agesoa_platform import demo
     from sqlalchemy.exc import DBAPIError

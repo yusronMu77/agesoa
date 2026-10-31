@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -5,6 +6,9 @@ from agesoa_packs import load_packs
 from agesoa_platform.app import create_app
 from fastapi import FastAPI
 from google.adk.sessions import DatabaseSessionService
+from google.adk.sessions.migration._schema_check_utils import LATEST_SCHEMA_VERSION, SCHEMA_VERSION_KEY
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from agesoa_case_audit import __version__
 from agesoa_case_audit.agent import AuditAgent
@@ -13,6 +17,8 @@ from agesoa_case_audit.bigquery_store import BigQueryIncidentStore
 from agesoa_case_audit.events import build_handlers
 from agesoa_case_audit.patterns import DatabaseIncidentStore, FallbackIncidentStore, IncidentStore
 from agesoa_case_audit.settings import Settings, get_settings
+
+log = logging.getLogger(__name__)
 
 DESCRIPTION = "Cases, evidence deadlines, witness interviews, audit trail and findings; agent Audit."
 
@@ -40,6 +46,21 @@ def build_app(settings: Settings | None = None) -> FastAPI:
     return app
 
 
+async def restore_session_schema_version(engine: AsyncEngine) -> None:
+    """Put back the schema-version row of ADK's session tables when the table exists without it (an older demo reset
+    emptied it). ADK reads that row before every first use and treats its absence as a malformed database, which
+    made each audit round fall back to the lexical ranking. A new database has no table yet: ADK creates both."""
+    async with engine.begin() as conn:
+        if (await conn.execute(text("select to_regclass('adk_internal_metadata') is not null"))).scalar_one():
+            await conn.execute(
+                text(
+                    "insert into adk_internal_metadata (key, value) values (:key, :value) "
+                    "on conflict (key) do nothing"
+                ),
+                {"key": SCHEMA_VERSION_KEY, "value": LATEST_SCHEMA_VERSION},
+            )
+
+
 def _keep_sessions_in_database(app: FastAPI, ranker: AuditAgent) -> None:
     """The ADK session of every case lives in this service's own database (tables `sessions`, `events`, ... created
     by ADK's `DatabaseSessionService` on first use). The engine only exists once the app has started."""
@@ -48,6 +69,10 @@ def _keep_sessions_in_database(app: FastAPI, ranker: AuditAgent) -> None:
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         async with started(application):
+            try:
+                await restore_session_schema_version(application.state.db.engine)
+            except Exception:  # the database may not answer yet; the service must still start
+                log.warning("could not check the ADK schema version at start", exc_info=True)
             ranker.sessions = DatabaseSessionService(db_engine=application.state.db.engine)
             yield
 

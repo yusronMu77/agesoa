@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -25,6 +26,11 @@ class Database:
             connect_args=connect_args,
         )
         self.sessions = async_sessionmaker(self.engine, expire_on_commit=False)
+        # A pushed event holds its connection while the handler works (a model call can take a minute). Only this many
+        # run at once, so the rest of the pool stays free for /readyz, the API and sessions opened inside a handler.
+        self.event_slots = asyncio.Semaphore(
+            max(1, settings.db_pool_size + settings.db_max_overflow - settings.db_reserved_connections)
+        )
 
     @asynccontextmanager
     async def transaction(self) -> AsyncIterator[AsyncSession]:

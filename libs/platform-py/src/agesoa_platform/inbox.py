@@ -17,7 +17,7 @@ EventHandler = Callable[[AsyncSession, dict[str, Any]], Awaitable[None]]
 
 async def process_once(db: Database, event: dict[str, Any], handler: EventHandler) -> bool:
     """Run `handler` unless this event id was already processed. Returns False for a duplicate."""
-    async with db.transaction() as session:
+    async with db.event_slots, db.transaction() as session:
         inserted = await session.scalar(
             insert(inbox)
             .values(event_id=event["id"], event_type=event["type"])
