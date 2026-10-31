@@ -218,14 +218,6 @@ export async function PublicDashboard({ basePath, searchParams }: { basePath: st
         />
       </div>
 
-      <section className="card pub-ask" aria-labelledby="ask-heading">
-        <div className="pub-section-head">
-          <h2 id="ask-heading">{t("public.ask.title")}</h2>
-          <p>{t("public.ask.sub")}</p>
-        </div>
-        <AskForm t={t} />
-      </section>
-
       <div className="pub-row">
         <section className="pub-trending" aria-labelledby="trending-heading">
           <div className="pub-section-head">
@@ -406,6 +398,11 @@ export async function PublicDashboard({ basePath, searchParams }: { basePath: st
           </div>
         </aside>
       </div>
+
+      <section className="card pub-ask" aria-labelledby="ask-heading">
+        <h2 id="ask-heading">{t("public.ask.title")}</h2>
+        <AskForm t={t} />
+      </section>
 
       <div className="pub-filter">
         <nav className="pub-chips" aria-label={t("public.findings.filter.label")}>

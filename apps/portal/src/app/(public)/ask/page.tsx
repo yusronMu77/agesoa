@@ -30,7 +30,6 @@ export default async function AskPage({ searchParams }: { searchParams: SearchPa
     <div className="pub-ask-page">
       <p className="eyebrow">{t("public.dashboard.title")}</p>
       <h1>{t("public.ask.title")}</h1>
-      <p className="lead">{t("public.ask.sub")}</p>
 
       <AskForm t={t} question={question ?? (typeof raw === "string" ? raw : "")} id="ask-page" />
 

@@ -2064,47 +2064,67 @@ button.pub-node__link {
   gap: var(--ag-space-2);
 }
 
-/* --- Ask about the findings (#74): dashboard form and the /ask answer page --- */
+/* --- Ask about the findings (#74): dashboard form (above the evidence status filter) and the /ask page --- */
 
 .pub-ask {
-  margin-top: var(--ag-space-6);
+  display: grid;
+  gap: var(--ag-space-4);
+  margin-bottom: var(--ag-space-8);
+}
+
+.pub-ask h2 {
+  margin: 0;
 }
 
 .ask-form {
   display: grid;
-  gap: var(--ag-space-2);
+  gap: var(--ag-space-1);
+}
+
+.ask-form__hint {
+  margin: 0;
+  font-size: var(--ag-font-size-sm);
+  line-height: 1.5;
+  color: var(--ag-color-text-secondary);
 }
 
 .ask-form__row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--ag-space-2);
+  align-items: stretch;
+  gap: var(--ag-space-3);
+  margin-top: var(--ag-space-2);
 }
 
 .ask-form__row input[type="text"] {
-  flex: 1 1 16rem;
+  flex: 1 1 18rem;
   width: auto;
+  min-width: 0;
 }
 
 .ask-form__row .button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--ag-space-2);
+  min-height: 44px;
+  padding-inline: var(--ag-space-6);
 }
 
 .pub-ask-page {
   display: grid;
-  gap: var(--ag-space-4);
+  gap: var(--ag-space-6);
   max-width: 56rem;
 }
 
-.pub-ask-page h1 {
+.pub-ask-page h1,
+.pub-ask-page .eyebrow {
   margin: 0;
 }
 
 .ask-answer {
   display: grid;
-  gap: var(--ag-space-3);
+  gap: var(--ag-space-4);
 }
 
 .ask-answer h2,
@@ -2112,10 +2132,15 @@ button.pub-node__link {
   margin: 0;
 }
 
+.ask-answer h3 {
+  margin-top: var(--ag-space-2);
+}
+
 .ask-answer__text {
   margin: 0;
   font-size: var(--ag-font-size-lg);
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .ask-answer__note {
@@ -2132,4 +2157,49 @@ button.pub-node__link {
 
 .ask-refs {
   margin: 0;
+}
+
+/* Badges of a reference stay together on the left (the dashboard card spreads its two ends apart). */
+.ask-refs .pub-finding__top {
+  justify-content: flex-start;
+}
+
+.ask-refs .pub-finding__statement {
+  margin: var(--ag-space-3) 0 var(--ag-space-2);
+}
+
+@media (max-width: 600px) {
+  .pub-ask,
+  .ask-answer {
+    padding: var(--ag-space-4);
+  }
+
+  .pub-ask {
+    margin-bottom: var(--ag-space-6);
+  }
+
+  .ask-form__row {
+    flex-direction: column;
+  }
+
+  .ask-form__row input[type="text"] {
+    flex: none;
+    width: 100%;
+  }
+
+  .ask-form__row .button {
+    width: 100%;
+  }
+
+  .pub-ask-page {
+    gap: var(--ag-space-4);
+  }
+
+  .ask-answer__text {
+    font-size: var(--ag-font-size-md);
+  }
+
+  .ask-refs .pub-finding {
+    padding: var(--ag-space-4);
+  }
 }
