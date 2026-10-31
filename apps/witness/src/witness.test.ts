@@ -1,12 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import { ApiError, CaseAuditClient, errorDetail, IngestionClient } from "./api";
 import type { KeyValueStore } from "./auth";
-import { bearerToken, deviceId } from "./auth";
+import { authToken, bearerToken, deviceId } from "./auth";
 import { messageFor, orderPacks } from "./App";
 import { ConfigError, loadConfig } from "./config";
 import { ID, LANGUAGES, language, pick, setLanguage, T, t } from "./copy";
 import { EN } from "./copy.en";
-import { EmptyRecording, LocationUnavailable, locationError, PermissionDenied, recordingResult } from "./device";
+import {
+  EmptyRecording,
+  LocationUnavailable,
+  locationError,
+  nativeLocationCode,
+  PermissionDenied,
+  recordingResult,
+} from "./device";
 import { appendDictated, dictationSupported, startDictation } from "./dictation";
 import { errorText } from "./errors";
 import {
@@ -51,7 +58,15 @@ describe("config", () => {
       ingestionUrl: "http://localhost:8001",
       caseAuditUrl: "http://localhost:8002",
       domain: "general",
+      firebase: null,
     });
+  });
+
+  test("deployed environments need the Firebase settings; the auth domain defaults from the project", () => {
+    expect(() => loadConfig({ VITE_APP_ENV: "demo" })).toThrow(/VITE_FIREBASE_API_KEY/);
+    expect(
+      loadConfig({ VITE_APP_ENV: "demo", VITE_FIREBASE_API_KEY: "k", VITE_FIREBASE_PROJECT_ID: "agesoa-demo" }).firebase,
+    ).toEqual({ apiKey: "k", projectId: "agesoa-demo", authDomain: "agesoa-demo.firebaseapp.com" });
   });
 
   test("reports start on the general pack; the legacy VITE_DOMAIN is ignored", () => {
@@ -91,8 +106,19 @@ describe("anonymous reporter", () => {
     expect(deviceId(store)).not.toContain("@");
   });
 
-  test("deployed environments wait for Firebase anonymous sign-in", () => {
-    expect(() => bearerToken("demo", memory())).toThrow(/#23/);
+  test("the development token is refused outside local", () => {
+    expect(() => bearerToken("demo", memory())).toThrow(/only accepted in local/);
+  });
+
+  test("deployed environments send the Firebase anonymous ID token; local keeps the dev token", async () => {
+    const firebase = { apiKey: "k", projectId: "agesoa-demo", authDomain: "agesoa-demo.firebaseapp.com" };
+    const demo = { ...loadConfig({}), appEnv: "demo" as const, firebase };
+    const seen: unknown[] = [];
+    const idToken = async (config: unknown) => (seen.push(config), "id-token");
+    expect(await authToken(demo, memory(), idToken)).toBe("id-token");
+    expect(seen).toEqual([firebase]);
+    expect(await authToken(loadConfig({}), memory(), idToken)).toMatch(/^dev:/);
+    expect(authToken({ ...demo, firebase: null }, memory(), idToken)).rejects.toThrow(/Firebase settings/);
   });
 });
 
@@ -265,6 +291,12 @@ describe("case-audit client (SCR-006)", () => {
 });
 
 describe("device errors (#106, #107)", () => {
+  test("native geolocation plugin errors map to the same codes", () => {
+    expect(nativeLocationCode(new Error("Location permission was denied"))).toBe(1);
+    expect(nativeLocationCode({ message: "Timeout expired" })).toBe(3);
+    expect(nativeLocationCode(new Error("Location unavailable"))).toBe(2);
+  });
+
   test("geolocation codes: 1 is a refusal, 2 and 3 let the reporter pick a district", () => {
     expect(locationError({ code: 1 })).toBeInstanceOf(PermissionDenied);
     const unavailable = locationError({ code: 2 });

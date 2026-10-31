@@ -1,6 +1,6 @@
 /** Clients for the ingestion and case-audit services (types mirror their openapi.json). */
 
-import { bearerToken } from "./auth";
+import { authToken } from "./auth";
 import type { WitnessConfig } from "./config";
 
 export interface Label {
@@ -147,7 +147,7 @@ abstract class ServiceClient {
   protected async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const headers: Record<string, string> = {
       accept: "application/json",
-      authorization: `Bearer ${bearerToken(this.config.appEnv)}`,
+      authorization: `Bearer ${await authToken(this.config)}`,
     };
     let payload: BodyInit | undefined;
     if (body instanceof FormData) {

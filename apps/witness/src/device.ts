@@ -1,13 +1,30 @@
 /**
  * Device capabilities: permission state, camera stream, voice recording, approximate position.
  * Permissions are requested only when the reporter presses the button, after the explainer (SCR-002).
+ *
+ * In the Android app the camera and the position come from the Capacitor plugins: the camera plugin hands over to
+ * the system camera app (no CAMERA permission), the position asks for ACCESS_COARSE_LOCATION only. The microphone
+ * uses getUserMedia, whose prompt the Capacitor WebView forwards to the RECORD_AUDIO runtime permission.
  */
+
+import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+import { Geolocation } from "@capacitor/geolocation";
+import { isNative } from "./native";
 
 export type Capability = "camera" | "microphone" | "geolocation";
 
 export type PermissionStatus = "granted" | "denied" | "prompt";
 
 export async function permissionStatus(kind: Capability): Promise<PermissionStatus> {
+  if (isNative() && kind === "camera") return "granted"; // the system camera app asks for nothing
+  if (isNative() && kind === "geolocation") {
+    try {
+      const { coarseLocation } = await Geolocation.checkPermissions();
+      return coarseLocation === "granted" || coarseLocation === "denied" ? coarseLocation : "prompt";
+    } catch {
+      return "prompt";
+    }
+  }
   try {
     const status = await navigator.permissions.query({ name: kind as PermissionName });
     return status.state;
@@ -45,6 +62,15 @@ export function locationError(error: { code: number }): Error {
   return new LocationUnavailable(error.code === 3 ? "timeout" : "unavailable");
 }
 
+/** Maps a rejection of the native geolocation plugin (message only) to the codes of GeolocationPositionError. */
+export function nativeLocationCode(error: unknown): number {
+  const message = (error instanceof Error ? error.message : String((error as { message?: unknown })?.message ?? error))
+    .toLowerCase();
+  if (message.includes("denied")) return 1;
+  if (message.includes("timeout") || message.includes("timed out")) return 3;
+  return 2;
+}
+
 function denied(error: unknown): boolean {
   return error instanceof DOMException && (error.name === "NotAllowedError" || error.name === "SecurityError");
 }
@@ -57,6 +83,24 @@ export async function openCamera(): Promise<MediaStream> {
     });
   } catch (error) {
     if (denied(error)) throw new PermissionDenied("camera");
+    throw error;
+  }
+}
+
+/** Android app: one photo from the system camera app, as a JPEG blob; null when the reporter backs out. */
+export async function takeNativePhoto(): Promise<Blob | null> {
+  try {
+    const photo = await Camera.getPhoto({
+      source: CameraSource.Camera,
+      resultType: CameraResultType.Uri,
+      quality: 90,
+      correctOrientation: true,
+      saveToGallery: false,
+    });
+    if (!photo.webPath) throw new Error("capture failed");
+    return await (await fetch(photo.webPath)).blob();
+  } catch (error) {
+    if (error instanceof Error && /cancel/i.test(error.message)) return null;
     throw error;
   }
 }
@@ -133,7 +177,22 @@ export function recordingResult(chunks: Blob[], type: string, elapsedMs: number)
 }
 
 /** Approximate position, used once to find the district and then dropped. */
-export function approximatePosition(): Promise<{ lat: number; lon: number }> {
+export async function approximatePosition(): Promise<{ lat: number; lon: number }> {
+  if (isNative()) {
+    try {
+      // Only the coarse permission is requested (± 2 km); the manifest declares no fine location.
+      const { coarseLocation } = await Geolocation.checkPermissions();
+      if (coarseLocation !== "granted") await Geolocation.requestPermissions({ permissions: ["coarseLocation"] });
+      const { coords } = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: false,
+        timeout: 15000,
+        maximumAge: 300000,
+      });
+      return { lat: coords.latitude, lon: coords.longitude };
+    } catch (error) {
+      throw locationError({ code: nativeLocationCode(error) });
+    }
+  }
   return new Promise((resolve, reject) => {
     if (!("geolocation" in navigator)) return reject(new PermissionDenied("geolocation"));
     navigator.geolocation.getCurrentPosition(

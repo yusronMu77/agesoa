@@ -12,6 +12,13 @@ export const DEFAULT_CASE_AUDIT_URL = "http://localhost:8002";
 /** The general pack (domain-packs/general): any public problem. */
 export const DEFAULT_DOMAIN = "general";
 
+/** Firebase Auth (Identity Platform) settings for anonymous sign-in; null in `local`, which uses the dev token. */
+export interface FirebaseConfig {
+  apiKey: string;
+  projectId: string;
+  authDomain: string;
+}
+
 export interface WitnessConfig {
   appEnv: AppEnv;
   demoMode: boolean;
@@ -20,6 +27,7 @@ export interface WitnessConfig {
   caseAuditUrl: string;
   /** Domain pack the reports belong to. */
   domain: string;
+  firebase: FirebaseConfig | null;
 }
 
 export class ConfigError extends Error {
@@ -59,6 +67,16 @@ function parseUrl(name: string, raw: string): string {
   return url.toString().replace(/\/+$/, "");
 }
 
+function loadFirebase(env: Env, appEnv: AppEnv): FirebaseConfig | null {
+  if (appEnv === "local") return null;
+  const apiKey = read(env, "VITE_FIREBASE_API_KEY");
+  const projectId = read(env, "VITE_FIREBASE_PROJECT_ID");
+  if (!apiKey || !projectId) {
+    throw new ConfigError(`VITE_FIREBASE_API_KEY and VITE_FIREBASE_PROJECT_ID are required when VITE_APP_ENV=${appEnv}`);
+  }
+  return { apiKey, projectId, authDomain: read(env, "VITE_FIREBASE_AUTH_DOMAIN") ?? `${projectId}.firebaseapp.com` };
+}
+
 export function loadConfig(env: Env = import.meta.env): WitnessConfig {
   const rawEnv = (read(env, "VITE_APP_ENV") ?? "local").toLowerCase();
   if (!(APP_ENVS as readonly string[]).includes(rawEnv)) {
@@ -74,5 +92,5 @@ export function loadConfig(env: Env = import.meta.env): WitnessConfig {
   // Reports start on the general pack; the reporter can move a draft to another pack on SCR-004. VITE_DOMAIN is a
   // legacy build variable and is ignored, so a deployment preset cannot replace the public form.
   const domain = DEFAULT_DOMAIN;
-  return { appEnv, demoMode, ingestionUrl, caseAuditUrl, domain };
+  return { appEnv, demoMode, ingestionUrl, caseAuditUrl, domain, firebase: loadFirebase(env, appEnv) };
 }

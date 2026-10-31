@@ -23,6 +23,8 @@ html {
 
 body {
   margin: 0;
+  /* Edge-to-edge WebView (Android app, viewport-fit=cover): keep content below the status bar and notch. */
+  padding-top: env(safe-area-inset-top, 0px);
   background: var(--ag-color-bg-canvas);
   color: var(--ag-color-text-primary);
   font-family: var(--ag-font-family-sans);
@@ -483,7 +485,7 @@ h2[tabindex="-1"]:focus {
   flex-direction: column;
   gap: var(--ag-space-3);
   margin: auto calc(-1 * var(--ag-space-4)) 0;
-  padding: var(--ag-space-3) var(--ag-space-4);
+  padding: var(--ag-space-3) var(--ag-space-4) calc(var(--ag-space-3) + env(safe-area-inset-bottom, 0px));
   background: var(--ag-color-bg-surface);
 }
 
@@ -1411,7 +1413,8 @@ dialog.fullscreen {
   height: 100dvh;
   max-height: 100dvh;
   margin: 0 auto;
-  padding: 0;
+  /* The dialog sits in the top layer, outside body's padding: keep it below the status bar (bottom: .actions). */
+  padding: env(safe-area-inset-top, 0px) 0 0;
   border: none;
   background: var(--ag-color-bg-canvas);
   color: var(--ag-color-text-primary);

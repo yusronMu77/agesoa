@@ -16,7 +16,9 @@ import {
   PermissionDenied,
   startRecording,
   stopStream,
+  takeNativePhoto,
 } from "../device";
+import { isNative } from "../native";
 import type { CaptureState, EvidenceItem } from "../state";
 import { errorText } from "../errors";
 import { newItem } from "../state";
@@ -118,6 +120,13 @@ export function Capture({
       "camera",
       () => {
         setLocalError(null);
+        if (isNative()) {
+          void takeNativePhoto().then(
+            (blob) => blob && addItems([newItem("photo", blob, `photo-${state.items.length + 1}.jpg`)]),
+            (err) => failed("camera", err),
+          );
+          return;
+        }
         void openCamera().then(setStream, (err) => failed("camera", err));
       },
       () => markDenied("camera"),

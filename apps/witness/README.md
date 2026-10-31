@@ -5,7 +5,7 @@ text, approximate location shown as a district, an optional social post link or 
 proposed by Agen Intake, corrects it and submits. There is no sign-up and no login: the device keeps a random id and
 the services only store a pseudonym of it.
 
-Vite + React + TypeScript, shipped as a PWA (Android APK via Capacitor comes later). Skeleton generated with
+Vite + React + TypeScript, shipped as a PWA and as an Android APK (Capacitor 8, same web build). Skeleton generated with
 scaffold-cli (`react-vite` template); screens and modules written for AGESOA.
 
 ## Screens
@@ -49,14 +49,42 @@ production build behind HTTPS.
 
 | Variable | Default | Notes |
 |---|---|---|
-| `VITE_APP_ENV` | `local` | `local` uses the services' development token; other environments need Firebase anonymous sign-in (issue #23) and fail loudly until then |
+| `VITE_APP_ENV` | `local` | `local` uses the services' development token; other environments sign in anonymously with Firebase Auth and need the three `VITE_FIREBASE_*` variables (config fails loudly without them) |
 | `VITE_DEMO_MODE` | `false` | shows the "SIMULASI" band; refused with `prod` |
 | `VITE_INGESTION_URL` | `http://localhost:8001` | |
+| `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID` | none | required outside `local` |
+| `VITE_FIREBASE_AUTH_DOMAIN` | `<project>.firebaseapp.com` | |
 | `VITE_CASE_AUDIT_URL` | `http://localhost:8002` | audit questions (SCR-006); its `CORS_ORIGINS` must include the Witness origin; unreachable = no banner, reporting is not blocked |
 
 `VITE_DOMAIN` is a legacy variable and is ignored: every report uses the general pack (`domain-packs/general`); its
 categories are the "Jenis masalah" choices on SCR-004. Other packs (`GET /v1/domain-packs`) are only read to label
 reports of earlier builds on SCR-008.
 
-Not done yet: service worker (offline queue of drafts), Capacitor Android build (native camera plugin, share
-target SCR-007), Firebase anonymous sign-in.
+## Android app (Capacitor 8)
+
+The APK wraps the same `dist/` build (`capacitor.config.ts`, project in `android/`). The WebView serves it from
+`https://localhost`, a secure context, so `getUserMedia` works; never set `server.url` or `server.hostname` to an
+http address. Every service the app calls must list `https://localhost` in `CORS_ORIGINS` (ingestion and
+case-audit examples do; `infra/tofu/envs/demo` already allows `capacitor://localhost` and `https://localhost`).
+
+Permissions in the manifest: `RECORD_AUDIO`, `MODIFY_AUDIO_SETTINGS`, `ACCESS_COARSE_LOCATION`, plus `INTERNET`
+(no prompt). The photo button opens the system camera app through `@capacitor/camera`, which needs no `CAMERA`
+permission; the gallery button uses the Android photo picker. Position comes from `@capacitor/geolocation` with
+only the coarse permission requested. The manifest removes `CAMERA`, fine location, `ACCESS_NETWORK_STATE` and
+the storage and media permissions, so a library update cannot add them back. Check the built APK with
+`aapt2 dump permissions app-debug.apk`.
+
+Firebase Auth inside the app uses `initializeAuth` with IndexedDB persistence (`src/firebase.ts`); the browser
+uses `getAuth`.
+
+Build (JDK 21 for Gradle 8.14, Android SDK with platform 36; `android/local.properties` holds `sdk.dir` and is
+ignored by git):
+
+```sh
+bun run build && bunx cap sync android
+cd android && ./gradlew assembleDebug      # app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb reverse tcp:8001 tcp:8001 && adb reverse tcp:8002 tcp:8002   # local services from the phone
+```
+
+Not done yet: service worker (offline queue of drafts), share target SCR-007.

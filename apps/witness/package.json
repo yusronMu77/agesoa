@@ -13,12 +13,18 @@
   },
   "dependencies": {
     "@agesoa/ui": "workspace:*",
+    "@capacitor/camera": "^8",
+    "@capacitor/core": "^8",
+    "@capacitor/geolocation": "^8",
     "@tailwindcss/vite": "^4.3.3",
+    "firebase": "13.0.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
+    "@capacitor/android": "^8",
+    "@capacitor/cli": "^8",
     "@types/bun": "latest",
     "@types/react": "^19",
     "@types/react-dom": "^19",
