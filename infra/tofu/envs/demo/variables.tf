@@ -17,7 +17,7 @@ variable "region" {
 variable "agent_model" {
   type        = string
   default     = "gemini-3.8-flash"
-  description = "Gemini model id for the Intake agent (ingestion) and the Audit agent (case-audit). `rules` is the deterministic fallback, accepted only with demo_mode (for example when the Gemini quota runs out)."
+  description = "Gemini model id for the Intake agent (ingestion), the Audit agent (case-audit) and the Report agent's public questions (transparency). `rules` is the deterministic fallback, accepted only with demo_mode (for example when the Gemini quota runs out)."
 }
 
 variable "vertex_location" {

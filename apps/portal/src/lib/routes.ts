@@ -3,7 +3,7 @@
  * and, for validators and organizations, its own sign-in page. Canonical URL segments are English; the selected UI
  * language never changes a URL.
  *
- *   public       `/`, `/cases/[id]`, `/cases/[id]/report`, `/log`, `/about`, `/status`
+ *   public       `/`, `/cases/[id]`, `/cases/[id]/report`, `/ask`, `/log`, `/about`, `/status`
  *   validator    `/validators`, `/validators/findings/[findingId]`, `/validators/register`, `/validators/log`,
  *                sign-in `/validators/login`
  *   organization `/organizations`, `/organizations/[organizationId]`, `/organizations/[organizationId]/deliveries`,
@@ -25,6 +25,8 @@ export const ROUTES = {
   cases: "/cases",
   case: (caseId: string) => `/cases/${encodeURIComponent(caseId)}`,
   caseReport: (caseId: string) => `/cases/${encodeURIComponent(caseId)}/report`,
+  /** Public question about the findings (`?q=`), answered from validated findings only. */
+  ask: "/ask",
   validator: "/validators",
   validatorDecided: "/validators?filter=decided",
   validatorFinding: (findingId: string) => `/validators/findings/${encodeURIComponent(findingId)}`,

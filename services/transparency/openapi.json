@@ -349,6 +349,50 @@
         }
       }
     },
+    "/v1/questions": {
+      "post": {
+        "tags": [
+          "questions"
+        ],
+        "summary": "Answer a public question from validated findings only",
+        "operationId": "ask_v1_questions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Question"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionAnswer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request body (not valid JSON)"
+          }
+        }
+      }
+    },
     "/internal/read-model/sync": {
       "post": {
         "tags": [
@@ -415,6 +459,78 @@
   },
   "components": {
     "schemas": {
+      "AnswerReference": {
+        "properties": {
+          "finding_id": {
+            "type": "string",
+            "title": "Finding Id"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "statement": {
+            "type": "string",
+            "title": "Statement",
+            "description": "The finding's public statement in the answer's language"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "description": "Evidence status of the finding (alleged, supported, proven)"
+          },
+          "region_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region Name"
+          },
+          "validated_at": {
+            "type": "string",
+            "title": "Validated At"
+          },
+          "approvals": {
+            "type": "integer",
+            "title": "Approvals",
+            "description": "Approving validator decisions (no validator reference)"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "finding_id",
+          "case_id",
+          "statement",
+          "status",
+          "region_name",
+          "validated_at",
+          "approvals",
+          "synthetic"
+        ],
+        "title": "AnswerReference"
+      },
       "ChainHead": {
         "properties": {
           "seq": {
@@ -781,6 +897,60 @@
           "published"
         ],
         "title": "ProbeResult"
+      },
+      "Question": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Question",
+            "description": "The reader's question, as typed"
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "id",
+              "en"
+            ],
+            "title": "Lang",
+            "description": "Language of the answer",
+            "default": "id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "Question"
+      },
+      "QuestionAnswer": {
+        "properties": {
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "references": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerReference"
+            },
+            "type": "array",
+            "title": "References",
+            "description": "Validated findings the answer uses, best first; empty when none answers the question"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "description": "\"model:<name>\" (the agent's answer, checked) or \"extractive\" (fallback)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "answer",
+          "references",
+          "method"
+        ],
+        "title": "QuestionAnswer"
       },
       "ReadModelRebuild": {
         "properties": {

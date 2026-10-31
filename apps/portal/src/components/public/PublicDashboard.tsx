@@ -29,6 +29,7 @@ import {
   type PublicFinding,
 } from "@/lib/readmodel";
 import { getLogForSubjectKind, getLogHead, getLogPage, getRecentLog, type LogEntry } from "@/lib/transparency";
+import { AskForm } from "./AskForm";
 import { ContextForm } from "./ContextForm";
 import { DistrictMap } from "./DistrictMap";
 import { FindingCard } from "./FindingCard";
@@ -216,6 +217,14 @@ export async function PublicDashboard({ basePath, searchParams }: { basePath: st
           anySynthetic={anySynthetic}
         />
       </div>
+
+      <section className="card pub-ask" aria-labelledby="ask-heading">
+        <div className="pub-section-head">
+          <h2 id="ask-heading">{t("public.ask.title")}</h2>
+          <p>{t("public.ask.sub")}</p>
+        </div>
+        <AskForm t={t} />
+      </section>
 
       <div className="pub-row">
         <section className="pub-trending" aria-labelledby="trending-heading">

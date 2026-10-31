@@ -2063,3 +2063,73 @@ button.pub-node__link {
   flex-wrap: wrap;
   gap: var(--ag-space-2);
 }
+
+/* --- Ask about the findings (#74): dashboard form and the /ask answer page --- */
+
+.pub-ask {
+  margin-top: var(--ag-space-6);
+}
+
+.ask-form {
+  display: grid;
+  gap: var(--ag-space-2);
+}
+
+.ask-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ag-space-2);
+}
+
+.ask-form__row input[type="text"] {
+  flex: 1 1 16rem;
+  width: auto;
+}
+
+.ask-form__row .button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ag-space-2);
+}
+
+.pub-ask-page {
+  display: grid;
+  gap: var(--ag-space-4);
+  max-width: 56rem;
+}
+
+.pub-ask-page h1 {
+  margin: 0;
+}
+
+.ask-answer {
+  display: grid;
+  gap: var(--ag-space-3);
+}
+
+.ask-answer h2,
+.ask-answer h3 {
+  margin: 0;
+}
+
+.ask-answer__text {
+  margin: 0;
+  font-size: var(--ag-font-size-lg);
+  line-height: 1.6;
+}
+
+.ask-answer__note {
+  margin: 0;
+  align-items: flex-start;
+  font-size: var(--ag-font-size-sm);
+}
+
+.ask-answer__note > svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--ag-color-status-info);
+}
+
+.ask-refs {
+  margin: 0;
+}

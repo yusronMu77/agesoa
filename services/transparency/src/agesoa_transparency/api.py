@@ -1,14 +1,16 @@
 """Public HTTP API of transparency (exported to openapi.json). Read-only: the log is written only from events."""
 
+from dataclasses import asdict
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from agesoa_platform.oidc import require_internal_caller
 from agesoa_platform.ops import Operator
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 
+from agesoa_transparency.answers import load_corpus
 from agesoa_transparency.chain import verify_chain
 from agesoa_transparency.tables import chain_head, decision_log
 
@@ -102,6 +104,49 @@ async def get_entry(seq: Annotated[int, Path(ge=1, le=MAX_SEQ)], request: Reques
     if row is None:
         raise HTTPException(404, "log entry not found")
     return LogEntry(**row)
+
+
+# Public questions (Agen Report): answered from validated findings only, with the findings it used as references.
+# The question is neither stored nor logged.
+questions_router = APIRouter(prefix="/v1", tags=["questions"])
+
+
+class Question(BaseModel):
+    question: str = Field(min_length=3, max_length=300, description="The reader's question, as typed")
+    lang: Literal["id", "en"] = Field("id", description="Language of the answer")
+
+
+class AnswerReference(BaseModel):
+    finding_id: str
+    case_id: str | None
+    statement: str = Field(description="The finding's public statement in the answer's language")
+    status: str | None = Field(description="Evidence status of the finding (alleged, supported, proven)")
+    region_name: str | None
+    validated_at: str
+    approvals: int = Field(description="Approving validator decisions (no validator reference)")
+    synthetic: bool
+
+
+class QuestionAnswer(BaseModel):
+    answer: str
+    references: list[AnswerReference] = Field(
+        description="Validated findings the answer uses, best first; empty when none answers the question"
+    )
+    method: str = Field(
+        description='"model:<name>" (the agent\'s answer, checked) or "extractive" (fallback)'
+    )
+
+
+@questions_router.post("/questions", summary="Answer a public question from validated findings only")
+async def ask(body: Question, request: Request) -> QuestionAnswer:
+    async with request.app.state.db.sessions() as session:
+        corpus = await load_corpus(session)
+    result = await request.app.state.answerer.answer(body.question.strip(), body.lang, corpus)
+    return QuestionAnswer(
+        answer=result.answer,
+        references=[AnswerReference(**asdict(r)) for r in result.references],
+        method=result.method,
+    )
 
 
 # Called by Cloud Scheduler (sync, safety net for projections that did not run after a commit) and by an

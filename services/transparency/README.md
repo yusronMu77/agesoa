@@ -1,6 +1,6 @@
 # services/transparency
 
-Hash-chained public decision log (its only writer) and the public read models.
+Hash-chained public decision log (its only writer), the public read models and public questions (Agen Report).
 
 Owns the Postgres database `transparency`; no other service reads it. Generated from
 `templates/service` (`.copier-answers.yml`).
@@ -11,6 +11,7 @@ Owns the Postgres database `transparency`; no other service reads it. Generated 
 | `src/agesoa_transparency/events.py` | handlers for the events routed here by `packages/contracts/events/catalog.json` |
 | `src/agesoa_transparency/chain.py` | hash-chained decision log, format in [ADR-0005](../../docs/adr/0005-decision-log-hash-chain.md) |
 | `src/agesoa_transparency/read_model.py` | Firestore public read model projected from consumed events |
+| `src/agesoa_transparency/answers.py` | Agen Report: public questions answered from validated findings only |
 | `src/agesoa_transparency/tables.py`, `alembic/` | owned tables + migrations (`0001` outbox/inbox, `0002` decision log, `0003` read model source) |
 | `openapi.json` | published API contract, exported from code |
 
@@ -36,6 +37,19 @@ Clients may only read these collections (`infra/firestore/firestore.rules`). `PO
 (Cloud Scheduler, every 5 minutes) projects anything left pending; `POST /internal/read-model/rebuild` drops
 the collections and projects again from Postgres. Locally set `FIRESTORE_EMULATOR_HOST` (refused outside
 `local`/`test`); `READ_MODEL_ENABLED=false` turns the projection off.
+
+## Public questions (Agen Report)
+
+`POST /v1/questions` `{question (3–300 characters), lang: id | en}` answers a public question about the findings
+(portal page `/ask`). The answer may only use findings whose validation completed `approved`, projected with the same
+allow-list as the read model (`build_finding`, `build_case` over `read_model_events`), and comes with the findings it
+used (`references`: statement, evidence status, region, approvals, case id). Retrieval is lexical (Indonesian and
+English terms, affixes included); an ADK agent writes the answer, and code keeps a reference only when it is a
+retrieved finding: an answer without one, a failing model or a timeout (20 s) gives the extractive answer instead
+(`method` `extractive`). The question is data to the agent, never instructions, and is neither stored nor logged.
+
+`ANSWER_MODEL` is a Gemini model id (Vertex AI) or `rules` (the extractive answer written as a model response),
+accepted only locally or with `demo_mode`.
 
 ## Run locally
 

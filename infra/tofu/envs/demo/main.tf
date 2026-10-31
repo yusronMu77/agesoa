@@ -11,7 +11,7 @@ locals {
     case-audit   = { database = "case_audit", agent = true, firestore = true, identity = false, archive = true }
     trust        = { database = "trust", agent = true, firestore = false, identity = true, archive = false }
     delivery     = { database = "delivery", agent = true, firestore = false, identity = false, archive = false }
-    transparency = { database = "transparency", agent = false, firestore = true, identity = false, archive = false }
+    transparency = { database = "transparency", agent = true, firestore = true, identity = false, archive = false }
   }
 
   # Request timeout per service (default 60). An audit round takes 10-40 s and a reset sends a dozen events at once, so

@@ -93,6 +93,7 @@ module "service" {
     } : {},
     each.key == "ingestion" ? { MEDIA_BUCKET = google_storage_bucket.media.name, INTAKE_MODEL = var.agent_model } : {},
     each.key == "case-audit" ? { AUDIT_MODEL = var.agent_model } : {},
+    each.key == "transparency" ? { ANSWER_MODEL = var.agent_model } : {},
     each.key == "delivery" ? {
       WEBHOOK_QUEUE       = google_cloud_tasks_queue.webhooks.id
       SELF_URL            = local.delivery_url

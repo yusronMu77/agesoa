@@ -17,6 +17,7 @@ institutions, its own sign-in page; a reader never sees another surface's menu.
 | Public | `/` | SCR-040 | Public dashboard: context pickers, trending, nearby, findings, latest log |
 | Public | `/cases/[caseId]` | SCR-043 | Case page: who validated, the institution's follow-up and right of reply, the case's log. A finding id redirects (308) to its case |
 | Public | `/cases/[caseId]/report` | SCR-041 | Audit report of the case |
+| Public | `/ask?q=` | SCR-040 | Ask about the findings: the answer of Agen Report (transparency `POST /v1/questions`) from validated findings only, with the findings it used linked to their case pages; the question is not stored |
 | Public | `/log`, `/log/[seq]` | SCR-042 | Hash-chained decision log (`transparency`), 50 entries per page via `?after=<seq>`; one entry with its hashes |
 | Public | `/about`, `/status` | | What AGESOA is and the ways in for validators and institutions; readiness of the five services |
 | Validator | `/validators/login` | SCR-023 | Validator sign-in (`?next=` limited to `/validators/*`) |
