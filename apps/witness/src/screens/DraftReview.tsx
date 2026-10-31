@@ -9,6 +9,7 @@ import type { Evidence, FieldValue, IngestionClient, PackDocument, PackField, Re
 import { ApiError } from "../api";
 import { AiResultLabel, Notice, splitFirstSentence } from "../components";
 import { evidenceKind, pick, T, t } from "../copy";
+import { errorText } from "../errors";
 import type { IconName } from "../icons";
 import { Icon } from "../icons";
 import { fieldInError, fromInput, sameValue, toInput, vocabularyOf } from "../fields";
@@ -109,7 +110,7 @@ export function DraftReview({
     } else if (err instanceof ApiError && err.status === null) {
       setError(T["TXT-WIT-130"]);
     } else {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(errorText(err));
     }
   };
 

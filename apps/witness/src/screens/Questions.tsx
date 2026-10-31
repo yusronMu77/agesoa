@@ -8,6 +8,7 @@ import type { Report, WitnessQuestion } from "../api";
 import { ApiError } from "../api";
 import { AiTag, EmptyState, Notice } from "../components";
 import { pick, t, T } from "../copy";
+import { errorText } from "../errors";
 import { Icon } from "../icons";
 import type { Dictation } from "../dictation";
 import { appendDictated, dictationSupported, startDictation } from "../dictation";
@@ -15,7 +16,7 @@ import { appendDictated, dictationSupported, startDictation } from "../dictation
 function answerError(err: unknown): string {
   if (err instanceof ApiError && err.status === 409) return T["TXT-WIT-149"];
   if (err instanceof ApiError && err.status === null) return T["TXT-WIT-130"];
-  return err instanceof Error ? err.message : String(err);
+  return errorText(err);
 }
 
 export function Questions({

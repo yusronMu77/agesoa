@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { ApiError, CaseAuditClient, errorDetail, IngestionClient } from "./api";
 import type { KeyValueStore } from "./auth";
 import { bearerToken, deviceId } from "./auth";
-import { orderPacks } from "./App";
+import { messageFor, orderPacks } from "./App";
 import { ConfigError, loadConfig } from "./config";
 import { ID, LANGUAGES, language, pick, setLanguage, T, t } from "./copy";
 import { EN } from "./copy.en";
@@ -279,6 +279,14 @@ describe("device errors (#106, #107)", () => {
     expect(errorText(raw)).toBe(T["TXT-WIT-133"]);
     expect(errorText(new ApiError(null, "down"))).toBe(T["TXT-WIT-130"]);
     expect(errorText(new Error("specific"))).toBe("specific");
+  });
+
+  test("screen-level messages fall back to the app text for a non-Error value", () => {
+    expect(messageFor({ code: 3, message: "" })).toBe(T["TXT-WIT-133"]);
+    expect(messageFor("boom")).toBe(T["TXT-WIT-133"]);
+    expect(messageFor(new ApiError(null, "down"))).toBe(T["TXT-WIT-130"]);
+    expect(messageFor(new ApiError(413, "too large"))).toBe(T["TXT-WIT-132"]);
+    expect(messageFor(new Error("specific"))).toBe("specific");
   });
 
   test("a recording without data is refused; the duration comes from the data", () => {

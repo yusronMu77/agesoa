@@ -16,6 +16,7 @@ import type { Language } from "./copy";
 import { language, setLanguage, T } from "./copy";
 import type { Capability } from "./device";
 import { permissionStatus } from "./device";
+import { errorText } from "./errors";
 import { savedPreference, savedRegion, saveLanguage, saveRegion, suggestedLanguage, uiLanguage } from "./language";
 import { lastReportId, rememberReport, reportIds } from "./reports";
 import { Capture } from "./screens/Capture";
@@ -55,7 +56,7 @@ export function messageFor(error: unknown): string {
     if (error.status === 422 && error.detail.startsWith("shared_post.url")) return T["TXT-WIT-065"];
     return error.detail;
   }
-  return error instanceof Error ? error.message : String(error);
+  return errorText(error);
 }
 
 /** The default issue type first, then the others by id (stable order). */
