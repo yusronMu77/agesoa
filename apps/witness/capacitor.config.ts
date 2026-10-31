@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   webDir: "dist",
   android: { allowMixedContent: false },
   // The app is always light (color-scheme: light): dark status and navigation bar icons whatever the system theme.
-  plugins: { SystemBars: { style: "DARK" } },
+  plugins: { SystemBars: { style: "LIGHT" } },
 };
 
 export default config;

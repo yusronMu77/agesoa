@@ -21,6 +21,16 @@ html {
   color-scheme: light;
 }
 
+/* Edge-to-edge WebView: scrolled content must not show through the status bar. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--ag-color-bg-canvas);
+  z-index: 100;
+}
+
 body {
   margin: 0;
   /* Edge-to-edge WebView (Android app, viewport-fit=cover): keep content below the status bar and notch. */
@@ -1456,6 +1466,8 @@ dialog.fullscreen::backdrop {
 dialog.fullscreen .actions {
   bottom: 0;
   margin: 0;
+  /* .has-tabs .actions drops the bottom padding for the tab bar; the dialog has none, so keep the nav bar clear. */
+  padding-bottom: calc(var(--ag-space-3) + env(safe-area-inset-bottom, 0px));
 }
 
 @media (prefers-reduced-motion: no-preference) {
