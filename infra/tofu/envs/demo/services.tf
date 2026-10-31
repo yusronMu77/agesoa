@@ -54,6 +54,8 @@ module "service" {
   db_password_version = var.db_password_version
   deletion_protection = var.deletion_protection
   image               = var.bootstrap_image
+
+  request_timeout_seconds = lookup(local.request_timeouts, each.key, 60)
   sql_instance = {
     name            = google_sql_database_instance.postgres.name
     connection_name = google_sql_database_instance.postgres.connection_name

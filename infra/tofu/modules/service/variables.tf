@@ -77,6 +77,12 @@ variable "max_instances" {
   default = 2
 }
 
+variable "request_timeout_seconds" {
+  type        = number
+  default     = 60
+  description = "Cloud Run request timeout. A push subscription's ack deadline must not be shorter than this."
+}
+
 variable "memory" {
   type    = string
   default = "512Mi"

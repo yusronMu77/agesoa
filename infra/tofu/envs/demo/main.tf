@@ -14,6 +14,10 @@ locals {
     transparency = { database = "transparency", agent = false, firestore = true, identity = false, archive = false }
   }
 
+  # Request timeout per service (default 60). An audit round takes 10-40 s and a reset sends a dozen events at once, so
+  # case-audit handlers can wait for a free slot; the push ack deadline of its subscriptions follows the same value.
+  request_timeouts = { case-audit = 300 }
+
   # "<consumer>--<type>" => push subscription
   push_subscriptions = merge([
     for e in local.catalog.events : {

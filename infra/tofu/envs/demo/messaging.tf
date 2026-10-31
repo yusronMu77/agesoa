@@ -57,7 +57,7 @@ resource "google_pubsub_subscription" "push" {
   for_each             = local.push_subscriptions
   name                 = "push--${each.key}"
   topic                = google_pubsub_topic.events[each.value.type].id
-  ack_deadline_seconds = 30
+  ack_deadline_seconds = lookup(local.request_timeouts, each.value.consumer, 30)
   # Consumers dedupe by CloudEvent id (inbox); ordering is not relied on.
   message_retention_duration = "604800s"
 
