@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { canonicalPath, ROUTES, type SignInSurface, surfaceOf } from "./routes";
+import { canonicalPath, ROUTES, type SignInSurface, signInHref, surfaceOf } from "./routes";
 
 /**
  * 303 See Other to a same-site path, with a RELATIVE Location. Behind a proxy or in the container the request URL is
@@ -39,12 +39,12 @@ export function signInTarget(raw: string | null | undefined, surface: SignInSurf
 type Params = Record<string, string | string[] | undefined>;
 
 /**
- * The shared `/login` page: validator and institution targets moved to their own sign-in pages (DESIGN-BRIEF §1),
- * so `/login?next=/validators…` → `/validators/login?next=…` and `/login?next=/organizations…` → `/organizations/login?next=…`
- * (other query values kept, `next` moved to its current route). `/login` without `next` → the validator sign-in.
- * The operator (`next=/ops…`) and the public header sign-in stay on `/login`.
+ * The shared `/login` page: console targets moved to their own sign-in pages (DESIGN-BRIEF §1), so
+ * `/login?next=/validators…` → `/validators/login?next=…`, `/login?next=/organizations…` → `/organizations/login?next=…`
+ * and `/login?next=/ops…` → `/ops/login?next=…` (other query values kept, `next` moved to its current route).
+ * `/login` without `next` → the validator sign-in. Only the public header sign-in stays on `/login`.
  */
-export function resolveLogin(params: Params): { redirect: string } | { surface: "ops" | "public"; next: string } {
+export function resolveLogin(params: Params): { redirect: string } | { surface: "public"; next: string } {
   const raw = typeof params.next === "string" ? params.next : undefined;
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) if (typeof value === "string" && key !== "next") query.set(key, value);
@@ -54,9 +54,6 @@ export function resolveLogin(params: Params): { redirect: string } | { surface: 
   }
   const target = canonicalPath(safePath(raw));
   const surface = surfaceOf(target);
-  if (surface === "validator" || surface === "institution") {
-    const page = surface === "validator" ? ROUTES.validatorSignIn : ROUTES.institutionSignIn;
-    return { redirect: `${page}?${new URLSearchParams({ next: target, ...Object.fromEntries(query) })}` };
-  }
+  if (surface !== "public") return { redirect: signInHref(target, Object.fromEntries(query)) };
   return { surface, next: target };
 }

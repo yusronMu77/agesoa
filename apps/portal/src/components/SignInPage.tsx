@@ -9,7 +9,7 @@ import { ROUTES } from "@/lib/routes";
 /**
  * Sign-in variants. Each surface has its own page and only its own copy (DESIGN-BRIEF §1): `validator` and
  * `register` on `/validators/login` (SCR-023, TXT-VAL-001..005), `org` on `/organizations/login` (SCR-063,
- * TXT-ORG-001..003), `ops` and `public` on `/login`.
+ * TXT-ORG-001..003), `ops` on `/ops/login` (SCR-090), `public` on `/login`.
  */
 export type SignInVariant = "validator" | "register" | "org" | "ops" | "public";
 

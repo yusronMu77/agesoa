@@ -29,8 +29,9 @@ institutions, its own sign-in page; a reader never sees another surface's menu.
 | Organization | `/organizations/[organizationId]` | SCR-061, 062, 064, 065 | Domain verification, newsroom staff confirmation, agency integration |
 | Organization | `/organizations/[organizationId]/deliveries` | SCR-062 | Every delivery to the agency |
 | Organization | `/organizations/log`, `/organizations/log/[seq]` | SCR-042 | The decision log inside the organization console |
-| Operator | `/ops` | SCR-090 | Machine status, events, outbox, demo reset; sign-in at `/login?next=/ops` |
-| | `/login` | | Operator and public-header sign-in. `/login` without `next` → 308 `/validators/login`; `next=/validators…` → 308 `/validators/login?next=…`; `next=/organizations…` → 308 `/organizations/login?next=…` |
+| Operator | `/ops` | SCR-090 | Machine status, events, outbox, demo reset |
+| | `/ops/login` | SCR-090 | Operator sign-in (`?signup=1` creates an account; `?next=` limited to `/ops`) |
+| | `/login` | | Public-header sign-in. `/login` without `next` → 308 `/validators/login`; `next=/validators…`, `next=/organizations…`, `next=/ops…` → 308 to that console's sign-in page with `next` kept |
 | | `GET`/`POST /location` | | "Near you" district: `?to=<district code>&back=<path>` chooses (empty forgets) a district; `POST lat, lon, back` turns a point into the published district and drops the point |
 | | `POST /logout?to=<path>` | | Clears the session, 303 to `to` (the console's sign-in page) or `/` |
 | | `GET /api/status`, `GET /api/healthz` | | Status report as JSON; `{service: "portal", status: "ok", release, environment, demo_mode}` |

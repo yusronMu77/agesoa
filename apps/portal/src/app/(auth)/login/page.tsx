@@ -14,14 +14,13 @@ export async function generateMetadata(): Promise<Metadata> {
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 /**
- * Shared sign-in for the operator (`/login?next=/ops`) and the public header link. Validators and institutions have
- * their own sign-in pages (`/validators/login`, `/organizations/login`): old `/login?next=…` links get a permanent redirect
- * there, and `/login` without `next` goes to the validator sign-in.
+ * Public header sign-in. Every console has its own sign-in page (`/validators/login`, `/organizations/login`,
+ * `/ops/login`): old `/login?next=…` links get a permanent redirect there, and `/login` without `next` goes to the
+ * validator sign-in.
  */
 export default async function LoginPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const route = resolveLogin(params);
   if ("redirect" in route) permanentRedirect(route.redirect);
-  // `?signup=1` (role switcher "Daftar" for the operator) starts in "create account" mode.
-  return <SignInPage variant={route.surface} next={route.next} signup={params.signup === "1"} />;
+  return <SignInPage variant={route.surface} next={route.next} />;
 }

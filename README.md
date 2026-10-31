@@ -73,7 +73,7 @@ Where to sign in (choose a role from the **Publik** chip in the public header):
 |---|---|---|
 | Validator | `/validators/login` | queue, decide (approve / reject / needs evidence), decision log |
 | Organization | `/organizations/login` | the fictional agency's dashboard: webhook, API key, deliveries |
-| Operator | `/login?next=/ops` | service status, events, outbox, demo reset |
+| Operator | `/ops/login` | service status, events, outbox, demo reset |
 
 The account exists only where `demo_mode` is on (local devenv and the demo environment; `demo_mode` is refused in
 prod) and is created by the trust service at start-up (`services/trust/demo/validators.json`). Everything it touches

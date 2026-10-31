@@ -8,7 +8,9 @@
  *                sign-in `/validators/login`
  *   organization `/organizations`, `/organizations/[organizationId]`, `/organizations/[organizationId]/deliveries`,
  *                `/organizations/log`, sign-in `/organizations/login`
- *   operator     `/ops`, sign-in `/login?next=/ops`
+ *   operator     `/ops`, sign-in `/ops/login`
+ *
+ * Every console signs in at `/<surface>/login`; `/login` is the public header sign-in only.
  *
  * Kept free of Next.js imports: next.config.ts reads LEGACY_REDIRECTS from here.
  */
@@ -40,12 +42,11 @@ export const ROUTES = {
   ops: "/ops",
   /** A section of the operator page (`#events`, `#outbox`, `#demo`). */
   opsSection: (section: string) => `/ops#${section}`,
-  /** The shared sign-in page: operator and public header sign-in. */
+  /** The public header sign-in (old `/login?next=…` links for a console move to that console's sign-in page). */
   signIn: "/login",
-  /** The operator keeps the shared sign-in page (not one of the four reader surfaces). */
-  opsSignIn: "/login?next=/ops",
+  opsSignIn: "/ops/login",
   /** Creates an account only: the operator role itself is granted by the environment admin. */
-  opsRegister: "/login?next=/ops&signup=1",
+  opsRegister: "/ops/login?signup=1",
   signOut: "/logout",
   /** Language picker form target (sets the language cookie, the URL stays). */
   language: "/lang",
@@ -129,7 +130,7 @@ export function surfaceOf(path: string): SignInSurface {
 const SIGN_IN_PAGE: Record<SignInSurface, string> = {
   validator: ROUTES.validatorSignIn,
   institution: ROUTES.institutionSignIn,
-  ops: ROUTES.signIn,
+  ops: ROUTES.opsSignIn,
   public: ROUTES.signIn,
 };
 

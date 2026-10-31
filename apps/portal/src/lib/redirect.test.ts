@@ -30,7 +30,7 @@ describe("redirects stay on the reader's host", () => {
   test("sign-out from a console returns to that surface's sign-in page, never off-site", async () => {
     const to = (path: string) => logout(new Request(`${INSIDE}/logout?to=${encodeURIComponent(path)}`, { method: "POST" }));
     expect((await to("/validators/login")).headers.get("location")).toBe("/validators/login");
-    expect((await to("/login?next=/ops")).headers.get("location")).toBe("/login?next=/ops");
+    expect((await to("/ops/login")).headers.get("location")).toBe("/ops/login");
     expect((await to("//evil.example")).headers.get("location")).toBe("/");
   });
 
@@ -50,6 +50,7 @@ describe("sign-in targets (next= allow-list)", () => {
     expect(signInTarget("/organizations/ORG-1/deliveries", "institution")).toBe("/organizations/ORG-1/deliveries");
     expect(signInTarget("/validators", "institution")).toBe("/organizations");
     expect(signInTarget("/ops#demo", "ops")).toBe("/ops#demo");
+    expect(signInTarget("/validators", "ops")).toBe("/ops");
     expect(signInTarget("/log?after=5", "public")).toBe("/log?after=5");
     expect(signInTarget("/", "public")).toBe("/");
   });
@@ -71,13 +72,15 @@ describe("sign-in targets (next= allow-list)", () => {
 });
 
 describe("the shared /login page", () => {
-  test("validator and institution targets go to their own sign-in pages, query kept", () => {
+  test("console targets go to their own sign-in pages, query kept", () => {
     expect(resolveLogin({ next: "/validate" })).toEqual({ redirect: "/validators/login?next=%2Fvalidators" });
     expect(resolveLogin({ next: "/validate/F-1" })).toEqual({ redirect: "/validators/login?next=%2Fvalidators%2Ffindings%2FF-1" });
     expect(resolveLogin({ next: "/validators/register" })).toEqual({ redirect: "/validators/login?next=%2Fvalidators%2Fregister" });
     expect(resolveLogin({ next: "/organizations", signup: "1" })).toEqual({ redirect: "/organizations/login?next=%2Forganizations&signup=1" });
     expect(resolveLogin({ next: "/organizations/ORG-1" })).toEqual({ redirect: "/organizations/login?next=%2Forganizations%2FORG-1" });
     expect(resolveLogin({ next: "/instansi/ORG-1" })).toEqual({ redirect: "/organizations/login?next=%2Forganizations%2FORG-1" });
+    expect(resolveLogin({ next: "/ops" })).toEqual({ redirect: "/ops/login?next=%2Fops" });
+    expect(resolveLogin({ next: "/ops", signup: "1" })).toEqual({ redirect: "/ops/login?next=%2Fops&signup=1" });
   });
 
   test("without next= it is the validator sign-in", () => {
@@ -85,8 +88,7 @@ describe("the shared /login page", () => {
     expect(resolveLogin({ lang: "en" })).toEqual({ redirect: "/validators/login?lang=en" });
   });
 
-  test("the operator and the public header sign-in stay on /login", () => {
-    expect(resolveLogin({ next: "/ops" })).toEqual({ surface: "ops", next: "/ops" });
+  test("only the public header sign-in stays on /login", () => {
     expect(resolveLogin({ next: "/dashboard" })).toEqual({ surface: "public", next: "/" });
     expect(resolveLogin({ next: "/" })).toEqual({ surface: "public", next: "/" });
     expect(resolveLogin({ next: "https://evil.example" })).toEqual({ surface: "public", next: "/" });
