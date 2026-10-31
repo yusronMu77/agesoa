@@ -16,6 +16,7 @@ import {
 } from "./device";
 import { appendDictated, dictationSupported, startDictation } from "./dictation";
 import { errorText } from "./errors";
+import { fieldsFromQuery, parseShare, receive } from "./share";
 import {
   LANGUAGE_CATALOG,
   LANGUAGE_KEY,
@@ -633,5 +634,50 @@ describe("domain packs", () => {
     });
     expect((await client.packs()).map((p) => p.id)).toEqual(["general"]);
     expect(calls[0]).toBe("http://localhost:8001/v1/domain-packs");
+  });
+});
+
+describe("share target (SCR-007)", () => {
+  test("a link in url is the post, and the text is the excerpt", () => {
+    expect(parseShare({ url: "https://www.instagram.com/p/Cx1/", text: "Dapur ini bau basi", title: "" })).toEqual({
+      url: "https://www.instagram.com/p/Cx1/",
+      excerpt: "Dapur ini bau basi",
+    });
+  });
+
+  test("a link at the end of the text is split from the caption, without trailing punctuation", () => {
+    expect(parseShare({ text: "Lihat ini https://x.com/user/status/123." })).toEqual({
+      url: "https://x.com/user/status/123",
+      excerpt: "Lihat ini",
+    });
+    expect(parseShare({ text: "https://vt.tiktok.com/ZS8abc/" })).toEqual({ url: "https://vt.tiktok.com/ZS8abc/", excerpt: null });
+  });
+
+  test("the title is the excerpt when the text is only the link; a long excerpt is cut to the service limit", () => {
+    expect(parseShare({ title: "Postingan warga", text: "https://facebook.com/groups/1/posts/2" })?.excerpt).toBe("Postingan warga");
+    const long = parseShare({ text: `${"a".repeat(1500)} https://x.com/a/status/1` });
+    expect(long?.excerpt).toHaveLength(1000);
+  });
+
+  test("text without a usable link is not a post", () => {
+    expect(parseShare({ text: "tidak ada link di sini" })).toBeNull();
+    expect(parseShare({ text: "ftp://example.com/file", url: "http://localhost" })).toBeNull();
+    expect(parseShare({})).toBeNull();
+  });
+
+  test("a share without a link becomes the story text; an empty share is ignored", () => {
+    expect(receive({ text: "  Air keruh sejak pagi  " })).toEqual({ post: null, narrative: "Air keruh sejak pagi" });
+    expect(receive({ text: "x https://x.com/a/status/1" })?.post?.url).toBe("https://x.com/a/status/1");
+    expect(receive({ text: " ", title: null })).toBeNull();
+  });
+
+  test("the PWA share target passes title, text and url as query parameters", () => {
+    expect(fieldsFromQuery("?title=T&text=cap+https%3A%2F%2Fx.com%2Fa%2Fstatus%2F1&url=")).toEqual({
+      title: "T",
+      text: "cap https://x.com/a/status/1",
+      url: "",
+    });
+    expect(fieldsFromQuery("?lang=en")).toBeNull();
+    expect(fieldsFromQuery("")).toBeNull();
   });
 });

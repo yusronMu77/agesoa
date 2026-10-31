@@ -1481,3 +1481,14 @@ dialog.fullscreen .actions {
     opacity: 0.3;
   }
 }
+
+/* SCR-007: the shared link is shown whole, however long. */
+.shared-link {
+  margin: 0;
+  padding: var(--ag-space-3);
+  border-radius: var(--ag-radius-md);
+  background: var(--ag-color-bg-sunken);
+  font-family: var(--ag-font-family-mono);
+  font-size: var(--ag-font-size-sm);
+  overflow-wrap: anywhere;
+}

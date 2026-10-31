@@ -87,4 +87,19 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb reverse tcp:8001 tcp:8001 && adb reverse tcp:8002 tcp:8002   # local services from the phone
 ```
 
-Not done yet: service worker (offline queue of drafts), share target SCR-007.
+### Share target (SCR-007)
+
+A post shared from another app opens Witness on "Post received" (SCR-007) with the link and the caption filled in,
+and "Continue to draft" goes on to SCR-004. `parseShare` in `src/share.ts` takes the first http(s) link of the shared
+url, text or title; the rest of the text is the excerpt (at most 1000 characters). A share with no link becomes the
+story text on SCR-001.
+
+- **Android app:** the manifest has an `ACTION_SEND` `text/plain` intent filter. `ShareTargetPlugin.java` hands the
+  launching share to the web app (`pending()`) and later ones as the `shareReceived` event (`onNewIntent`). It needs no
+  permission. Try it without a social app: `adb shell am start -a android.intent.action.SEND -t text/plain --es
+  android.intent.extra.TEXT "caption https://www.instagram.com/p/abc/"` (add `-n id.agesoa.witness/.MainActivity`
+  to skip the chooser).
+- **Installed PWA:** `share_target` in `manifest.webmanifest` (GET `/?title=&text=&url=`); the address is cleaned after
+  the share is read.
+
+Not done yet: service worker (offline queue of drafts), sharing images or screenshots to Witness.

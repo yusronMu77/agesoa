@@ -1,12 +1,13 @@
 /**
  * AGESOA Witness: anonymous citizen reporting.
  * SCR-001 record evidence -> (SCR-002 permission explainer) -> (SCR-003 social link / screenshot)
- * -> SCR-004 review the Agen Intake draft -> SCR-005 submitted.
+ * -> SCR-004 review the Agen Intake draft -> SCR-005 submitted. A post shared from another app starts at SCR-007
+ * (post received) and goes straight on to SCR-004.
  * Tabs: Lapor (the flow above), Laporan saya (SCR-008), Pertanyaan (SCR-006 audit questions, also reachable from the
  * banner once Agen Audit has a question for this device) and Bantuan (help, SCR-009 language and region).
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { PackDocument, PackSummary, Report, WitnessQuestion } from "./api";
 import { ApiError, CaseAuditClient, IngestionClient } from "./api";
 import type { Tab } from "./components";
@@ -27,6 +28,9 @@ import { MyReports } from "./screens/MyReports";
 import { PermissionExplainer } from "./screens/PermissionExplainer";
 import { Questions } from "./screens/Questions";
 import { SharedPost } from "./screens/SharedPost";
+import { SharedReceived } from "./screens/SharedReceived";
+import type { Received } from "./share";
+import { initialShare, onShare } from "./share";
 import { Submitted } from "./screens/Submitted";
 import type { CaptureState } from "./state";
 import { EMPTY_CAPTURE, hasContent } from "./state";
@@ -35,10 +39,11 @@ import { EMPTY_CAPTURE, hasContent } from "./state";
 type Screen =
   | { name: "capture" }
   | { name: "social" }
+  | { name: "received" }
   | { name: "draft"; report: Report; intakeFailed: boolean }
   | { name: "submitted"; report: Report };
 
-const STEP: Record<Screen["name"], 1 | 2 | 3> = { capture: 1, social: 1, draft: 2, submitted: 3 };
+const STEP: Record<Screen["name"], 1 | 2 | 3> = { capture: 1, social: 1, received: 1, draft: 2, submitted: 3 };
 
 interface PendingPermission {
   kind: Capability;
@@ -147,6 +152,33 @@ export default function App({ config }: { config: WitnessConfig }) {
 
   const update = (change: Partial<CaptureState>) => setCapture((current) => ({ ...current, ...change }));
 
+  // SCR-007: a share from another app starts a new report (or adds to the one being written), whatever tab is open.
+  const state = useRef({ screen, capture });
+  state.current = { screen, capture };
+  useEffect(() => {
+    const receive = (received: Received | null) => {
+      if (!received) return;
+      const { screen: current, capture: held } = state.current;
+      // A finished report is not extended: the share opens a new one.
+      if (current.name === "submitted") held.items.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      const base = current.name === "submitted" ? EMPTY_CAPTURE : held;
+      setTab("report");
+      setError(null);
+      window.scrollTo?.({ top: 0 });
+      if (received.post) {
+        setCapture({ ...base, sharedPost: received.post });
+        setScreen({ name: "received" });
+      } else if (received.narrative) {
+        const narrative = [base.narrative.trim(), received.narrative].filter(Boolean).join("\n\n");
+        setCapture({ ...base, narrative });
+        setScreen({ name: "capture" });
+      }
+    };
+    void initialShare().then(receive, () => undefined);
+    return onShare(receive);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reads the latest state through the ref
+  }, []);
+
   const withPermission = (kind: Capability, action: () => void, onSkip: () => void) => {
     void permissionStatus(kind).then((status) => {
       if (status === "granted" || explained.includes(kind)) action();
@@ -252,7 +284,7 @@ export default function App({ config }: { config: WitnessConfig }) {
   const draftPack =
     screen.name === "draft" ? (packDocs[screen.report.domain] ?? (pack?.id === screen.report.domain ? pack : null)) : null;
   // Focus steps (link, draft review, language form) hide the tab bar so the screen's own actions stay in reach.
-  const showTabs = !(reporting && (screen.name === "social" || screen.name === "draft")) && !(tab === "help" && helpView === "language");
+  const showTabs = !(reporting && (screen.name === "social" || screen.name === "received" || screen.name === "draft")) && !(tab === "help" && helpView === "language");
   const showBanner = questions.length > 0 && reporting && (screen.name === "capture" || screen.name === "submitted");
   const banner = <QuestionsBanner count={questions.length} onOpen={openQuestions} />;
 
@@ -285,6 +317,16 @@ export default function App({ config }: { config: WitnessConfig }) {
             update({ sharedPost, items: [...capture.items.filter((i) => i.kind !== "screenshot"), ...screenshots] });
             setScreen({ name: "capture" });
           }}
+          onBack={() => setScreen({ name: "capture" })}
+        />
+      )}
+      {reporting && screen.name === "received" && capture.sharedPost && (
+        <SharedReceived
+          post={capture.sharedPost}
+          busy={busy || !pack}
+          error={error}
+          onExcerpt={(excerpt) => update({ sharedPost: { url: capture.sharedPost!.url, excerpt } })}
+          onContinue={() => void toDraft()}
           onBack={() => setScreen({ name: "capture" })}
         />
       )}

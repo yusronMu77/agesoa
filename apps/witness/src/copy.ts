@@ -6,8 +6,8 @@
  * back to Indonesian for any missing key. `T` always holds the active language: screens read `T[...]` while they
  * render, and the app re-renders after `setLanguage`.
  *
- * Microcopy texts keep their TXT-WIT id. Ids this app does not show are named at their place: SCR-007 (native share
- * target, TXT-WIT-150..153) and rows the 18 Oct 2026 mockups replaced. Texts the screens need that have no microcopy id use free ids: 033-037/133 (device errors), 174-176
+ * Microcopy texts keep their TXT-WIT id. Ids this app does not show are named at their place: rows the 18 Oct 2026
+ * mockups replaced. Texts the screens need that have no microcopy id use free ids: 033-037/133 (device errors), 174-176
  * (dictation), 230-247 (SCR-008, Bantuan), 290-316 (mockup texts) and 400-437 (shell, tabs, mockup texts, dialogs).
  * Where a mockup of 18 Oct 2026 and an older microcopy row disagree, the mockup text is used (noted at the key).
  */
@@ -107,6 +107,10 @@ export const ID = {
   "TXT-WIT-119": "Foto",
   "TXT-WIT-120": "Rekaman suara",
   "TXT-WIT-121": "Screenshot medsos",
+  "TXT-WIT-150": "Postingan diterima",
+  "TXT-WIT-151": "Anda membagikan postingan dari app lain ke AGESOA Witness.",
+  "TXT-WIT-152": "Kutipan yang diterima",
+  "TXT-WIT-153": "Anda bisa mengubah kutipan sebelum lanjut.",
   "TXT-WIT-140": "Pertanyaan dari audit",
   "TXT-WIT-141":
     "Pertanyaan ini muncul dari kasus laporan Anda. Anda tetap anonim. Jawaban dicatat sebagai dugaan dan tidak menaikkan status bukti.",

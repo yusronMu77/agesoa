@@ -89,6 +89,10 @@ export const EN: Partial<Record<TextId, string>> = {
   "TXT-WIT-119": "Photo",
   "TXT-WIT-120": "Voice note",
   "TXT-WIT-121": "Social media screenshot",
+  "TXT-WIT-150": "Post received",
+  "TXT-WIT-151": "You shared a post from another app to AGESOA Witness.",
+  "TXT-WIT-152": "Received excerpt",
+  "TXT-WIT-153": "You can edit the excerpt before you continue.",
   "TXT-WIT-140": "Questions from the audit",
   "TXT-WIT-141":
     "These questions come from the case of your report. You stay anonymous. Answers are recorded as suspected and do not raise the evidence status.",

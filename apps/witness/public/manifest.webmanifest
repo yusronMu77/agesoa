@@ -9,5 +9,10 @@
   "orientation": "portrait",
   "background_color": "#FEFAF0",
   "theme_color": "#6D151A",
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  },
   "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
 }
