@@ -6,7 +6,7 @@
  */
 
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
-import { getAuth, indexedDBLocalPersistence, initializeAuth, signInAnonymously, type Auth } from "firebase/auth";
+import { getAuth, indexedDBLocalPersistence, initializeAuth, signInAnonymously, type Auth, type UserCredential } from "firebase/auth";
 import type { FirebaseConfig } from "./config";
 import { isNative } from "./native";
 
@@ -24,10 +24,22 @@ export function authFor(config: FirebaseConfig, native: boolean = isNative()): A
   return auth;
 }
 
-/** ID token of the persisted anonymous user; signs in once when there is none yet. */
+/** The sign-in in flight: requests that start together (regions, draft, ...) must share it. */
+let signingIn: Promise<UserCredential> | null = null;
+
+/**
+ * ID token of the persisted anonymous user; signs in once when there is none yet. Every `signInAnonymously` makes a
+ * new user, so concurrent first requests that each signed in would put a report under one uid and ask for its audit
+ * questions under another.
+ */
 export async function anonymousIdToken(config: FirebaseConfig): Promise<string> {
   const instance = authFor(config);
   await instance.authStateReady();
-  const user = instance.currentUser ?? (await signInAnonymously(instance)).user;
+  signingIn ??= instance.currentUser
+    ? null
+    : signInAnonymously(instance).finally(() => {
+        signingIn = null;
+      });
+  const user = instance.currentUser ?? (await signingIn)!.user;
   return user.getIdToken();
 }

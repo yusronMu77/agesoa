@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { ApiError, CaseAuditClient, errorDetail, IngestionClient } from "./api";
 import type { KeyValueStore } from "./auth";
 import { authToken, bearerToken, deviceId } from "./auth";
@@ -679,5 +679,37 @@ describe("share target (SCR-007)", () => {
     });
     expect(fieldsFromQuery("?lang=en")).toBeNull();
     expect(fieldsFromQuery("")).toBeNull();
+  });
+});
+
+describe("anonymous sign-in", () => {
+  test("requests that start together share one anonymous user", async () => {
+    let signIns = 0;
+    const fake = {
+      currentUser: null as null | { getIdToken: () => Promise<string> },
+      authStateReady: () => Promise.resolve(),
+    };
+    mock.module("firebase/app", () => ({ getApps: () => [], getApp: () => ({}), initializeApp: () => ({}) }));
+    mock.module("firebase/auth", () => ({
+      getAuth: () => fake,
+      initializeAuth: () => fake,
+      indexedDBLocalPersistence: {},
+      signInAnonymously: async () => {
+        const uid = `uid-${++signIns}`;
+        await new Promise((resolve) => setTimeout(resolve, 10)); // the network round trip
+        const user = { getIdToken: () => Promise.resolve(`token-of-${uid}`) };
+        fake.currentUser = user;
+        return { user };
+      },
+    }));
+    const { anonymousIdToken } = await import("./firebase");
+    const config = { apiKey: "k", projectId: "p", authDomain: "p.firebaseapp.com" };
+
+    const tokens = await Promise.all([anonymousIdToken(config), anonymousIdToken(config), anonymousIdToken(config)]);
+
+    expect(signIns).toBe(1);
+    expect(new Set(tokens)).toEqual(new Set(["token-of-uid-1"]));
+    expect(await anonymousIdToken(config)).toBe("token-of-uid-1"); // later calls reuse the persisted user
+    expect(signIns).toBe(1);
   });
 });
