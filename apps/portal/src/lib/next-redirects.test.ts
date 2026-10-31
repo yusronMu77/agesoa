@@ -10,15 +10,22 @@ async function hit(path: string) {
 describe("next.config legacy redirects", () => {
   test.each([
     ["/dashboard?page=2", "/?page=2"],
-    ["/findings/F-1", "/temuan/F-1"],
-    ["/cases/CASE-1?verify=1", "/temuan/CASE-1?verify=1"],
-    ["/cases/CASE-1/report", "/temuan/CASE-1/laporan"],
-    ["/validate?filter=decided", "/validator?filter=decided"],
-    ["/validate/F-1", "/validator/temuan/F-1"],
-    ["/validators/register", "/validator/daftar"],
-    ["/organizations?kind=agency", "/instansi?kind=agency"],
-    ["/organizations/ORG-1", "/instansi/ORG-1"],
-    ["/organizations/ORG-1/deliveries", "/instansi/ORG-1/riwayat"],
+    ["/findings/F-1", "/cases/F-1"],
+    ["/validate?filter=decided", "/validators?filter=decided"],
+    ["/validate/F-1", "/validators/findings/F-1"],
+    ["/temuan/CASE-1?verify=1", "/cases/CASE-1?verify=1"],
+    ["/temuan/CASE-1/laporan", "/cases/CASE-1/report"],
+    ["/validator?filter=decided", "/validators?filter=decided"],
+    ["/validator/masuk?next=%2Fvalidator&lang=en", "/validators/login?next=%2Fvalidator&lang=en"],
+    ["/validator/daftar", "/validators/register"],
+    ["/validator/temuan/F-1", "/validators/findings/F-1"],
+    ["/validator/log/4", "/validators/log/4"],
+    ["/instansi?kind=agency", "/organizations?kind=agency"],
+    ["/instansi/masuk?signup=1", "/organizations/login?signup=1"],
+    ["/instansi/log", "/organizations/log"],
+    ["/instansi/ORG-1", "/organizations/ORG-1"],
+    ["/instansi/ORG-1/riwayat", "/organizations/ORG-1/deliveries"],
+    ["/lokasi?to=3201010", "/location?to=3201010"],
   ])("%s → 308 %s", async (from, to) => {
     const res = await hit(from);
     expect(res.status).toBe(308);
@@ -27,7 +34,20 @@ describe("next.config legacy redirects", () => {
   });
 
   test("current routes are not redirected", async () => {
-    for (const path of ["/", "/temuan/C-1", "/validator", "/instansi/ORG-1/riwayat", "/log/3", "/status", "/ops"]) {
+    for (const path of [
+      "/",
+      "/cases/C-1",
+      "/cases/C-1/report",
+      "/validators",
+      "/validators/login",
+      "/validators/findings/F-1",
+      "/organizations",
+      "/organizations/login",
+      "/organizations/ORG-1/deliveries",
+      "/log/3",
+      "/status",
+      "/ops",
+    ]) {
       expect((await hit(path)).status).not.toBe(308);
     }
   });

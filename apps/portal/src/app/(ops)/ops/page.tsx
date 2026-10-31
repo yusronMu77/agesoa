@@ -12,6 +12,7 @@ import { getT } from "@/lib/i18n/server";
 import { AGENTS, resetDemo, serviceEvents } from "@/lib/ops";
 import { sessionToken } from "@/lib/session";
 import { getStatusReport } from "@/lib/status";
+import { ROUTES } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +26,9 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 async function runReset(formData: FormData) {
   "use server";
   const token = await sessionToken();
-  if (!token) redirect("/login?next=/ops");
+  if (!token) redirect(ROUTES.opsSignIn);
   // Only the confirm button of the dialog (PRV-reset-demo) sends `confirm`; a direct submit is refused.
-  if (formData.get("confirm") !== "on") redirect("/ops?reset=unconfirmed#demo");
+  if (formData.get("confirm") !== "on") redirect(`${ROUTES.ops}?reset=unconfirmed#demo`);
   const report = await resetDemo(loadConfig(), token);
   const failed = report.steps.filter((s) => !s.ok).map((s) => `${s.service}: ${s.detail}`);
   redirect(
@@ -40,12 +41,12 @@ async function runReset(formData: FormData) {
 /** SCR-090 machine status: services, events, outbox and the demo mode. Read-only except the demo reset. */
 export default async function OpsPage({ searchParams }: { searchParams: SearchParams }) {
   const token = await sessionToken();
-  if (!token) redirect("/login?next=/ops");
+  if (!token) redirect(ROUTES.opsSignIn);
   const config = loadConfig();
   const { lang, t } = await getT();
   const [status, events] = await Promise.all([getStatusReport(config), serviceEvents(config, token)]);
   const denied = events.every((e) => !e.result.ok && (e.result.status === 401 || e.result.status === 403));
-  if (events.every((e) => !e.result.ok && e.result.status === 401)) redirect("/login?next=/ops");
+  if (events.every((e) => !e.result.ok && e.result.status === 401)) redirect(ROUTES.opsSignIn);
   const { reset, seconds, error } = await searchParams;
 
   const data = events.map((e) => ({ service: e.service as string, data: e.result.ok ? e.result.data : null }));
@@ -59,7 +60,7 @@ export default async function OpsPage({ searchParams }: { searchParams: SearchPa
 
   const context = (
     <ConsoleContext
-      action="/ops"
+      action={ROUTES.ops}
       label={t("console.context.label")}
       applyLabel={t("console.context.apply")}
       hint={t("console.context.hint")}

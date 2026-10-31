@@ -267,7 +267,7 @@ export default async function AuditReportPage({ params }: { params: Params }) {
                   <ul className="pub-entry-links pub-entry-links--scroll" tabIndex={0} aria-labelledby="check-heading">
                     {entries.map((e) => (
                       <li key={e.seq}>
-                        <Link href={`/log/${e.seq}`} data-testid="report-log-entry">
+                        <Link href={ROUTES.logEntry(e.seq)} data-testid="report-log-entry">
                           <span className="mono">#{e.seq}</span> {actionLabel(t, e.action)}
                         </Link>
                         <code className="muted" title={e.hash}>

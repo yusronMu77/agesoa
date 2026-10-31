@@ -127,10 +127,10 @@ export async function OpsConsole({ section, context, children }: { section: OpsS
   const { t } = await getT();
   const config = loadConfig();
   const nav: ConsoleNavItem[] = [
-    { href: "/ops", label: t("console.ops.nav.ops"), icon: "machine", current: section === "machine" },
-    { href: "/ops#events", label: t("console.ops.nav.events"), icon: "events" },
-    { href: "/ops#outbox", label: t("console.ops.nav.outbox"), icon: "outbox" },
-    { href: "/ops#demo", label: t("console.ops.nav.demo"), icon: "demo" },
+    { href: ROUTES.ops, label: t("console.ops.nav.ops"), icon: "machine", current: section === "machine" },
+    { href: ROUTES.opsSection("events"), label: t("console.ops.nav.events"), icon: "events" },
+    { href: ROUTES.opsSection("outbox"), label: t("console.ops.nav.outbox"), icon: "outbox" },
+    { href: ROUTES.opsSection("demo"), label: t("console.ops.nav.demo"), icon: "demo" },
   ];
   return (
     <ConsoleShell

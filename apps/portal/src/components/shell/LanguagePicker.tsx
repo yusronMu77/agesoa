@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 import { isLang, LANGUAGE_CATALOG, searchLanguages } from "@/lib/i18n/core";
 import { useLang, useT } from "@/lib/i18n/client";
+import { ROUTES } from "@/lib/routes";
 
 /**
  * "Pemilih bahasa" {Ink / Terang} in every header (components.md): the current language code opens the
@@ -42,7 +43,7 @@ export function LanguagePicker({ tone = "light", preference }: { tone?: "light" 
         <ChevronDown aria-hidden size={16} strokeWidth={2} />
       </button>
       <div id={popover} popover="auto" role="dialog" aria-labelledby={title} className="lang-dialog">
-        <form action="/lang" method="get" className="lang-dialog__form">
+        <form action={ROUTES.language} method="get" className="lang-dialog__form">
           <h2 id={title}>{t("common.language.dialog.title")}</h2>
           <p className="lang-dialog__body">{t("common.language.dialog.body")}</p>
           <input type="hidden" name="back" value={back} />

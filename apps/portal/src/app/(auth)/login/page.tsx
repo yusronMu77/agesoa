@@ -15,7 +15,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 /**
  * Shared sign-in for the operator (`/login?next=/ops`) and the public header link. Validators and institutions have
- * their own sign-in pages (`/validator/masuk`, `/instansi/masuk`): old `/login?next=…` links get a permanent redirect
+ * their own sign-in pages (`/validators/login`, `/organizations/login`): old `/login?next=…` links get a permanent redirect
  * there, and `/login` without `next` goes to the validator sign-in.
  */
 export default async function LoginPage({ searchParams }: { searchParams: SearchParams }) {

@@ -6,8 +6,8 @@ import { safePath, seeOther } from "@/lib/redirect";
 /**
  * "Di sekitar Anda" location (SCR-040). Only the district code is remembered (a cookie for a year), never a point.
  *
- *   GET  /lokasi?to=<district code>&back=/   the reader chose a district ("Ubah lokasi"); `to=` empty forgets it
- *   POST /lokasi  lat, lon, back             "Gunakan lokasi saya": the point is turned into the published district
+ *   GET  /location?to=<district code>&back=/   the reader chose a district ("Ubah lokasi"); `to=` empty forgets it
+ *   POST /location  lat, lon, back             "Gunakan lokasi saya": the point is turned into the published district
  *                                            that contains it and then dropped (not logged, not stored)
  */
 const MAX_AGE = 60 * 60 * 24 * 365;

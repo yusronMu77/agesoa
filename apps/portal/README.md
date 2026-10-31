@@ -6,9 +6,7 @@ services on the server; the browser never talks to a service or a database direc
 ## Routes and naming
 
 Use English for documentation, source paths, identifiers and canonical URL segments. Use **organization** as the
-shared term for newsrooms and government agencies. The selected UI language does not change URLs. The table below
-documents the current implementation; its Indonesian URL segments are temporary compatibility routes until the
-English-route migration lands, after which they will return permanent 308 redirects. Paths are built in
+shared term for newsrooms and government agencies. The selected UI language does not change URLs. Paths are built in
 `src/lib/routes.ts` (`ROUTES`), never typed as literals.
 
 Four separate surfaces (DESIGN-BRIEF §1 in the design repository), each with its own shell and, for validators and
@@ -17,28 +15,42 @@ institutions, its own sign-in page; a reader never sees another surface's menu.
 | Surface | Route | Screen | What it shows |
 |---|---|---|---|
 | Public | `/` | SCR-040 | Public dashboard: context pickers, trending, nearby, findings, latest log |
-| Public | `/temuan/[caseId]` | SCR-043 | Case page: who validated, the institution's follow-up and right of reply, the case's log. A finding id redirects (308) to its case |
-| Public | `/temuan/[caseId]/laporan` | SCR-041 | Audit report of the case |
+| Public | `/cases/[caseId]` | SCR-043 | Case page: who validated, the institution's follow-up and right of reply, the case's log. A finding id redirects (308) to its case |
+| Public | `/cases/[caseId]/report` | SCR-041 | Audit report of the case |
 | Public | `/log`, `/log/[seq]` | SCR-042 | Hash-chained decision log (`transparency`), 50 entries per page via `?after=<seq>`; one entry with its hashes |
 | Public | `/about`, `/status` | | What AGESOA is and the ways in for validators and institutions; readiness of the five services |
-| Validator | `/validator/masuk` | SCR-023 | Validator sign-in (`?next=` limited to `/validator/*`) |
-| Validator | `/validator` | SCR-022 | Queue (`?filter=decided` = my decisions) |
-| Validator | `/validator/temuan/[findingId]` | SCR-020 | Basis of the finding and the decision |
-| Validator | `/validator/daftar` | SCR-021, 024–026 | Registration wizard |
-| Institution | `/instansi/masuk` | SCR-063 | Organisation sign-in (`?signup=1` creates an account; `?next=` limited to `/instansi/*`) |
-| Institution | `/instansi` | SCR-060 | Register an organisation, the admin's organisations |
-| Institution | `/instansi/[organizationId]` | SCR-061, 062, 064, 065 | Domain verification, newsroom staff confirmation, agency integration |
-| Institution | `/instansi/[organizationId]/riwayat` | SCR-062 | Every delivery to the agency |
+| Validator | `/validators/login` | SCR-023 | Validator sign-in (`?next=` limited to `/validators/*`) |
+| Validator | `/validators` | SCR-022 | Queue (`?filter=decided` = my decisions) |
+| Validator | `/validators/findings/[findingId]` | SCR-020 | Basis of the finding and the decision |
+| Validator | `/validators/register` | SCR-021, 024–026 | Registration wizard |
+| Validator | `/validators/log`, `/validators/log/[seq]` | SCR-042 | The decision log inside the validator console |
+| Organization | `/organizations/login` | SCR-063 | Organization sign-in (`?signup=1` creates an account; `?next=` limited to `/organizations/*`) |
+| Organization | `/organizations` | SCR-060 | Register an organization, the admin's organizations |
+| Organization | `/organizations/[organizationId]` | SCR-061, 062, 064, 065 | Domain verification, newsroom staff confirmation, agency integration |
+| Organization | `/organizations/[organizationId]/deliveries` | SCR-062 | Every delivery to the agency |
+| Organization | `/organizations/log`, `/organizations/log/[seq]` | SCR-042 | The decision log inside the organization console |
 | Operator | `/ops` | SCR-090 | Machine status, events, outbox, demo reset; sign-in at `/login?next=/ops` |
-| | `/login` | | Operator and public-header sign-in. `/login` without `next` → 308 `/validator/masuk`; `next=/validate…` → 308 `/validator/masuk?next=…`; `next=/organizations…` → 308 `/instansi/masuk?next=…` |
+| | `/login` | | Operator and public-header sign-in. `/login` without `next` → 308 `/validators/login`; `next=/validators…` → 308 `/validators/login?next=…`; `next=/organizations…` → 308 `/organizations/login?next=…` |
+| | `GET`/`POST /location` | | "Near you" district: `?to=<district code>&back=<path>` chooses (empty forgets) a district; `POST lat, lon, back` turns a point into the published district and drops the point |
 | | `POST /logout?to=<path>` | | Clears the session, 303 to `to` (the console's sign-in page) or `/` |
 | | `GET /api/status`, `GET /api/healthz` | | Status report as JSON; `{service: "portal", status: "ok", release, environment, demo_mode}` |
 
-Old paths answer with a permanent **308** to the new route, query string kept, relative `Location`
-(`LEGACY_REDIRECTS` in `src/lib/routes.ts`, served by `next.config.ts`): `/dashboard` → `/`, `/findings/[id]` and
-`/cases/[id]` → `/temuan/[id]`, `/cases/[id]/report` → `/temuan/[id]/laporan`, `/validate` → `/validator`,
-`/validate/[id]` → `/validator/temuan/[id]`, `/validators/register` → `/validator/daftar`, `/organizations` →
-`/instansi`, `/organizations/[id]` → `/instansi/[id]`, `/organizations/[id]/deliveries` → `/instansi/[id]/riwayat`.
+Old paths answer with a permanent **308** to the English route, query string kept, relative `Location`
+(`LEGACY_REDIRECTS` in `src/lib/routes.ts`, served by `next.config.ts`):
+
+| Old path | Current route |
+|---|---|
+| `/dashboard` | `/` |
+| `/findings/[id]`, `/temuan/[id]` | `/cases/[id]` |
+| `/temuan/[id]/laporan` | `/cases/[id]/report` |
+| `/validate`, `/validator` | `/validators` |
+| `/validate/[id]`, `/validator/temuan/[id]` | `/validators/findings/[id]` |
+| `/validator/masuk`, `/validator/daftar` | `/validators/login`, `/validators/register` |
+| `/validator/log[/seq]` | `/validators/log[/seq]` |
+| `/instansi`, `/instansi/[id]` | `/organizations`, `/organizations/[id]` |
+| `/instansi/masuk`, `/instansi/[id]/riwayat` | `/organizations/login`, `/organizations/[id]/deliveries` |
+| `/instansi/log[/seq]` | `/organizations/log[/seq]` |
+| `/lokasi` | `/location` |
 
 Dates and times follow the reader's language, always in Western Indonesia Time (`src/lib/i18n/core.ts`):
 `16 Okt 2026, 10.42 WIB` / `Oct 16, 2026, 10:42 AM WIB`.

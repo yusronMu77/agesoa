@@ -25,7 +25,7 @@ const SURFACE_HOME: Record<SignInSurface, string> = {
 
 /**
  * Allow-list for the `next` parameter of a sign-in page: a same-site path (safePath), moved to its current route
- * (old links such as `/validate/F-1` → `/validator/temuan/F-1`), and inside the sign-in page's own surface, so the
+ * (old links such as `/validator/temuan/F-1` → `/validators/findings/F-1`), and inside the sign-in page's own surface, so the
  * validator sign-in never leads into the institution dashboard and vice versa. Anything else → the surface's home.
  * The public sign-in (header link) may return to any public page.
  */
@@ -40,7 +40,7 @@ type Params = Record<string, string | string[] | undefined>;
 
 /**
  * The shared `/login` page: validator and institution targets moved to their own sign-in pages (DESIGN-BRIEF §1),
- * so `/login?next=/validate…` → `/validator/masuk?next=…` and `/login?next=/organizations…` → `/instansi/masuk?next=…`
+ * so `/login?next=/validators…` → `/validators/login?next=…` and `/login?next=/organizations…` → `/organizations/login?next=…`
  * (other query values kept, `next` moved to its current route). `/login` without `next` → the validator sign-in.
  * The operator (`next=/ops…`) and the public header sign-in stay on `/login`.
  */

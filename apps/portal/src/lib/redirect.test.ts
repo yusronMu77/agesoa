@@ -29,7 +29,7 @@ describe("redirects stay on the reader's host", () => {
 
   test("sign-out from a console returns to that surface's sign-in page, never off-site", async () => {
     const to = (path: string) => logout(new Request(`${INSIDE}/logout?to=${encodeURIComponent(path)}`, { method: "POST" }));
-    expect((await to("/validator/masuk")).headers.get("location")).toBe("/validator/masuk");
+    expect((await to("/validators/login")).headers.get("location")).toBe("/validators/login");
     expect((await to("/login?next=/ops")).headers.get("location")).toBe("/login?next=/ops");
     expect((await to("//evil.example")).headers.get("location")).toBe("/");
   });
@@ -45,44 +45,44 @@ describe("redirects stay on the reader's host", () => {
 
 describe("sign-in targets (next= allow-list)", () => {
   test("each sign-in page only leads into its own surface", () => {
-    expect(signInTarget("/validator/temuan/F-1", "validator")).toBe("/validator/temuan/F-1");
-    expect(signInTarget("/instansi", "validator")).toBe("/validator");
-    expect(signInTarget("/instansi/ORG-1/riwayat", "institution")).toBe("/instansi/ORG-1/riwayat");
-    expect(signInTarget("/validator", "institution")).toBe("/instansi");
+    expect(signInTarget("/validators/findings/F-1", "validator")).toBe("/validators/findings/F-1");
+    expect(signInTarget("/organizations", "validator")).toBe("/validators");
+    expect(signInTarget("/organizations/ORG-1/deliveries", "institution")).toBe("/organizations/ORG-1/deliveries");
+    expect(signInTarget("/validators", "institution")).toBe("/organizations");
     expect(signInTarget("/ops#demo", "ops")).toBe("/ops#demo");
     expect(signInTarget("/log?after=5", "public")).toBe("/log?after=5");
     expect(signInTarget("/", "public")).toBe("/");
   });
 
   test("old paths in next= are moved to their current route", () => {
-    expect(signInTarget("/validate", "validator")).toBe("/validator");
-    expect(signInTarget("/validate/F-1", "validator")).toBe("/validator/temuan/F-1");
-    expect(signInTarget("/validators/register", "validator")).toBe("/validator/daftar");
-    expect(signInTarget("/organizations/ORG-1/deliveries", "institution")).toBe("/instansi/ORG-1/riwayat");
+    expect(signInTarget("/validate", "validator")).toBe("/validators");
+    expect(signInTarget("/validate/F-1", "validator")).toBe("/validators/findings/F-1");
+    expect(signInTarget("/validator/daftar", "validator")).toBe("/validators/register");
+    expect(signInTarget("/instansi/ORG-1/riwayat", "institution")).toBe("/organizations/ORG-1/deliveries");
     expect(signInTarget("/dashboard", "public")).toBe("/");
   });
 
   test("missing or off-site next= falls back to the surface's home", () => {
     for (const bad of [null, undefined, "", "https://evil.example", "//evil.example", "/\\evil.example"]) {
-      expect(signInTarget(bad, "validator")).toBe("/validator");
-      expect(signInTarget(bad, "institution")).toBe("/instansi");
+      expect(signInTarget(bad, "validator")).toBe("/validators");
+      expect(signInTarget(bad, "institution")).toBe("/organizations");
     }
   });
 });
 
 describe("the shared /login page", () => {
   test("validator and institution targets go to their own sign-in pages, query kept", () => {
-    expect(resolveLogin({ next: "/validate" })).toEqual({ redirect: "/validator/masuk?next=%2Fvalidator" });
-    expect(resolveLogin({ next: "/validate/F-1" })).toEqual({ redirect: "/validator/masuk?next=%2Fvalidator%2Ftemuan%2FF-1" });
-    expect(resolveLogin({ next: "/validators/register" })).toEqual({ redirect: "/validator/masuk?next=%2Fvalidator%2Fdaftar" });
-    expect(resolveLogin({ next: "/organizations", signup: "1" })).toEqual({ redirect: "/instansi/masuk?next=%2Finstansi&signup=1" });
-    expect(resolveLogin({ next: "/organizations/ORG-1" })).toEqual({ redirect: "/instansi/masuk?next=%2Finstansi%2FORG-1" });
-    expect(resolveLogin({ next: "/instansi/ORG-1" })).toEqual({ redirect: "/instansi/masuk?next=%2Finstansi%2FORG-1" });
+    expect(resolveLogin({ next: "/validate" })).toEqual({ redirect: "/validators/login?next=%2Fvalidators" });
+    expect(resolveLogin({ next: "/validate/F-1" })).toEqual({ redirect: "/validators/login?next=%2Fvalidators%2Ffindings%2FF-1" });
+    expect(resolveLogin({ next: "/validators/register" })).toEqual({ redirect: "/validators/login?next=%2Fvalidators%2Fregister" });
+    expect(resolveLogin({ next: "/organizations", signup: "1" })).toEqual({ redirect: "/organizations/login?next=%2Forganizations&signup=1" });
+    expect(resolveLogin({ next: "/organizations/ORG-1" })).toEqual({ redirect: "/organizations/login?next=%2Forganizations%2FORG-1" });
+    expect(resolveLogin({ next: "/instansi/ORG-1" })).toEqual({ redirect: "/organizations/login?next=%2Forganizations%2FORG-1" });
   });
 
   test("without next= it is the validator sign-in", () => {
-    expect(resolveLogin({})).toEqual({ redirect: "/validator/masuk" });
-    expect(resolveLogin({ lang: "en" })).toEqual({ redirect: "/validator/masuk?lang=en" });
+    expect(resolveLogin({})).toEqual({ redirect: "/validators/login" });
+    expect(resolveLogin({ lang: "en" })).toEqual({ redirect: "/validators/login?lang=en" });
   });
 
   test("the operator and the public header sign-in stay on /login", () => {

@@ -147,7 +147,7 @@ export async function ConsoleShell({
               )}
             </div>
             {signedIn ? (
-              <form method="post" action={`/logout?to=${encodeURIComponent(SIGN_OUT_TO[surface])}`} className="console-identity__out">
+              <form method="post" action={`${ROUTES.signOut}?to=${encodeURIComponent(SIGN_OUT_TO[surface])}`} className="console-identity__out">
                 <button type="submit" className="console-signout" title={t("common.signOut")}>
                   <LogOut aria-hidden size={18} strokeWidth={2} />
                   <span className="sr-only">{t("common.signOut")}</span>

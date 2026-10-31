@@ -2843,7 +2843,7 @@ a.button--secondary:hover {
   }
 }
 
-/* SCR-042 inside a console (/validator/log, /instansi/log): the log keeps its own ink surface (DESIGN-BRIEF §2 rule 2)
+/* SCR-042 inside a console (/validators/log, /organizations/log): the log keeps its own ink surface (DESIGN-BRIEF §2 rule 2)
    as a panel in the content area; the sidebar and topbar stay light. */
 .shell--console .log-surface {
   padding: var(--ag-space-8);

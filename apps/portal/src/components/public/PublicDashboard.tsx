@@ -366,7 +366,7 @@ export async function PublicDashboard({ basePath, searchParams }: { basePath: st
                   deniedText={t("public.nearby.denied")}
                 />
                 <p className="pub-nearby__note">{t("public.nearby.permission")}</p>
-                <form action="/lokasi" method="get" className="pub-nearby__pick">
+                <form action={ROUTES.location} method="get" className="pub-nearby__pick">
                   <input type="hidden" name="back" value={backPath} />
                   <label htmlFor="nearby-area">{t("public.nearby.pick")}</label>
                   <select id="nearby-area" name="to" defaultValue={area?.district_code ?? ""} required>
@@ -386,7 +386,7 @@ export async function PublicDashboard({ basePath, searchParams }: { basePath: st
                       {t("public.nearby.save")}
                     </button>
                     {area ? (
-                      <a className="button button--secondary" href={`/lokasi?to=&back=${encodeURIComponent(backPath)}`}>
+                      <a className="button button--secondary" href={`${ROUTES.location}?to=&back=${encodeURIComponent(backPath)}`}>
                         {t("public.nearby.forget")}
                       </a>
                     ) : null}

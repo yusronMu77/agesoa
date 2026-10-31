@@ -3,6 +3,7 @@ import { formatDateTime, formatTime, type Lang, type Translate } from "@/lib/i18
 import { actorCategory, entryNumber, middleHash } from "@/lib/publicview";
 import type { LogEntry } from "@/lib/transparency";
 import { actionLabel, actorLabel } from "./text";
+import { ROUTES } from "@/lib/routes";
 
 /** SCR-040 side panel "Log terbaru": the latest entries of the public decision log on the ink surface, newest first. */
 export function LatestLog({ t, lang, entries }: { t: Translate; lang: Lang; entries: LogEntry[] | null }) {
@@ -10,7 +11,7 @@ export function LatestLog({ t, lang, entries }: { t: Translate; lang: Lang; entr
     <aside className="pub-ink-panel" aria-labelledby="latest-log-heading">
       <div className="pub-ink-panel__head">
         <h2 id="latest-log-heading">{t("public.log.title")}</h2>
-        <Link href="/log" className="pub-ink-panel__all">
+        <Link href={ROUTES.log} className="pub-ink-panel__all">
           {t("public.log.seeAll")}
         </Link>
       </div>
@@ -22,7 +23,7 @@ export function LatestLog({ t, lang, entries }: { t: Translate; lang: Lang; entr
         <ol className="pub-mini-log">
           {entries.map((e) => (
             <li key={e.seq}>
-              <Link href={`/log/${e.seq}`} className="pub-mini-log__link">
+              <Link href={ROUTES.logEntry(e.seq)} className="pub-mini-log__link">
                 <span className="pub-mini-log__meta">
                   <span className="pub-mini-log__seq">{entryNumber(e.seq)}</span>
                   <span>

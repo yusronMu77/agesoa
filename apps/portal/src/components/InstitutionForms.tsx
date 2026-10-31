@@ -5,8 +5,8 @@ import Link from "next/link";
 import { type ReactNode, useActionState, useState } from "react";
 import { ConfirmSubmit } from "@/components/console/ConfirmSubmit";
 import { CopyButton } from "@/components/console/CopyButton";
-import { rotateApiKey, saveWebhook, testEvent } from "@/app/(institution)/instansi/[organizationId]/actions";
-import { registerOrganizationAction } from "@/app/(institution)/instansi/actions";
+import { rotateApiKey, saveWebhook, testEvent } from "@/app/(institution)/organizations/[organizationId]/actions";
+import { registerOrganizationAction } from "@/app/(institution)/organizations/actions";
 import { useT } from "@/lib/i18n/client";
 import type { Subscription } from "@/lib/institutions";
 

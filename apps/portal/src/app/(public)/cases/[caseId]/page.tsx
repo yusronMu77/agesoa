@@ -39,7 +39,7 @@ export default async function CasePage({ params, searchParams }: { params: Param
   ]);
   const caseFindings = findings.ok ? findings.data.filter((f) => f.case_id === caseId) : [];
   if (caseDoc.ok && caseDoc.data === null && caseFindings.length === 0) {
-    // `/temuan/<finding id>` (old `/findings/<id>` links): the finding's page is its case page.
+    // `/cases/<finding id>` (old `/findings/<id>` links): the finding's page is its case page.
     const finding = findings.ok ? findings.data.find((f) => f.finding_id === caseId) : undefined;
     if (finding?.case_id) permanentRedirect(ROUTES.case(finding.case_id));
     notFound();
@@ -280,7 +280,7 @@ export default async function CasePage({ params, searchParams }: { params: Param
                   return (
                     <tr key={e.seq}>
                       <td className="num">
-                        <Link href={`/log/${e.seq}`}>#{e.seq}</Link>
+                        <Link href={ROUTES.logEntry(e.seq)}>#{e.seq}</Link>
                       </td>
                       <td>
                         <time dateTime={e.recorded_at}>{formatDateTime(lang, e.recorded_at)}</time>

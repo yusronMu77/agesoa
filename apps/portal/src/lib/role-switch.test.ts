@@ -11,13 +11,13 @@ describe("role switcher", () => {
 
   test("every other surface has exactly a sign-in and a registration page of its own surface", () => {
     expect(ROLE_ENTRIES.slice(1).map((e) => [e.signIn, e.register])).toEqual([
-      ["/validator/masuk", "/validator/daftar"],
-      ["/instansi/masuk", "/instansi/masuk?signup=1"],
+      ["/validators/login", "/validators/register"],
+      ["/organizations/login", "/organizations/login?signup=1"],
       ["/login?next=/ops", "/login?next=/ops&signup=1"],
     ]);
     // Registration never leads to another surface (no mixed menus, DESIGN-BRIEF §1).
-    expect(surfaceOf(canonicalPath("/validator/daftar"))).toBe("validator");
-    expect(surfaceOf(canonicalPath("/instansi/masuk"))).toBe("institution");
+    expect(surfaceOf(canonicalPath("/validators/register"))).toBe("validator");
+    expect(surfaceOf(canonicalPath("/organizations/login"))).toBe("institution");
   });
 
   test("labels and notes exist in both languages", () => {

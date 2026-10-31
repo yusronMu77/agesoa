@@ -2,6 +2,7 @@
 
 import { LocateFixed } from "lucide-react";
 import { useRef, useState } from "react";
+import { ROUTES } from "@/lib/routes";
 
 /**
  * "Gunakan lokasi saya" (SCR-040 "Di sekitar Anda"): asks for the location only when pressed (UIUX-STANDARD
@@ -48,7 +49,7 @@ export function LocateButton({
   }
 
   return (
-    <form ref={form} action="/lokasi" method="post" className="pub-locate">
+    <form ref={form} action={ROUTES.location} method="post" className="pub-locate">
       <input type="hidden" name="back" value={back} />
       <input ref={lat} type="hidden" name="lat" />
       <input ref={lon} type="hidden" name="lon" />

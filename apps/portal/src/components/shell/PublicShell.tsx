@@ -28,15 +28,15 @@ export async function PublicShell({ children }: { children: ReactNode }) {
           <nav className="public-nav" aria-label={t("nav.main")}>
             <ul>
               <li>
-                <NavLink href={ROUTES.home} also={["/temuan"]}>
+                <NavLink href={ROUTES.home} also={[ROUTES.cases]}>
                   {t("public.nav.findings")}
                 </NavLink>
               </li>
               <li>
-                <NavLink href="/log">{t("public.nav.log")}</NavLink>
+                <NavLink href={ROUTES.log}>{t("public.nav.log")}</NavLink>
               </li>
               <li>
-                <NavLink href="/about">{t("public.nav.about")}</NavLink>
+                <NavLink href={ROUTES.about}>{t("public.nav.about")}</NavLink>
               </li>
             </ul>
           </nav>

@@ -20,8 +20,8 @@ export default async function AboutPage() {
   const witnessUrl = loadConfig().witnessUrl ?? null;
   const explore = [
     { href: ROUTES.home, title: t("public.dashboard.title"), body: t("public.about.dashboard"), Icon: LayoutDashboard },
-    { href: "/log", title: t("public.logPage.title"), body: t("public.about.log"), Icon: ScrollText },
-    { href: "/status", title: t("public.about.status.title"), body: t("public.about.status"), Icon: Activity },
+    { href: ROUTES.log, title: t("public.logPage.title"), body: t("public.about.log"), Icon: ScrollText },
+    { href: ROUTES.status, title: t("public.about.status.title"), body: t("public.about.status"), Icon: Activity },
     { href: ROUTES.validator, title: t("public.nav.forValidators"), body: t("public.about.validators"), Icon: ShieldCheck },
     { href: ROUTES.institution, title: t("public.nav.forInstitutions"), body: t("public.about.institutions"), Icon: Building2 },
   ];

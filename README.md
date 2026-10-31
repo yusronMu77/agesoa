@@ -71,8 +71,8 @@ Where to sign in (choose a role from the **Publik** chip in the public header):
 
 | Surface | Sign in | What you can do |
 |---|---|---|
-| Validator | `/validator/masuk` | queue, decide (approve / reject / needs evidence), decision log |
-| Organisation | `/instansi/masuk` | the fictional agency's dashboard: webhook, API key, deliveries |
+| Validator | `/validators/login` | queue, decide (approve / reject / needs evidence), decision log |
+| Organization | `/organizations/login` | the fictional agency's dashboard: webhook, API key, deliveries |
 | Operator | `/login?next=/ops` | service status, events, outbox, demo reset |
 
 The account exists only where `demo_mode` is on (local devenv and the demo environment; `demo_mode` is refused in
@@ -84,8 +84,8 @@ and the operator role can reset the demo data. Witness needs no account (anonymo
 
 Use English for frontend documentation, source paths, identifiers and canonical URL segments. The selected UI
 language does not change URLs. Use **organization** for the shared workspace concept; newsrooms and government
-agencies are organization types. Existing Indonesian URL segments are temporary compatibility routes and will
-redirect permanently to their English replacements when the route migration lands. See the
+agencies are organization types. The earlier Indonesian URL segments (`/temuan`, `/validator/masuk`, `/instansi`, ...)
+redirect permanently (308) to their English routes. See the
 [portal README](apps/portal/README.md#routes-and-naming) for the full route map.
 
 ## Quick start (local)
