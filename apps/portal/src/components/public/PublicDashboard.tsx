@@ -38,6 +38,7 @@ import { count } from "./text";
 import { localizedText } from "@/lib/localized";
 import { AREA_COOKIE, NEARBY_RADIUS_KM, nearbyCases } from "@/lib/nearby";
 import { LocateButton } from "./LocateButton";
+import { WitnessCta } from "./WitnessCta";
 
 const LATEST_LOG = 4;
 
@@ -178,6 +179,7 @@ export async function PublicDashboard({ basePath, searchParams }: { basePath: st
             {t("public.hero.title")}
           </h2>
           <p className="pub-hero__lead">{t("public.hero.body")}</p>
+          <WitnessCta url={config.witnessUrl} t={t} />
 
           <ul className="pub-kpis" aria-label={t("public.kpi.label")} data-testid="dashboard-stats">
             <li className="pub-kpi">

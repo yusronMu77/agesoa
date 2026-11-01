@@ -1,0 +1,175 @@
+# Builds the Witness Android app (APK) for the demo environment and attaches it to a GitHub Release of the tag.
+# The release is made in the public repository only: publish-public.yml pushes every version tag there with a deploy
+# key (a push that triggers workflows), and this workflow, published with the code, builds exactly that tag. In this
+# repository a tag push does nothing; a manual run builds an unsigned APK as a workflow artifact to check the build.
+# Setup (both repositories, values from `tofu output` in infra/tofu/envs/demo; the web API key is public by design):
+#   variables WITNESS_INGESTION_URL, WITNESS_CASE_AUDIT_URL, WITNESS_FIREBASE_PROJECT_ID, WITNESS_FIREBASE_API_KEY
+# Setup (public repository only): the release key, registered for com.agesoa.witness in Android developer verification
+#   secrets  WITNESS_KEYSTORE_B64 (base64 of the .jks), WITNESS_KEYSTORE_PASSWORD, WITNESS_KEY_ALIAS, WITNESS_KEY_PASSWORD
+#   variable WITNESS_CERT_SHA256 (SHA-256 of the registered signing certificate; a release signed otherwise fails)
+name: release-witness
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "versionName of the test build (MAJOR.MINOR.PATCH)"
+        default: "0.0.0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-witness-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    if: github.event_name == 'workflow_dispatch' || !github.event.repository.private
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # the release
+      id-token: write # build provenance attestation
+      attestations: write
+    env:
+      RELEASE: ${{ github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Version from the tag
+        id: version
+        env:
+          INPUT: ${{ inputs.version }}
+        run: |
+          set -eu
+          if [ "$RELEASE" = true ]; then version="${GITHUB_REF_NAME#v}"; else version="$INPUT"; fi
+          if ! echo "$version" | grep -qE '^[0-9]+\.[0-9]{1,2}\.[0-9]{1,2}$'; then
+            echo "::error::version must be MAJOR.MINOR.PATCH (tag vMAJOR.MINOR.PATCH), got '$version'"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+
+      # Vite bakes these into the bundle; the app refuses to start without them (apps/witness/src/config.ts).
+      - name: Build the web app for the demo environment
+        env:
+          VITE_APP_ENV: demo
+          VITE_DEMO_MODE: "true"
+          VITE_INGESTION_URL: ${{ vars.WITNESS_INGESTION_URL }}
+          VITE_CASE_AUDIT_URL: ${{ vars.WITNESS_CASE_AUDIT_URL }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.WITNESS_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_API_KEY: ${{ vars.WITNESS_FIREBASE_API_KEY }}
+        run: |
+          set -eu
+          for name in VITE_INGESTION_URL VITE_CASE_AUDIT_URL VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_API_KEY; do
+            if [ -z "$(printenv "$name")" ]; then echo "::error::repository variable for $name is not set"; exit 1; fi
+          done
+          bun run --cwd apps/witness build
+          cd apps/witness && bunx cap sync android
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Release key
+        if: env.RELEASE == 'true'
+        env:
+          KEYSTORE_B64: ${{ secrets.WITNESS_KEYSTORE_B64 }}
+        run: |
+          set -eu
+          if [ -z "$KEYSTORE_B64" ]; then echo "::error::secret WITNESS_KEYSTORE_B64 is not set"; exit 1; fi
+          keystore="$RUNNER_TEMP/witness-release.jks"
+          install -m 600 /dev/null "$keystore"
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$keystore"
+          echo "WITNESS_KEYSTORE_FILE=$keystore" >> "$GITHUB_ENV"
+
+      - name: Build the APK
+        working-directory: apps/witness/android
+        env:
+          WITNESS_KEYSTORE_PASSWORD: ${{ secrets.WITNESS_KEYSTORE_PASSWORD }}
+          WITNESS_KEY_ALIAS: ${{ secrets.WITNESS_KEY_ALIAS }}
+          WITNESS_KEY_PASSWORD: ${{ secrets.WITNESS_KEY_PASSWORD }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: ./gradlew --no-daemon assembleRelease "-PwitnessVersion=$VERSION"
+
+      - name: Check the signature
+        id: apk
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          EXPECTED_CERT: ${{ vars.WITNESS_CERT_SHA256 }}
+        run: |
+          set -eu
+          rm -f "${WITNESS_KEYSTORE_FILE:-/nonexistent}"
+          out=apps/witness/android/app/build/outputs/apk/release
+          apk="$RUNNER_TEMP/agesoa-witness-$VERSION.apk"
+          if [ "$RELEASE" = true ]; then
+            cp "$out/app-release.apk" "$apk"
+            apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
+            "$apksigner" verify --verbose --print-certs "$apk" | tee "$RUNNER_TEMP/certs.txt"
+            cert=$(grep -m1 'certificate SHA-256 digest' "$RUNNER_TEMP/certs.txt" | awk '{print $NF}')
+            expected=$(echo "$EXPECTED_CERT" | tr -d ':' | tr 'A-F' 'a-f')
+            if [ -z "$expected" ] || [ "$cert" != "$expected" ]; then
+              echo "::error::APK certificate $cert is not the registered one (variable WITNESS_CERT_SHA256)"; exit 1
+            fi
+            echo "cert=$cert" >> "$GITHUB_OUTPUT"
+          else
+            cp "$out/app-release-unsigned.apk" "$apk"
+          fi
+          (cd "$RUNNER_TEMP" && sha256sum "$(basename "$apk")" > "$(basename "$apk").sha256")
+          echo "path=$apk" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(cut -d' ' -f1 "$apk.sha256")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/attest-build-provenance@v4
+        if: env.RELEASE == 'true'
+        with:
+          subject-path: ${{ steps.apk.outputs.path }}
+
+      - name: Publish the release
+        if: env.RELEASE == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          APK: ${{ steps.apk.outputs.path }}
+          SHA256: ${{ steps.apk.outputs.sha256 }}
+          CERT: ${{ steps.apk.outputs.cert }}
+        run: |
+          set -eu
+          notes="$RUNNER_TEMP/notes.md"
+          cat > "$notes" <<EOF
+          ## AGESOA Witness for Android
+
+          Report a public problem without typing and without an account. This build talks to the **demo** environment:
+          its data is fictional and reset from time to time, so do not send real personal data.
+
+          1. On an Android phone, download \`$(basename "$APK")\` below and open it.
+          2. Allow your browser to install apps when Android asks, then install.
+          3. Open **AGESOA Witness**, take a photo or record a voice note and send the report.
+
+          | | |
+          |---|---|
+          | APK SHA-256 | \`$SHA256\` |
+          | Signing certificate SHA-256 | \`$CERT\` |
+
+          Build provenance: \`gh attestation verify $(basename "$APK") -R $GITHUB_REPOSITORY\`
+          EOF
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$APK" "$APK.sha256" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$APK" "$APK.sha256" --verify-tag \
+              --title "AGESOA $GITHUB_REF_NAME" --notes-file "$notes"
+          fi
+          echo "Released $(basename "$APK") ($SHA256) on $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$GITHUB_REF_NAME" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        if: env.RELEASE != 'true'
+        with:
+          name: agesoa-witness-${{ steps.version.outputs.version }}-unsigned
+          path: ${{ steps.apk.outputs.path }}
+          retention-days: 7

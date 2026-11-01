@@ -1,14 +1,27 @@
 apply plugin: 'com.android.application'
 
+// Release builds (.github/workflows/release-witness.yml) pass the version of the git tag: -PwitnessVersion=0.1.2.
+// versionCode is derived from it (MAJOR*10000 + MINOR*100 + PATCH), so every tag installs over the previous one.
+def witnessVersion = (findProperty('witnessVersion') ?: '0.0.0').toString()
+def versionMatch = witnessVersion =~ /^(\d+)\.(\d{1,2})\.(\d{1,2})$/
+if (!versionMatch.matches()) {
+    throw new GradleException("witnessVersion must be MAJOR.MINOR.PATCH (minor and patch below 100), got '${witnessVersion}'")
+}
+def witnessVersionCode = Math.max(1, versionMatch.group(1).toInteger() * 10000 + versionMatch.group(2).toInteger() * 100 + versionMatch.group(3).toInteger())
+
+// The release key never lives in the repository: CI decodes it from a secret and points WITNESS_KEYSTORE_FILE at it.
+// Without it `assembleRelease` gives an unsigned APK, so local builds keep working.
+def releaseKeystore = System.getenv('WITNESS_KEYSTORE_FILE')
+
 android {
-    namespace = "id.agesoa.witness"
+    namespace = "com.agesoa.witness"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "id.agesoa.witness"
+        applicationId "com.agesoa.witness"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode witnessVersionCode
+        versionName witnessVersion
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +29,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (releaseKeystore) {
+                storeFile file(releaseKeystore)
+                storePassword System.getenv('WITNESS_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('WITNESS_KEY_ALIAS')
+                keyPassword System.getenv('WITNESS_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (releaseKeystore) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

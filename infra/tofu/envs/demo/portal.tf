@@ -73,6 +73,7 @@ resource "google_cloud_run_v2_service" "portal" {
             READ_MODEL_URL = "https://firestore.googleapis.com/v1/projects/${var.project_id}/databases/(default)/documents"
           },
           { for k, m in module.service : "SERVICE_URL_${upper(replace(k, "-", "_"))}" => m.uri },
+          var.witness_url == "" ? {} : { WITNESS_URL = var.witness_url },
         )
         content {
           name  = env.key

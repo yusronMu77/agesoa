@@ -56,6 +56,16 @@ variable "extra_cors_origins" {
   description = "Browser origins allowed by the services (Witness dev server, Capacitor app), besides the portal."
 }
 
+variable "witness_url" {
+  type        = string
+  default     = ""
+  description = "Where the portal sends reporters (\"Start a report\"): the Witness release page; empty = no link."
+  validation {
+    condition     = var.witness_url == "" || startswith(var.witness_url, "https://")
+    error_message = "witness_url must be empty or an https URL."
+  }
+}
+
 variable "billing_account" {
   type        = string
   default     = ""

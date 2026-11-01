@@ -6,6 +6,8 @@ recurring, not just *what* happened.
 > Complaint channels record what happened. AGESOA tells you why it keeps happening.
 
 - **Live prototype** (demo mode, fictional data): https://agesoa-team.cloud.run
+- **Witness app for Android** (report a problem without typing and without an account, against the same demo):
+  download the APK from the [latest release](https://github.com/yusronMu77/agesoa/releases/latest)
 - **Demo video** (3 min): https://youtu.be/6NcSvIsFF0E
 - Built for the **AI Builder Cup 2026** (Google Cloud × Hack2skill), theme Sustainability & Social Impact.
 

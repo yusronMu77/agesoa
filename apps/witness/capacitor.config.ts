@@ -3,7 +3,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 // No `server.url` / `server.hostname`: the app is served from https://localhost inside the WebView, a secure
 // context, so getUserMedia keeps working. Services must list https://localhost in CORS_ORIGINS.
 const config: CapacitorConfig = {
-  appId: "id.agesoa.witness",
+  appId: "com.agesoa.witness",
   appName: "AGESOA Witness",
   webDir: "dist",
   android: { allowMixedContent: false },

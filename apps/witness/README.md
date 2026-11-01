@@ -96,6 +96,24 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb reverse tcp:8001 tcp:8001 && adb reverse tcp:8002 tcp:8002   # local services from the phone
 ```
 
+### Releases
+
+Each version tag `vMAJOR.MINOR.PATCH` gets a signed APK for the demo environment on the public repository's
+releases: `publish-public.yml` publishes the tag there and `.github/workflows/release-witness.yml` builds that tag,
+signs it with the release key and attaches `agesoa-witness-<version>.apk`, its SHA-256 and a build provenance
+attestation. The package is `com.agesoa.witness`; `versionName` is the tag without `v` and `versionCode` is
+`MAJOR*10000 + MINOR*100 + PATCH`, so every release installs over the previous one. The release key is registered
+for the package in Android developer verification: on certified phones in Indonesia and Singapore an APK from an
+unverified developer does not install outside `adb`. The key never enters the repository; the workflow header lists
+the secrets and variables it needs. A manual run of the workflow in a private repository builds an unsigned APK as
+a workflow artifact, to check the build without releasing.
+
+Local release build (unsigned unless `WITNESS_KEYSTORE_FILE` and the matching passwords and alias are set):
+
+```sh
+cd android && ./gradlew assembleRelease -PwitnessVersion=0.1.2   # app/build/outputs/apk/release/
+```
+
 ### Share target (SCR-007)
 
 A post shared from another app opens Witness on "Post received" (SCR-007) with the link and the caption filled in,
@@ -106,7 +124,7 @@ story text on SCR-001.
 - **Android app:** the manifest has an `ACTION_SEND` `text/plain` intent filter. `ShareTargetPlugin.java` hands the
   launching share to the web app (`pending()`) and later ones as the `shareReceived` event (`onNewIntent`). It needs no
   permission. Try it without a social app: `adb shell am start -a android.intent.action.SEND -t text/plain --es
-  android.intent.extra.TEXT "caption https://www.instagram.com/p/abc/"` (add `-n id.agesoa.witness/.MainActivity`
+  android.intent.extra.TEXT "caption https://www.instagram.com/p/abc/"` (add `-n com.agesoa.witness/.MainActivity`
   to skip the chooser).
 - **Installed PWA:** `share_target` in `manifest.webmanifest` (GET `/?title=&text=&url=`); the address is cleaned after
   the share is read.

@@ -2,6 +2,7 @@ import { Activity, Building2, LayoutDashboard, ScrollText, ShieldCheck } from "l
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EvidenceBadge } from "@/components/EvidenceBadge";
+import { WitnessCta } from "@/components/public/WitnessCta";
 import { loadConfig } from "@/lib/config";
 import { getT } from "@/lib/i18n/server";
 import { ROUTES } from "@/lib/routes";
@@ -31,13 +32,7 @@ export default async function AboutPage() {
       <h1 className="pub-about__title">{t("public.about.lead")}</h1>
       <p className="lead">{t("public.about.intro1")}</p>
       {/* PRV-about primary: the Witness app, where reports start (anonymous, no account). */}
-      {witnessUrl ? (
-        <p>
-          <a className="button" href={witnessUrl}>
-            {t("public.about.start")}
-          </a>
-        </p>
-      ) : null}
+      <WitnessCta url={witnessUrl} t={t} />
       <p className="pub-about__body">{t("public.about.intro2")}</p>
 
       <ul className="card-grid" aria-label={t("public.about.explore")}>

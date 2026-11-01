@@ -13,5 +13,8 @@ budget_amount   = 75
 budget_currency = "USD"
 alert_email     = ""
 
+# Portal "Start a report": the Witness APK on the public repository's releases (release-witness.yml).
+witness_url = "https://github.com/OWNER/REPOSITORY/releases/latest"
+
 # Set to false only for a throwaway project you want `tofu destroy` to remove completely.
 deletion_protection = true

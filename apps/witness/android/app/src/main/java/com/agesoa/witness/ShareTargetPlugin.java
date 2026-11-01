@@ -1,4 +1,4 @@
-package id.agesoa.witness;
+package com.agesoa.witness;
 
 import android.content.Intent;
 import com.getcapacitor.JSObject;

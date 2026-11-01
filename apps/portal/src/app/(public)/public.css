@@ -223,6 +223,14 @@
   color: var(--ag-color-text-secondary);
 }
 
+.pub-witness {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ag-space-2) var(--ag-space-4);
+  margin: 0 0 22px;
+}
+
 .pub-kpis {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

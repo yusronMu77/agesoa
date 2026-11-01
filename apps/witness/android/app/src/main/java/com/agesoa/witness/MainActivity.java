@@ -1,4 +1,4 @@
-package id.agesoa.witness;
+package com.agesoa.witness;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
