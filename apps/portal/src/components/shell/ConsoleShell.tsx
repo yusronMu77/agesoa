@@ -26,6 +26,7 @@ import { ROUTES } from "@/lib/routes";
 import { sessionToken } from "@/lib/session";
 import { LanguagePicker } from "./LanguagePicker";
 import { Logo } from "./Logo";
+import { MenuDrawer } from "./MenuDrawer";
 
 export type ConsoleSurface = "validator" | "institution" | "ops";
 
@@ -77,7 +78,8 @@ const SIGN_OUT_TO: Record<ConsoleSurface, string> = {
  * Shell of the signed-in surfaces (SCR-020/022 validator, SCR-060–062 institution, SCR-090 operator): sidebar with
  * logo, role chip, the surface's sections and the identity card; topbar with the context selectors of the page, the
  * language picker and the notifications link. Each page renders the shell itself, because the context selectors,
- * the current section and the identity depend on the page's data.
+ * the current section and the identity depend on the page's data. On phones the sections and the identity card sit
+ * behind a menu button (MenuDrawer).
  */
 export async function ConsoleShell({
   surface,
@@ -115,47 +117,49 @@ export async function ConsoleShell({
           <RoleIcon aria-hidden size={14} strokeWidth={2} />
           {role}
         </span>
-        <nav className="console-nav" aria-label={t("nav.console", { surface: role })}>
-          <ul>
-            {nav.map(({ href, label, icon, current }) => {
-              const Icon = CONSOLE_ICONS[icon];
-              return (
-                <li key={`${href}-${label}`}>
-                  <Link href={href} aria-current={current ? "page" : undefined}>
-                    <Icon aria-hidden size={20} strokeWidth={1.75} />
-                    {label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-        {identity || signedIn ? (
-          <div className="console-identity" data-testid={identity?.testId}>
-            <span className={`console-identity__icon console-identity__icon--${surface}`} aria-hidden="true">
-              <IdentityIcon size={22} strokeWidth={1.75} />
-            </span>
-            <div className="console-identity__body">
-              {identity ? (
-                <>
-                  <p className="console-identity__title">{identity.title}</p>
-                  {identity.sub ? <p className="console-identity__sub">{identity.sub}</p> : null}
-                  {identity.extra}
-                </>
-              ) : (
-                <p className="console-identity__title">{role}</p>
-              )}
+        <MenuDrawer variant="console">
+          <nav className="console-nav" aria-label={t("nav.console", { surface: role })}>
+            <ul>
+              {nav.map(({ href, label, icon, current }) => {
+                const Icon = CONSOLE_ICONS[icon];
+                return (
+                  <li key={`${href}-${label}`}>
+                    <Link href={href} aria-current={current ? "page" : undefined}>
+                      <Icon aria-hidden size={20} strokeWidth={1.75} />
+                      {label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+          {identity || signedIn ? (
+            <div className="console-identity" data-testid={identity?.testId}>
+              <span className={`console-identity__icon console-identity__icon--${surface}`} aria-hidden="true">
+                <IdentityIcon size={22} strokeWidth={1.75} />
+              </span>
+              <div className="console-identity__body">
+                {identity ? (
+                  <>
+                    <p className="console-identity__title">{identity.title}</p>
+                    {identity.sub ? <p className="console-identity__sub">{identity.sub}</p> : null}
+                    {identity.extra}
+                  </>
+                ) : (
+                  <p className="console-identity__title">{role}</p>
+                )}
+              </div>
+              {signedIn ? (
+                <form method="post" action={`${ROUTES.signOut}?to=${encodeURIComponent(SIGN_OUT_TO[surface])}`} className="console-identity__out">
+                  <button type="submit" className="console-signout" title={t("common.signOut")}>
+                    <LogOut aria-hidden size={18} strokeWidth={2} />
+                    <span className="sr-only">{t("common.signOut")}</span>
+                  </button>
+                </form>
+              ) : null}
             </div>
-            {signedIn ? (
-              <form method="post" action={`${ROUTES.signOut}?to=${encodeURIComponent(SIGN_OUT_TO[surface])}`} className="console-identity__out">
-                <button type="submit" className="console-signout" title={t("common.signOut")}>
-                  <LogOut aria-hidden size={18} strokeWidth={2} />
-                  <span className="sr-only">{t("common.signOut")}</span>
-                </button>
-              </form>
-            ) : null}
-          </div>
-        ) : null}
+          ) : null}
+        </MenuDrawer>
       </aside>
       <div className="console-body">
         <header className="console-topbar">

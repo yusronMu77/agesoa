@@ -2687,6 +2687,28 @@ a.button--secondary:hover {
   }
 }
 
+/* Phones: logo, role chip and the menu button in one row; the sections and the identity card in the drawer
+   (MenuDrawer). */
+@media (max-width: 600px) {
+  .shell--console .console-sidebar {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--ag-space-3) var(--ag-space-4);
+  }
+
+  .shell--console .menu-drawer {
+    gap: var(--ag-space-4);
+  }
+
+  .shell--console .console-nav {
+    margin-top: 0;
+  }
+
+  .shell--console .console-nav a {
+    min-height: 48px;
+  }
+}
+
 @media (max-width: 640px) {
   .console-context,
   .console-context__box {

@@ -245,7 +245,10 @@ pre,
   box-shadow: var(--ag-elevation-2);
 }
 
-.lang-dialog::backdrop {
+.lang-dialog::backdrop,
+.login-dialog::backdrop,
+.role-dialog::backdrop,
+.menu-drawer::backdrop {
   background: color-mix(in srgb, var(--ag-color-bg-ink) 55%, transparent);
 }
 
@@ -465,10 +468,36 @@ pre,
   gap: var(--ag-space-3);
 }
 
-.public-header .lang-picker__trigger {
-  min-width: 92px;
-  justify-content: space-between;
-  padding: 0 var(--ag-space-4) 0 var(--ag-space-3);
+/* MenuDrawer: on wide screens the drawer (a native popover) is not a box of its own, so its content sits in place
+   (public header row, console sidebar); the menu and close buttons only show on phones (max-width 600px below). */
+.menu-drawer {
+  display: contents;
+}
+
+.menu-drawer__toggle,
+.menu-drawer__close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--ag-radius-md);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.menu-drawer__toggle:hover,
+.menu-drawer__close:hover {
+  border-color: var(--menu-drawer-line, var(--ag-color-border-default));
+}
+
+/* The public header's drawer is ink, like the header (a console's takes the surface colour). */
+.public-header {
+  --menu-drawer-line: var(--ag-color-neutral-ink-border);
+  --menu-drawer-bg: var(--ag-color-bg-ink);
 }
 
 .public-header .role-chip {
@@ -480,6 +509,17 @@ pre,
 
 .public-header .role-chip svg {
   color: var(--ag-color-role-publik-stroke);
+}
+
+/* The header's language and role buttons are one size: same width, height, padding and icon gap. */
+.public-header .lang-picker__trigger,
+.public-header .role-switch__trigger {
+  justify-content: center;
+  gap: var(--ag-space-2);
+  min-width: 116px;
+  min-height: 40px;
+  padding: 0 var(--ag-space-3);
+  font-size: var(--ag-font-size-sm);
 }
 
 /* The design's band is 34 px on the public and sign-in surfaces. */
@@ -659,14 +699,17 @@ pre,
     border-bottom: 1px solid var(--ag-color-border-default);
   }
 
-  .console-nav ul {
-    grid-auto-flow: column;
-    overflow-x: auto;
-  }
-
   .console-main,
   .console-topbar {
     padding-inline: var(--ag-space-4);
+  }
+}
+
+/* Tablets: the sections in one row that scrolls sideways (phones: in the drawer, MenuDrawer). */
+@media (min-width: 601px) and (max-width: 900px) {
+  .console-nav ul {
+    grid-auto-flow: column;
+    overflow-x: auto;
   }
 }
 
@@ -934,10 +977,6 @@ pre,
   border-radius: var(--ag-radius-lg);
   background: var(--ag-color-bg-surface);
   color: var(--ag-color-text-primary);
-}
-
-.login-dialog::backdrop {
-  background: color-mix(in srgb, var(--ag-color-bg-ink) 55%, transparent);
 }
 
 .login-dialog h2 {
@@ -1623,14 +1662,64 @@ pre.json {
 /* Public authentication: fixed right-hand slot, with keyboard and reduced-motion support. */
 .auth-main, .auth-motion { animation: auth-enter 220ms ease-out both; }
 @keyframes auth-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@media (max-width: 900px) {
+/* Tablets: the sections wrap onto a row of their own under the logo and the tools. */
+@media (min-width: 601px) and (max-width: 900px) {
   .public-header__inner { gap: 0 var(--ag-space-3); padding-top: var(--ag-space-2); }
   .public-header__tools { margin-left: auto; gap: var(--ag-space-2); }
   .public-nav { order: 3; flex-basis: 100%; margin-bottom: 0; }
   .public-nav ul { gap: var(--ag-space-2); }
   .public-nav a { min-width: 0; min-height: 48px; padding-inline: var(--ag-space-2); }
-  .public-header .logo__word { font-size: var(--ag-font-size-lg); }
 }
+/* Phones: logo + menu button in one row; sections and tools in a drawer from the right. */
+@media (max-width: 600px) {
+  .public-header__inner { flex-wrap: nowrap; justify-content: space-between; gap: var(--ag-space-3); }
+  .menu-drawer__toggle { display: inline-flex; margin-inline: auto calc(-1 * var(--ag-space-2)); }
+  .menu-drawer:not(:popover-open) { display: none; }
+  .menu-drawer {
+    display: flex;
+    position: fixed;
+    inset: 0 0 0 auto;
+    flex-direction: column;
+    gap: var(--ag-space-6);
+    width: min(320px, 86vw);
+    height: 100dvh;
+    margin: 0;
+    padding: var(--ag-space-3) var(--ag-space-4) var(--ag-space-8);
+    overflow-y: auto;
+    border: 0;
+    border-inline-start: 1px solid var(--menu-drawer-line, var(--ag-color-border-default));
+    background: var(--menu-drawer-bg, var(--ag-color-bg-surface));
+    box-shadow: var(--ag-elevation-2);
+  }
+  .menu-drawer:popover-open { animation: menu-drawer-in 200ms ease-out; }
+  .menu-drawer__close { display: inline-flex; align-self: flex-end; }
+  .public-nav { flex: none; margin-bottom: 0; }
+  .public-nav ul { flex-direction: column; gap: var(--ag-space-1); }
+  .public-nav a {
+    display: flex;
+    min-height: 48px;
+    padding: 0 var(--ag-space-3);
+    border-bottom: 0;
+    border-inline-start: 3px solid transparent;
+    font-size: var(--ag-font-size-md);
+  }
+  .public-nav a[aria-current="page"] { border-inline-start-color: var(--ag-color-brand-accent); }
+  /* In the drawer the two buttons share the row in equal halves at the 48 px touch size of the links above. */
+  .public-header__tools {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding-top: var(--ag-space-6);
+    border-top: 1px solid var(--ag-color-neutral-ink-border);
+  }
+  .public-header .lang-picker__trigger,
+  .public-header .role-switch__trigger {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    font-size: var(--ag-font-size-md);
+  }
+}
+@keyframes menu-drawer-in { from { transform: translateX(100%); } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   }
@@ -1638,11 +1727,6 @@ pre.json {
 
 /* Role switcher: the public header's Role chip opens the four surfaces (validator, organisation, operator: sign-in or
    registration). Same native popover pattern as the language picker. */
-.public-header .role-switch__trigger {
-  min-height: 40px;
-  padding: 0 var(--ag-space-3);
-  font-size: var(--ag-font-size-sm);
-}
 .role-switch__trigger {
   border: 1px solid transparent;
   cursor: pointer;
@@ -1668,7 +1752,6 @@ pre.json {
   color: var(--ag-color-text-primary);
   box-shadow: var(--ag-elevation-2);
 }
-.role-dialog::backdrop { background: color-mix(in srgb, var(--ag-color-bg-ink) 55%, transparent); }
 .role-dialog h2 { margin: 0; font-size: var(--ag-font-size-xl); }
 .role-dialog__body { margin: var(--ag-space-2) 0 var(--ag-space-4); color: var(--ag-color-text-secondary); }
 .role-dialog__list { display: grid; gap: var(--ag-space-2); margin: 0; padding: 0; list-style: none; }

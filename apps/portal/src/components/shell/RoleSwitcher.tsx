@@ -32,10 +32,11 @@ export function RoleSwitcher({ signedIn, clerk }: { signedIn: boolean; clerk: bo
     <div className="role-switch" data-testid="role-switch">
       {/* Accessible name keeps the visible text (WCAG 2.5.3): "Ganti peran Publik". */}
       <button type="button" className="role-chip role-chip--public role-switch__trigger" popoverTarget={popover}>
-        <Users aria-hidden size={14} strokeWidth={2} />
+        {/* Icons sized like the language picker's next to it (globe 18, chevron 16). */}
+        <Users aria-hidden size={18} strokeWidth={2} />
         <span className="sr-only">{t("common.roleSwitch.trigger")} </span>
         <span>{t("common.role.public")}</span>
-        <ChevronDown aria-hidden size={14} strokeWidth={2} />
+        <ChevronDown aria-hidden size={16} strokeWidth={2} />
       </button>
       <div id={popover} popover="auto" role="dialog" aria-labelledby={title} className="role-dialog">
         <h2 id={title}>{t("common.roleSwitch.title")}</h2>
