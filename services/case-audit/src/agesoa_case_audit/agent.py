@@ -20,7 +20,6 @@ audit trail it produced; without a store (eval, unit tests) a round runs in memo
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from collections.abc import AsyncGenerator, Sequence
@@ -37,6 +36,8 @@ from google.adk.sessions import BaseSessionService
 from google.genai import types
 from pydantic import BaseModel, Field, create_model
 
+from agesoa_case_audit import model_call
+from agesoa_case_audit.pattern_agent import TIMEOUT_SECONDS as PATTERN_TIMEOUT_SECONDS
 from agesoa_case_audit.pattern_agent import Execute, PlannedTest, run_directly, run_with_agent
 from agesoa_case_audit.patterns import PatternTest
 
@@ -44,7 +45,8 @@ log = logging.getLogger(__name__)
 APP_NAME = "agesoa-audit"
 USER_ID = "audit"  # the agent itself: a case has one session, and no person is ever its user
 TOP_N = 3  # hypotheses kept per round
-TIMEOUT_SECONDS = 45  # a round holds a database transaction open: a slow model falls back instead of waiting
+TIMEOUT_SECONDS = 20  # per attempt; a round holds a database transaction open, so a slow model falls back
+ATTEMPTS = 2  # the second only after a timeout or a 429/5xx (`model_call`): about 41 s in all
 MAX_SOURCES = 30
 MAX_SOURCE_CHARS = 2000
 MAX_REASONING_CHARS = 500
@@ -172,12 +174,16 @@ class AuditAgent:
         model: str | BaseLlm,
         *,
         timeout: float = TIMEOUT_SECONDS,
+        attempts: int = ATTEMPTS,
+        pattern_timeout: float = PATTERN_TIMEOUT_SECONDS,
         sessions: BaseSessionService | None = None,
     ):
         self._rules = model == "rules" or isinstance(model, RulesModel)  # the pack is bound per call
         self.model_name = model if isinstance(model, str) else model.model
         self._model = model
         self._timeout = timeout
+        self._attempts = attempts
+        self._pattern_timeout = pattern_timeout
         self._fallback = LexicalRanker()
         self.sessions = sessions  # where the sessions of the cases are kept; None = in memory, per round
 
@@ -193,8 +199,12 @@ class AuditAgent:
         if not sources:
             return lexical
         try:
-            async with asyncio.timeout(self._timeout):
-                raw = await self._ask(pack, sources, violated, case_id)
+            raw = await model_call.attempts(
+                lambda: self._ask(pack, sources, violated, case_id),
+                timeout=self._timeout,
+                tries=self._attempts,
+                what="audit",
+            )
             checked = self._checked(pack, raw, sources, violated, lexical)
         except Exception as exc:  # whatever goes wrong with a model must not stop the round
             log.warning("audit model failed, lexical ranking used", extra={"detail": {"error": repr(exc)}})
@@ -211,7 +221,15 @@ class AuditAgent:
         whole plan runs directly, so a model outage never leaves a case without its pattern tests."""
         done: dict[tuple[str, str, str], PatternTest] = {}
         try:
-            done = await run_with_agent(self._model, self.sessions, plan, execute, case_id=case_id)
+            done = await run_with_agent(
+                self._model,
+                self.sessions,
+                plan,
+                execute,
+                case_id=case_id,
+                timeout=self._pattern_timeout,
+                attempts=self._attempts,
+            )
         except Exception as exc:
             log.warning("pattern agent failed, plan run directly", extra={"detail": {"error": repr(exc)}})
         return done or await run_directly(plan, execute)

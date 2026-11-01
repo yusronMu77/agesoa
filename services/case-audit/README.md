@@ -51,8 +51,11 @@ case's `hypothesis` rows in `audit_trail` (top 3: rank, score, supporting and ag
 - **Agen Audit** (`agent.py`) is that model: an ADK `LlmAgent` with an output schema built from the pack. It ranks
   the pack's branches and cites the sources behind each; code keeps only branches of the pack, only sources that
   exist, at most 3, and computes the evidence status itself from the cited sources, so a model can neither invent
-  evidence nor raise a status. If the model fails, times out (45 s) or returns nothing usable, the round uses the
+  evidence nor raise a status. If the model fails, times out or returns nothing usable, the round uses the
   lexical ranking; the `method` of each row (`lexical` or `model:<id>`) and the decision log say which one ran.
+  Vertex AI sometimes holds a call for minutes while the next one answers in seconds, so each attempt gets
+  `AUDIT_TIMEOUT_SECONDS` (20) and a timeout or a 429/5xx is tried once more (`AUDIT_ATTEMPTS`, 2; `model_call.py`),
+  about 41 s in all; the pattern agent gets 25 s per attempt. Other failures are not repeated.
   `AUDIT_MODEL=rules` (default, local and demo_mode only) writes the lexical ranking as a model response, so the
   whole path runs without a model call; set a Gemini model id (and Vertex or API-key credentials) to use the model.
 - **One ADK session per case**, kept in this service's own database: `main.py` gives the agent ADK's

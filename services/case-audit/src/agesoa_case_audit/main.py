@@ -31,7 +31,9 @@ def build_app(settings: Settings | None = None) -> FastAPI:
     if settings.incident_store == "bigquery":
         assert settings.bigquery_events_table  # checked by Settings
         store = FallbackIncidentStore(BigQueryIncidentStore(settings.bigquery_events_table), store)
-    ranker = AuditAgent(settings.audit_model)
+    ranker = AuditAgent(
+        settings.audit_model, timeout=settings.audit_timeout_seconds, attempts=settings.audit_attempts
+    )
     app = create_app(
         settings=settings,
         title="AGESOA case-audit",

@@ -20,6 +20,14 @@ class Settings(ServiceSettings):
     audit_parallel_rounds: int = Field(
         4, ge=1, description="Audit rounds waiting on the model at once (Vertex AI quota; the rest queue)."
     )
+    audit_timeout_seconds: float = Field(
+        20,
+        gt=0,
+        description="Time limit of one model attempt of Agen Audit (the ranking; the pattern agent has 25).",
+    )
+    audit_attempts: int = Field(
+        2, ge=1, description="Model attempts per call; the next only after a timeout or a 429/5xx."
+    )
     domain_packs_dir: Path = REPO_DOMAIN_PACKS
     gemini_model: str = "gemini-3.8-flash"
     audit_model: str = Field(

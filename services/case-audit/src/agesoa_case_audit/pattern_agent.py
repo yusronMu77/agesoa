@@ -29,13 +29,15 @@ from google.adk.sessions import BaseSessionService
 from google.adk.tools import FunctionTool
 from google.genai import types
 
+from agesoa_case_audit import model_call
 from agesoa_case_audit.patterns import WINDOW_DAYS, PatternError, PatternTest
 
 log = logging.getLogger(__name__)
 APP_NAME = "agesoa-audit-patterns"
 USER_ID = "audit"
 TOOL = "check_pattern"
-TIMEOUT_SECONDS = 60
+TIMEOUT_SECONDS = 25  # per attempt; with `ATTEMPTS` about 51 s in all (`model_call`)
+ATTEMPTS = 2
 MAX_CALLS = 12  # tool calls honoured in one round
 
 INSTRUCTION = """You are Agen Audit of AGESOA. The case below has pattern tests waiting: each asks whether the same
@@ -114,7 +116,8 @@ async def run_with_agent(
     execute: Execute,
     *,
     case_id: str,
-    timeout: float = TIMEOUT_SECONDS,  # noqa: ASYNC109 (bounds the whole agent run, see asyncio.timeout below)
+    timeout: float = TIMEOUT_SECONDS,  # noqa: ASYNC109 (bounds one attempt of the agent run, see `model_call`)
+    attempts: int = ATTEMPTS,
 ) -> dict[tuple[str, str, str], PatternTest]:
     allowed = {t.key: t for t in plan}
     done: dict[tuple[str, str, str], PatternTest] = {}
@@ -162,13 +165,12 @@ async def run_with_agent(
         runner = InMemoryRunner(agent=agent, app_name=APP_NAME)
         session = await runner.session_service.create_session(app_name=APP_NAME, user_id=USER_ID)
     request = {"tests": [{"branch": t.branch, "metric_id": t.metric_id, "group": t.group} for t in plan]}
-    async with asyncio.timeout(timeout):
-        async for _ in runner.run_async(
-            user_id=USER_ID,
-            session_id=session.id,
-            new_message=types.Content(
-                role="user", parts=[types.Part(text=json.dumps(request, ensure_ascii=False))]
-            ),
-        ):
+    message = types.Content(role="user", parts=[types.Part(text=json.dumps(request, ensure_ascii=False))])
+
+    async def run() -> None:
+        # A second attempt asks again; the tests the first one ran are in `done` and are not run twice.
+        async for _ in runner.run_async(user_id=USER_ID, session_id=session.id, new_message=message):
             pass
+
+    await model_call.attempts(run, timeout=timeout, tries=attempts, what="pattern agent")
     return done
