@@ -13,10 +13,13 @@ REPO_DOMAIN_PACKS = Path(__file__).resolve().parents[4] / "domain-packs"
 
 class Settings(ServiceSettings):
     service_name: str = SERVICE
-    # Audit rounds hold a connection while the model answers, so this service takes a larger pool than the others
-    # (event handlers still leave `db_reserved_connections` of it free).
+    # Event handlers hold a connection only while they record a source; the audit round that follows holds none while
+    # the model answers. The pool is still larger than the others': ADK keeps its own sessions in the same engine.
     db_pool_size: int = 3
     db_max_overflow: int = 3
+    audit_parallel_rounds: int = Field(
+        4, ge=1, description="Audit rounds waiting on the model at once (Vertex AI quota; the rest queue)."
+    )
     domain_packs_dir: Path = REPO_DOMAIN_PACKS
     gemini_model: str = "gemini-3.8-flash"
     audit_model: str = Field(

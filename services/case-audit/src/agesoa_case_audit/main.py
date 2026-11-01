@@ -16,6 +16,7 @@ from agesoa_case_audit.api import router
 from agesoa_case_audit.bigquery_store import BigQueryIncidentStore
 from agesoa_case_audit.events import build_handlers
 from agesoa_case_audit.patterns import DatabaseIncidentStore, FallbackIncidentStore, IncidentStore
+from agesoa_case_audit.rounds import RoundRunner
 from agesoa_case_audit.settings import Settings, get_settings
 
 log = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         description=DESCRIPTION,
         version=__version__,
         routers=[router],
-        event_handlers=build_handlers(packs, store, ranker),
+        event_handlers=build_handlers(packs, store, ranker, RoundRunner(settings.audit_parallel_rounds)),
     )
     _keep_sessions_in_database(app, ranker)
     app.state.packs = packs

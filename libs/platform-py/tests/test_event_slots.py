@@ -52,3 +52,34 @@ async def test_a_larger_pool_runs_more_handlers():
 
 async def test_at_least_one_handler_always_runs():
     assert await run_events(database(db_pool_size=1, db_max_overflow=0, db_reserved_connections=2), 3) == 1
+
+
+async def test_work_after_commit_runs_without_a_transaction_or_a_slot():
+    # the slow part of a handler (a model call) is left to run once the transaction has closed
+    db = database(db_pool_size=1, db_max_overflow=0, db_reserved_connections=0)  # one slot
+    open_transactions = 0
+    original = db.transaction
+
+    @asynccontextmanager
+    async def counted():
+        nonlocal open_transactions
+        async with original() as session:
+            open_transactions += 1
+            try:
+                yield session
+            finally:
+                open_transactions -= 1
+
+    db.transaction = counted  # type: ignore[method-assign]
+    seen: list[tuple[int, bool]] = []
+
+    async def handler(session, event):
+        async def after(received_db):
+            assert received_db is db
+            seen.append((open_transactions, db.event_slots.locked()))
+            await asyncio.sleep(0.01)
+
+        return after
+
+    await asyncio.gather(*(process_once(db, {"id": f"e{i}", "type": "t"}, handler) for i in range(3)))
+    assert seen == [(0, False)] * 3

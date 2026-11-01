@@ -10,16 +10,19 @@ the same rule wrote (hypotheses, pattern tests) is replaced, questions and answe
 
 import hashlib
 import json
+import logging
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
 from agesoa_packs import DomainPack, Incident, branch_metrics, field_text, group_value
+from agesoa_platform.db import Database
 from agesoa_platform.outbox import add_event
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agesoa_case_audit.agent import TOP_N, LexicalRanker, Ranker
+from agesoa_case_audit.agent import TOP_N, LexicalRanker, Ranker, RankResult
 from agesoa_case_audit.cases import STATUS_ORDER, cap_status
 from agesoa_case_audit.decisions import decision_event
 from agesoa_case_audit.interview import sync_questions
@@ -34,6 +37,8 @@ from agesoa_case_audit.patterns import (
     window,
 )
 from agesoa_case_audit.tables import audit_trail, case_sources, cases
+
+log = logging.getLogger(__name__)
 
 ACTOR = "hypothesis_ranking"  # a rule, never a person
 MAX_REFS = 20  # evidence references listed on one pattern test
@@ -108,6 +113,71 @@ async def load_sources(session: AsyncSession, case_id: str) -> list[LinkedSource
     ]
 
 
+async def load_case(session: AsyncSession, case_id: str) -> Any:
+    return (await session.execute(select(cases).where(cases.c.id == case_id))).mappings().one()
+
+
+async def run_round_detached(
+    db: Database,
+    *,
+    case_id: str,
+    pack: DomainPack,
+    store: IncidentStore,
+    at: datetime,
+    ranker: Ranker | None = None,
+) -> None:
+    """The round of `run_round` without a transaction open while the model answers.
+
+    A round takes tens of seconds, nearly all of it waiting for the model. Inside the event's transaction that wait
+    held its row locks, a pooled connection and the lock that serialises a regency, and stalled every statement that
+    needs an exclusive lock (the demo reset's TRUNCATE) behind it. Here the sources are read in one short transaction,
+    the model and the pattern tests run with none open (each test reads in a transaction of its own), and the result is
+    written in a second short transaction under a lock on the case. If a source joined the case in between, the round
+    that source starts writes the up to date result, so this one drops its own.
+    """
+    ranker = ranker or LexicalRanker()
+    async with db.transaction() as session:
+        case = await load_case(session, case_id)
+        sources = await load_sources(session, case_id)
+    result = await rank_sources(ranker, pack, sources, case_id)
+    ranked = _ranked(result)
+    plan = plan_pattern_tests(case=case, pack=pack, sources=sources, branches=ranked.top, at=at)
+
+    async def execute(test: PlannedTest) -> PatternTest:
+        async with db.transaction() as session:  # a read, as short as its query
+            return await _check(session, store, pack, case, plan, test)
+
+    done = await run_pattern_plan(plan, execute, runner=ranker, case_id=case_id)
+
+    async with db.transaction() as session:
+        await session.execute(
+            text("select pg_advisory_xact_lock(hashtext(:key))"), {"key": f"audit-round|{case_id}"}
+        )
+        current = await load_sources(session, case_id)
+        if [(s.kind, s.id) for s in current] != [(s.kind, s.id) for s in sources]:
+            log.info("audit round dropped: a source joined the case while it ran", extra={"case_id": case_id})
+            return
+        case = await load_case(session, case_id)
+        await write_hypotheses(
+            session,
+            case_id=case_id,
+            sources=sources,
+            max_status=case["max_finding_status"],
+            at=at,
+            synthetic=case["synthetic"],
+            result=result,
+        )
+        await sync_questions(
+            session,
+            case_id=case_id,
+            pack=pack,
+            ranked_branches=ranked.order,
+            at=at,
+            synthetic=case["synthetic"],
+        )
+        await write_pattern_tests(session, case=case, plan=plan, done=done, at=at)
+
+
 async def run_round(
     session: AsyncSession,
     *,
@@ -118,8 +188,9 @@ async def run_round(
     ranker: Ranker | None = None,
 ) -> None:
     """Rank the hypotheses (`ranker`: the model-backed Agen Audit, the lexical ranking by default), keep the
-    interview going and test the patterns of the leading branches."""
-    case = (await session.execute(select(cases).where(cases.c.id == case_id))).mappings().one()
+    interview going and test the patterns of the leading branches. Everything runs in `session`, so it holds
+    that transaction while the model answers: callers that can wait use `run_round_detached`."""
+    case = await load_case(session, case_id)
     sources = await load_sources(session, case_id)
     ranked = await refresh_hypotheses(
         session,
@@ -162,13 +233,46 @@ async def refresh_hypotheses(
     synthetic: bool,
     ranker: Ranker,
 ) -> Ranked:
-    by_ref = {s.id: s for s in sources}
-    result = await ranker.rank(
+    result = await rank_sources(ranker, pack, sources, case_id)
+    return await write_hypotheses(
+        session,
+        case_id=case_id,
+        sources=sources,
+        max_status=max_status,
+        at=at,
+        synthetic=synthetic,
+        result=result,
+    )
+
+
+async def rank_sources(
+    ranker: Ranker, pack: DomainPack, sources: list[LinkedSource], case_id: str
+) -> RankResult:
+    """The model call of a round: needs no database."""
+    return await ranker.rank(
         pack, [(s.id, evidence_text(s)) for s in sources], violated_rules(sources), case_id=case_id
     )
+
+
+def _ranked(result: RankResult) -> Ranked:
+    top = [r for r in result.ranks if r.score > 0][:TOP_N]
+    return Ranked([r.branch for r in top], [r.branch for r in result.ranks])
+
+
+async def write_hypotheses(
+    session: AsyncSession,
+    *,
+    case_id: str,
+    sources: list[LinkedSource],
+    max_status: str,
+    at: datetime,
+    synthetic: bool,
+    result: RankResult,
+) -> Ranked:
+    by_ref = {s.id: s for s in sources}
     ranks, method = result.ranks, result.method
     top = [r for r in ranks if r.score > 0][:TOP_N]
-    ranked = Ranked([r.branch for r in top], [r.branch for r in ranks])
+    ranked = _ranked(result)
 
     await session.execute(
         delete(audit_trail).where(
@@ -238,6 +342,73 @@ async def refresh_hypotheses(
     return ranked
 
 
+@dataclass(frozen=True)
+class PatternPlan:
+    own: list[Incident]  # the case's own reports
+    tests: list[PlannedTest]
+    metrics: dict[tuple[str, str], dict[str, Any]]
+    start: datetime
+    until: datetime
+
+
+def plan_pattern_tests(
+    *, case: Any, pack: DomainPack, sources: list[LinkedSource], branches: list[str], at: datetime
+) -> PatternPlan:
+    """Every metric of the leading branches, for each group value (kitchen, supplier, ...) of the case's own reports."""
+    case_id = case["id"]
+    own = [
+        Incident(s.id, case_id, s.data.get("fields", {}), tuple(s.data.get("rule_results", [])))
+        for s in sources
+        if s.kind == "report"
+    ]
+    start, until = window(case["occurred_at"], at)
+    tests: list[PlannedTest] = []
+    metrics: dict[tuple[str, str], dict[str, Any]] = {}
+    for branch in branches:
+        for metric in branch_metrics(pack, branch):
+            metrics[(branch, metric["id"])] = metric
+            field = metric["params"]["group_by"]
+            groups = sorted({g for i in own if (g := group_value(i.fields.get(field))) is not None})
+            tests += [PlannedTest(branch, metric["id"], group) for group in groups[:MAX_GROUPS]]
+    return PatternPlan(own, tests, metrics, start, until)
+
+
+async def _check(
+    session: AsyncSession,
+    store: IncidentStore,
+    pack: DomainPack,
+    case: Any,
+    plan: PatternPlan,
+    test: PlannedTest,
+) -> PatternTest:
+    return await check_pattern(
+        session,
+        store,
+        pack,
+        case_id=case["id"],
+        domain=case["domain"],
+        own=plan.own,
+        branch=test.branch,
+        metric_id=test.metric_id,
+        group=test.group,
+        window_start=plan.start,
+        until=plan.until,
+    )
+
+
+async def run_pattern_plan(
+    plan: PatternPlan,
+    execute: Callable[[PlannedTest], Awaitable[PatternTest]],
+    *,
+    runner: object | None,
+    case_id: str,
+) -> Mapping[tuple[str, str, str], PatternTest]:
+    """The agent runs the tests as tool calls when it can; the plan is the same either way."""
+    if isinstance(runner, PatternRunner):
+        return await runner.run_pattern_tests(plan.tests, execute, case_id=case_id)
+    return await run_directly(plan.tests, execute)
+
+
 async def refresh_pattern_tests(
     session: AsyncSession,
     *,
@@ -251,45 +422,27 @@ async def refresh_pattern_tests(
 ) -> None:
     """Test every metric of the leading branches for the group values (kitchen, supplier, ...) of the case's own
     reports, and write the results as `pattern_test` steps. Replaces the previous results of this rule."""
-    case_id = case["id"]
-    own = [
-        Incident(s.id, case_id, s.data.get("fields", {}), tuple(s.data.get("rule_results", [])))
-        for s in sources
-        if s.kind == "report"
-    ]
-    start, until = window(case["occurred_at"], at)
-    plan: list[PlannedTest] = []
-    metrics: dict[tuple[str, str], dict[str, Any]] = {}
-    for branch in branches:
-        for metric in branch_metrics(pack, branch):
-            metrics[(branch, metric["id"])] = metric
-            field = metric["params"]["group_by"]
-            groups = sorted({g for i in own if (g := group_value(i.fields.get(field))) is not None})
-            plan += [PlannedTest(branch, metric["id"], group) for group in groups[:MAX_GROUPS]]
+    plan = plan_pattern_tests(case=case, pack=pack, sources=sources, branches=branches, at=at)
 
     async def execute(test: PlannedTest) -> PatternTest:
-        return await check_pattern(
-            session,
-            store,
-            pack,
-            case_id=case_id,
-            domain=case["domain"],
-            own=own,
-            branch=test.branch,
-            metric_id=test.metric_id,
-            group=test.group,
-            window_start=start,
-            until=until,
-        )
+        return await _check(session, store, pack, case, plan, test)
 
-    # The agent runs the tests as tool calls when it can; the plan is the same either way.
-    done = (
-        await runner.run_pattern_tests(plan, execute, case_id=case_id)
-        if isinstance(runner, PatternRunner)
-        else await run_directly(plan, execute)
-    )
+    done = await run_pattern_plan(plan, execute, runner=runner, case_id=case["id"])
+    await write_pattern_tests(session, case=case, plan=plan, done=done, at=at)
+
+
+async def write_pattern_tests(
+    session: AsyncSession,
+    *,
+    case: Any,
+    plan: PatternPlan,
+    done: Mapping[tuple[str, str, str], PatternTest],
+    at: datetime,
+) -> None:
+    case_id = case["id"]
+    metrics = plan.metrics
     rows: list[dict[str, Any]] = []
-    for planned in plan:
+    for planned in plan.tests:
         test = done.get(planned.key)
         if test is None:
             continue  # the agent left this test out

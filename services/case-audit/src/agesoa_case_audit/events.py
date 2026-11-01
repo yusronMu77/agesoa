@@ -11,8 +11,9 @@ from datetime import datetime
 from typing import Any
 
 from agesoa_packs import DomainPack, parse_datetime
+from agesoa_platform.db import Database
 from agesoa_platform.events import isoformat, new_event
-from agesoa_platform.inbox import EventHandler
+from agesoa_platform.inbox import AfterCommit, EventHandler
 from agesoa_platform.outbox import add_event
 from agesoa_platform.push import consumed_events, not_handled_yet
 from sqlalchemy import select, text, update
@@ -21,7 +22,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from agesoa_case_audit import SERVICE
 from agesoa_case_audit.agent import Ranker
-from agesoa_case_audit.audit import run_round
 from agesoa_case_audit.cases import (
     MATCH_WINDOW,
     OPEN_STATUSES,
@@ -36,6 +36,7 @@ from agesoa_case_audit.cases import (
 )
 from agesoa_case_audit.decisions import decision_event
 from agesoa_case_audit.patterns import IncidentStore
+from agesoa_case_audit.rounds import RoundRunner
 from agesoa_case_audit.tables import case_sources, cases
 
 log = logging.getLogger(__name__)
@@ -50,8 +51,13 @@ async def attach_source(
     read: SourceReader,
     store: IncidentStore,
     ranker: Ranker | None = None,
-) -> None:
-    """Join a report or signal to the matching open case, or open a new case; recompute the evidence deadline."""
+    rounds: RoundRunner | None = None,
+) -> AfterCommit | None:
+    """Join a report or signal to the matching open case, or open a new case; recompute the evidence deadline.
+
+    The audit round of the case is returned, not run: it waits on the model for tens of seconds and must not do that
+    inside this transaction (see `run_round_detached`). The transaction only holds the regency lock while it matches
+    and records the source."""
     data = event["data"]
     pack = packs.get(data["domain"])
     if pack is None:
@@ -59,7 +65,7 @@ async def attach_source(
         log.warning(
             "event for an unknown domain ignored", extra={"event_id": event["id"], "domain": data["domain"]}
         )
-        return
+        return None
     source = read(pack, data)
     at = parse_datetime(event["time"])
 
@@ -166,7 +172,12 @@ async def attach_source(
     await add_event(
         session, _decision(case_id, source, "case.deadline_set", "evidence_deadline", deadline_reason, [], at)
     )
-    await run_round(session, case_id=case_id, pack=pack, store=store, at=at, ranker=ranker)
+    runner = rounds or RoundRunner()
+
+    async def audit(db: Database) -> None:
+        await runner.run(db, case_id=case_id, pack=pack, store=store, at=at, ranker=ranker)
+
+    return audit
 
 
 def _deadline_reason(pack: DomainPack, evidence: Any) -> str:
@@ -242,13 +253,18 @@ async def _find_case(session: AsyncSession, source: Source) -> OpenCase | None:
 
 
 def build_handlers(
-    packs: dict[str, DomainPack], store: IncidentStore, ranker: Ranker | None = None
+    packs: dict[str, DomainPack],
+    store: IncidentStore,
+    ranker: Ranker | None = None,
+    rounds: RoundRunner | None = None,
 ) -> dict[str, EventHandler]:
-    async def on_report(session: AsyncSession, event: dict[str, Any]) -> None:
-        await attach_source(session, event, packs, source_from_report, store, ranker)
+    rounds = rounds or RoundRunner()
 
-    async def on_signal(session: AsyncSession, event: dict[str, Any]) -> None:
-        await attach_source(session, event, packs, source_from_signal, store, ranker)
+    async def on_report(session: AsyncSession, event: dict[str, Any]) -> AfterCommit | None:
+        return await attach_source(session, event, packs, source_from_report, store, ranker, rounds)
+
+    async def on_signal(session: AsyncSession, event: dict[str, Any]) -> AfterCommit | None:
+        return await attach_source(session, event, packs, source_from_signal, store, ranker, rounds)
 
     handlers: dict[str, EventHandler] = {
         event_type: not_handled_yet for event_type in consumed_events(SERVICE)
