@@ -278,7 +278,7 @@ export default async function OrganizationPage({ params, searchParams }: { param
             </div>
             {deliveries.ok ? (
               deliveries.data.length > 0 ? (
-                <DeliveryList deliveries={deliveries.data} limit={LATEST_DELIVERIES} t={t} lang={lang} />
+                <DeliveryList organizationId={id} deliveries={deliveries.data} limit={LATEST_DELIVERIES} t={t} lang={lang} />
               ) : (
                 <p className="muted" data-testid="deliveries-empty">
                   {t("int.historyEmpty")}

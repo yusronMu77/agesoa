@@ -9,9 +9,22 @@ const TONE = { delivered: "badge--ok", failed: "badge--error", pending: "badge--
 
 /**
  * Delivery history of an agency (SCR-062): event and case, time and attempt, the HTTP answer of the last attempt.
- * The status word stays readable for screen readers next to the code; failed deliveries get one warning below.
+ * The status word stays readable for screen readers next to the code; failed deliveries get one warning below. A case
+ * opens inside the organization console.
  */
-export function DeliveryList({ deliveries, t, lang, limit }: { deliveries: Delivery[]; t: Translate; lang: Lang; limit?: number }) {
+export function DeliveryList({
+  organizationId,
+  deliveries,
+  t,
+  lang,
+  limit,
+}: {
+  organizationId: string;
+  deliveries: Delivery[];
+  t: Translate;
+  lang: Lang;
+  limit?: number;
+}) {
   const rows = latestFirst(deliveries, limit);
   const failed = deliveries.filter((d) => d.status === "failed");
   return (
@@ -28,7 +41,7 @@ export function DeliveryList({ deliveries, t, lang, limit }: { deliveries: Deliv
                   {d.event === "test_event" ? (
                     <code>{d.case_id}</code>
                   ) : (
-                    <Link href={ROUTES.case(d.case_id)}>{d.case_id}</Link>
+                    <Link href={ROUTES.organizationCase(organizationId, d.case_id)}>{d.case_id}</Link>
                   )}
                 </p>
                 <p className="delivery-row__meta">

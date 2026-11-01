@@ -4,10 +4,11 @@
  * language never changes a URL.
  *
  *   public       `/`, `/cases/[id]`, `/cases/[id]/report`, `/ask`, `/log`, `/about`, `/status`
- *   validator    `/validators`, `/validators/findings/[findingId]`, `/validators/register`, `/validators/log`,
- *                sign-in `/validators/login`
+ *   validator    `/validators`, `/validators/findings/[findingId]` (+ `/case`, `/case/report`), `/validators/register`,
+ *                `/validators/log`, sign-in `/validators/login`
  *   organization `/organizations`, `/organizations/[organizationId]`, `/organizations/[organizationId]/deliveries`,
- *                `/organizations/log`, sign-in `/organizations/login`
+ *                `/organizations/[organizationId]/cases/[caseId]` (+ `/report`), `/organizations/log`,
+ *                sign-in `/organizations/login`
  *   operator     `/ops`, sign-in `/ops/login`
  *
  * Every console signs in at `/<surface>/login`; `/login` is the public header sign-in only.
@@ -30,6 +31,9 @@ export const ROUTES = {
   validator: "/validators",
   validatorDecided: "/validators?filter=decided",
   validatorFinding: (findingId: string) => `/validators/findings/${encodeURIComponent(findingId)}`,
+  /** A finding's case and evidence inside the validator console (same view as `/cases/[id]`, the console shell stays). */
+  validatorFindingCase: (findingId: string) => `/validators/findings/${encodeURIComponent(findingId)}/case`,
+  validatorFindingReport: (findingId: string) => `/validators/findings/${encodeURIComponent(findingId)}/case/report`,
   validatorRegister: "/validators/register",
   validatorSignIn: "/validators/login",
   /** The decision log inside the validator console (same log as `/log`, the console shell stays). */
@@ -37,6 +41,11 @@ export const ROUTES = {
   institution: "/organizations",
   organization: (organizationId: string) => `/organizations/${encodeURIComponent(organizationId)}`,
   organizationHistory: (organizationId: string) => `/organizations/${encodeURIComponent(organizationId)}/deliveries`,
+  /** A delivered case inside the organization console (same view as `/cases/[id]`, the console shell stays). */
+  organizationCase: (organizationId: string, caseId: string) =>
+    `/organizations/${encodeURIComponent(organizationId)}/cases/${encodeURIComponent(caseId)}`,
+  organizationCaseReport: (organizationId: string, caseId: string) =>
+    `/organizations/${encodeURIComponent(organizationId)}/cases/${encodeURIComponent(caseId)}/report`,
   institutionSignIn: "/organizations/login",
   institutionLog: "/organizations/log",
   /** Organizations register after creating an account on their own sign-in page (SCR-063 → SCR-060). */

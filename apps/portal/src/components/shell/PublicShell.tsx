@@ -1,5 +1,5 @@
 import { clerkEnabled } from "@/lib/clerk-config";
-import { sessionToken } from "@/lib/session";
+import { sessionRoles, sessionToken } from "@/lib/session";
 import type { ReactNode } from "react";
 import { NavLink } from "@/components/NavLink";
 import { SimulationBand } from "@/components/SimulationBand";
@@ -45,7 +45,7 @@ export async function PublicShell({ children }: { children: ReactNode }) {
             </nav>
             <div className="public-header__tools">
               <LanguagePicker tone="ink" preference={await getLangPreference()} />
-              <RoleSwitcher signedIn={signedIn} clerk={clerkEnabled()} />
+              <RoleSwitcher signedIn={signedIn} roles={await sessionRoles()} clerk={clerkEnabled()} />
             </div>
           </MenuDrawer>
         </div>

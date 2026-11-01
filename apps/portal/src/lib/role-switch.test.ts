@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { messages } from "@/lib/i18n/messages";
-import { ROLE_ENTRIES } from "@/lib/role-switch";
+import { claimedRoles, ROLE_ENTRIES } from "@/lib/role-switch";
 import { canonicalPath, surfaceOf } from "@/lib/routes";
 
 describe("role switcher", () => {
@@ -29,5 +29,28 @@ describe("role switcher", () => {
       }
     }
     expect(messages.id["common.role.organization"]).toBe("Organisasi");
+  });
+
+  test("a signed-in role opens its own console", () => {
+    expect(ROLE_ENTRIES.map((e) => [e.role, e.home])).toEqual([
+      ["public", null],
+      ["validator", "/validators"],
+      ["institution", "/organizations"],
+      ["ops", "/ops"],
+    ]);
+    for (const key of ["common.roleSwitch.open", "common.roleSwitch.openAs"] as const) {
+      expect(messages.id[key]).toBeTruthy();
+      expect(messages.en[key]).toBeTruthy();
+    }
+  });
+
+  test("console roles come from the token's role claims, only when the claim is true", () => {
+    expect(claimedRoles({ validator: true })).toEqual(["validator"]);
+    expect(claimedRoles({ validator: true, org_admin: true, operator: true })).toEqual(["validator", "institution", "ops"]);
+    expect(claimedRoles({ org_admin: true })).toEqual(["institution"]);
+    // A reader's or anonymous reporter's token, a claim that is not `true`, no claims at all: no console.
+    expect(claimedRoles({ sub: "u1", firebase: { sign_in_provider: "anonymous" } })).toEqual([]);
+    expect(claimedRoles({ validator: "true", operator: 1 })).toEqual([]);
+    expect(claimedRoles(null)).toEqual([]);
   });
 });

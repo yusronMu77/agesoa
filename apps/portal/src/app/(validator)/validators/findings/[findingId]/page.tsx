@@ -173,7 +173,7 @@ export default async function ValidateFindingPage({ params, searchParams }: { pa
                       <span className="attach__title">{ref}</span>
                       <span className="attach__meta">{t("decide.evidenceMeta")}</span>
                     </span>
-                    <Link className="attach__open" href={ROUTES.case(f.case_id)}>
+                    <Link className="attach__open" href={ROUTES.validatorFindingCase(f.finding_id)}>
                       {t("decide.open")}
                       <span className="sr-only"> {ref}</span>
                     </Link>

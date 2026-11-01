@@ -75,7 +75,7 @@ describe("legacy paths move to the current routes", () => {
   });
 
   test("every canonical route uses English segments only", () => {
-    const paths = Object.values(ROUTES).map((r) => (typeof r === "function" ? r("X") : r));
+    const paths = Object.values(ROUTES).map((r) => (typeof r === "function" ? r("X", "Y") : r));
     for (const path of paths) {
       expect(path).not.toMatch(/\/(temuan|laporan|validator\/|instansi|masuk|daftar|riwayat|lokasi)\b/);
     }
@@ -99,6 +99,15 @@ describe("surfaces and their sign-in pages", () => {
     expect(surfaceOf(`${ROUTES.institutionLog}/12`)).toBe("institution");
     expect(surfaceOf(ROUTES.log)).toBe("public");
     expect(signInHref(ROUTES.validatorLog)).toBe("/validators/login?next=%2Fvalidators%2Flog");
+  });
+
+  test("a case opens inside the validator and the organization console, so reading it keeps the console", () => {
+    expect(ROUTES.validatorFindingCase("F 1")).toBe("/validators/findings/F%201/case");
+    expect(ROUTES.validatorFindingReport("F-1")).toBe("/validators/findings/F-1/case/report");
+    expect(ROUTES.organizationCase("ORG 1", "C/1")).toBe("/organizations/ORG%201/cases/C%2F1");
+    expect(surfaceOf(ROUTES.organizationCaseReport("ORG-1", "C-1"))).toBe("institution");
+    expect(surfaceOf(ROUTES.validatorFindingCase("F-1"))).toBe("validator");
+    expect(signInHref(ROUTES.validatorFindingCase("F-1"))).toBe("/validators/login?next=%2Fvalidators%2Ffindings%2FF-1%2Fcase");
   });
 
   test("signInHref picks the surface's sign-in page and keeps next", () => {

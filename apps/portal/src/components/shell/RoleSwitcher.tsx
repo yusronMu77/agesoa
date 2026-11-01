@@ -3,12 +3,12 @@
 import { useClerk } from "@clerk/nextjs";
 import { getApps } from "firebase/app";
 import { getAuth, signOut as firebaseSignOut } from "firebase/auth";
-import { Building2, ChevronDown, LogIn, LogOut, Settings, ShieldCheck, UserPlus, Users, type LucideIcon } from "lucide-react";
+import { ArrowRight, Building2, ChevronDown, LogIn, LogOut, Settings, ShieldCheck, UserPlus, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { useT } from "@/lib/i18n/client";
-import { ROLE_ENTRIES, type SwitchRole } from "@/lib/role-switch";
+import { type ConsoleRole, ROLE_ENTRIES, type SwitchRole } from "@/lib/role-switch";
 
 const ROLE_ICON: Record<SwitchRole, LucideIcon> = {
   public: Users,
@@ -20,10 +20,12 @@ const ROLE_ICON: Record<SwitchRole, LucideIcon> = {
 /**
  * The public header's Role chip ("Publik", components.md) as a role switcher: it opens a native popover listing the
  * four surfaces. The public surface is marked as the current one; validator, organisation and operator each offer
- * their own two ways in, sign-in or registration. Works without JavaScript (popover + plain links). A reader signed in
- * on the public surface signs out here (this replaces the former header sign-in button).
+ * their own two ways in, sign-in or registration; a role the session already holds (`roles`) opens its dashboard
+ * instead, so a validator who went to the public pages gets back without signing in again. Works without JavaScript
+ * (popover + plain links). A reader signed in on the public surface signs out here (this replaces the former header
+ * sign-in button).
  */
-export function RoleSwitcher({ signedIn, clerk }: { signedIn: boolean; clerk: boolean }) {
+export function RoleSwitcher({ signedIn, roles = [], clerk }: { signedIn: boolean; roles?: ConsoleRole[]; clerk: boolean }) {
   const t = useT();
   const id = useId();
   const popover = `${id}-roles`;
@@ -51,7 +53,19 @@ export function RoleSwitcher({ signedIn, clerk }: { signedIn: boolean; clerk: bo
                   <Icon aria-hidden size={14} strokeWidth={2} />
                   {role}
                 </span>
-                {entry.signIn && entry.register ? (
+                {entry.home && roles.includes(entry.role as ConsoleRole) ? (
+                  <span className="role-option__actions">
+                    <Link
+                      href={entry.home}
+                      className="button role-dialog__button"
+                      aria-label={t("common.roleSwitch.openAs", { role })}
+                      data-testid={`role-open-${entry.role}`}
+                    >
+                      <ArrowRight aria-hidden size={16} strokeWidth={2} />
+                      {t("common.roleSwitch.open")}
+                    </Link>
+                  </span>
+                ) : entry.signIn && entry.register ? (
                   <span className="role-option__actions">
                     <Link
                       href={entry.signIn}

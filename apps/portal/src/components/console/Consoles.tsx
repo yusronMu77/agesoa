@@ -3,7 +3,7 @@ import { validatorStatusText } from "@/components/ValidatorHeader";
 import { type ConsoleIdentity, type ConsoleNavItem, ConsoleShell } from "@/components/shell/ConsoleShell";
 import { loadConfig } from "@/lib/config";
 import { getT } from "@/lib/i18n/server";
-import type { Organization } from "@/lib/organizations";
+import { isVerifiedAgency, type Organization } from "@/lib/organizations";
 import { ROUTES } from "@/lib/routes";
 import type { ValidatorProfile } from "@/lib/trust";
 
@@ -88,7 +88,7 @@ export async function InstitutionConsole({
   const o = organization;
   const orgHref = o ? ROUTES.organization(o.organization_id) : null;
   const nav: ConsoleNavItem[] = [];
-  if (o && orgHref && o.status === "verified" && o.kind === "agency") {
+  if (o && orgHref && isVerifiedAgency(o)) {
     nav.push(
       { href: ROUTES.organizationHistory(o.organization_id), label: t("console.institution.nav.inbox"), icon: "inbox", current: section === "inbox" },
       { href: orgHref, label: t("console.institution.nav.integration"), icon: "integration", current: section === "integration" },

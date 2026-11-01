@@ -3,6 +3,11 @@
 import type { PortalConfig } from "./config";
 import { type FetchLike, type FetchResult, fetchJson } from "./http";
 
+/** A verified agency: it runs an integration and reads the cases delivered to it (SCR-062). */
+export function isVerifiedAgency(o: Pick<Organization, "kind" | "status">): boolean {
+  return o.kind === "agency" && o.status === "verified";
+}
+
 export interface Organization {
   organization_id: string;
   name: string;

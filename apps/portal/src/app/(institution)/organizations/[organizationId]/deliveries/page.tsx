@@ -6,7 +6,7 @@ import { DeliveryList } from "@/components/console/DeliveryList";
 import { loadConfig } from "@/lib/config";
 import { getT } from "@/lib/i18n/server";
 import { listDeliveries } from "@/lib/institutions";
-import { getOrganization } from "@/lib/organizations";
+import { getOrganization, isVerifiedAgency } from "@/lib/organizations";
 import { ROUTES, signInHref } from "@/lib/routes";
 import { sessionToken } from "@/lib/session";
 
@@ -29,7 +29,7 @@ export default async function DeliveriesPage({ params }: { params: Params }) {
   const config = loadConfig();
   const org = await getOrganization(config, token, id);
   if (!org.ok && org.status === 404) notFound();
-  if (!org.ok || org.data.kind !== "agency" || org.data.status !== "verified") redirect(path);
+  if (!org.ok || !isVerifiedAgency(org.data)) redirect(path);
   const deliveries = await listDeliveries(config, token, id);
   return (
     <InstitutionConsole organization={org.data} section="inbox">
@@ -48,7 +48,7 @@ export default async function DeliveriesPage({ params }: { params: Params }) {
       <section className="card int-card" aria-labelledby="deliveries-heading">
         {deliveries.ok ? (
           deliveries.data.length > 0 ? (
-            <DeliveryList deliveries={deliveries.data} t={t} lang={lang} />
+            <DeliveryList organizationId={id} deliveries={deliveries.data} t={t} lang={lang} />
           ) : (
             <p className="muted" data-testid="deliveries-empty">
               {t("int.historyEmpty")}

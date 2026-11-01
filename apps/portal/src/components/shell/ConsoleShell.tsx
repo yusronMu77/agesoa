@@ -4,6 +4,7 @@ import {
   Building2,
   CircleCheck,
   FileText,
+  Globe,
   Hash,
   Inbox,
   LayoutGrid,
@@ -47,6 +48,7 @@ export const CONSOLE_ICONS = {
   events: Inbox,
   outbox: List,
   demo: GitBranch,
+  public: Globe,
 } satisfies Record<string, LucideIcon>;
 
 export interface ConsoleNavItem {
@@ -131,6 +133,13 @@ export async function ConsoleShell({
                   </li>
                 );
               })}
+              {/* The public pages stay one tap away; their role switcher leads back here ("Open dashboard"). */}
+              <li className="console-nav__public">
+                <Link href={ROUTES.home} data-testid="console-public">
+                  <CONSOLE_ICONS.public aria-hidden size={20} strokeWidth={1.75} />
+                  {t("nav.publicPortal")}
+                </Link>
+              </li>
             </ul>
           </nav>
           {identity || signedIn ? (
