@@ -74,7 +74,8 @@ def test_reports_need_a_token(client):
 def test_intake_that_runs_out_of_time_answers_503_and_logs_the_traceback(client, flaky_intake, caplog):
     report = create(client)
     client.app.state.intake = {
-        k: flaky_intake(p, "hang", "hang", timeout=0.2)[0] for k, p in client.app.state.packs.items()
+        k: flaky_intake(p, "hang", "hang", "hang", hedge_after=0.1, deadline=0.3)[0]
+        for k, p in client.app.state.packs.items()
     }
 
     with caplog.at_level("ERROR", logger="agesoa_ingestion.reports"):

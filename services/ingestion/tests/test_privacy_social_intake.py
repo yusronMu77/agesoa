@@ -197,32 +197,74 @@ def no_retry_pause(monkeypatch):
     monkeypatch.setattr(intake, "RETRY_DELAY_SECONDS", 0)
 
 
-def test_intake_tries_again_when_the_model_does_not_answer_in_time(flaky_intake, no_retry_pause):
+async def test_intake_asks_again_in_parallel_while_a_call_hangs(flaky_intake, no_retry_pause):
     agent, model = flaky_intake(PACK, "hang")
-    draft = asyncio.run(agent.draft("Sorenya 12 siswa diare.", [], RECEIVED))
+    started = time.monotonic()
+    draft = await agent.draft("Sorenya 12 siswa diare.", [], RECEIVED)
+
     assert draft.fields["affected_count"] == 12
-    assert model.calls == 2
+    assert model.calls == 2 and model.answered == [2]
+    assert time.monotonic() - started < 0.2 + 0.5  # the hedge, not a long wait
 
 
-def test_intake_tries_again_after_a_quota_error(flaky_intake, no_retry_pause):
-    agent, model = flaky_intake(PACK, quota_error())
-    assert asyncio.run(agent.draft("Sorenya 12 siswa diare.", [], RECEIVED)).category == "poisoning"
-    assert model.calls == 2
+async def test_a_slow_but_healthy_call_is_not_cut_for_a_new_one(flaky_intake, no_retry_pause):
+    # Everything is slow: the first call answers at 0.5 s, after two more were started; it still wins.
+    agent, model = flaky_intake(PACK, 0.5, 0.5, 0.5, hedge_after=0.2, deadline=3)
+    draft = await agent.draft("Sorenya 12 siswa diare.", [], RECEIVED)
+
+    assert draft.category == "poisoning"
+    assert model.calls == 3 and model.answered == [1]
 
 
-def test_intake_gives_up_after_the_attempts_and_within_their_time(flaky_intake, no_retry_pause):
-    agent, model = flaky_intake(PACK, "hang", "hang", timeout=0.2)
+async def test_a_call_that_answers_before_the_hedge_starts_no_other(flaky_intake, no_retry_pause):
+    agent, model = flaky_intake(PACK, 0.1, hedge_after=0.5)
+    await agent.draft("Sorenya 12 siswa diare.", [], RECEIVED)
+
+    assert model.calls == 1
+
+
+async def test_a_quota_error_is_replaced_at_once_without_waiting_for_the_hedge(flaky_intake, no_retry_pause):
+    agent, model = flaky_intake(PACK, quota_error(), hedge_after=30, deadline=60)
+    started = time.monotonic()
+    draft = await agent.draft("Sorenya 12 siswa diare.", [], RECEIVED)
+
+    assert draft.category == "poisoning"
+    assert model.calls == 2 and time.monotonic() - started < 2
+
+
+async def test_intake_gives_up_at_the_deadline_and_cancels_every_call(flaky_intake, no_retry_pause):
+    agent, model = flaky_intake(PACK, "hang", "hang", "hang", hedge_after=0.1, deadline=0.5)
     started = time.monotonic()
     with pytest.raises(TimeoutError):
-        asyncio.run(agent.draft("Sorenya 12 siswa diare.", [], RECEIVED))
+        await agent.draft("Sorenya 12 siswa diare.", [], RECEIVED)
+
+    assert model.calls == 3 and time.monotonic() - started < 2
+    assert len(asyncio.all_tasks()) == 1  # no call is left running
+
+
+async def test_intake_starts_no_more_calls_than_the_limit(flaky_intake, no_retry_pause):
+    agent, model = flaky_intake(
+        PACK, "hang", "hang", "hang", "hang", hedge_after=0.05, deadline=0.4, max_calls=2
+    )
+    with pytest.raises(TimeoutError):
+        await agent.draft("Sorenya 12 siswa diare.", [], RECEIVED)
+
     assert model.calls == 2
-    assert time.monotonic() - started < 2
 
 
-def test_intake_does_not_repeat_a_failure_that_another_try_cannot_fix(flaky_intake, no_retry_pause):
-    agent, model = flaky_intake(PACK, ValueError("bad output"))
+async def test_intake_fails_with_the_last_error_when_every_call_is_refused(flaky_intake, no_retry_pause):
+    agent, model = flaky_intake(PACK, quota_error(), quota_error(), quota_error())
+    with pytest.raises(errors.ClientError):
+        await agent.draft("Sorenya 12 siswa diare.", [], RECEIVED)
+
+    assert model.calls == 3
+
+
+async def test_intake_does_not_repeat_a_failure_that_another_try_cannot_fix(flaky_intake, no_retry_pause):
+    agent, model = flaky_intake(PACK, ValueError("bad output"), "hang", hedge_after=5)
     with pytest.raises(ValueError, match="bad output"):
-        asyncio.run(agent.draft("Sorenya 12 siswa diare.", [], RECEIVED))
+        await agent.draft("Sorenya 12 siswa diare.", [], RECEIVED)
+
     assert model.calls == 1
 
 

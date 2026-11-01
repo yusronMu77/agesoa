@@ -27,10 +27,14 @@ uv run uvicorn agesoa_ingestion.main:app --port 8001 --reload
 
 ## Agen Intake model limits
 
-`POST /v1/reports/{id}/intake` gives the model `INTAKE_TIMEOUT_SECONDS` (20) per attempt and `INTAKE_ATTEMPTS` (2) attempts
-(the second only after a timeout or a 429/5xx), so it answers within about 41 s, under the 60 s request limit of the
-Cloud Run service. When both attempts fail the endpoint answers 503 and the reporter fills the draft by hand. Keep
-`timeout x attempts` below that limit if you change either value.
+Vertex AI sometimes holds a call for minutes, or answers 429, while the next call answers in a few seconds. So the
+model is not given a short limit and then asked again from the start: a call that is only slow is never cut.
+`POST /v1/reports/{id}/intake` asks the model once; while it has not answered, a second call starts in parallel after
+`INTAKE_HEDGE_AFTER_SECONDS` (10) and a third after another 10, up to `INTAKE_MAX_CALLS` (3). The first answer wins and
+the other calls are cancelled. A call that fails with 429/5xx is replaced after 1 s; any other failure is not repeated.
+After `INTAKE_DEADLINE_SECONDS` (45) the endpoint answers 503 and the reporter fills the draft by hand. Keep the
+deadline below the 60 s request limit of the Cloud Run service. A healthy call takes 2-6 s, so it never starts a second
+one; at most three calls are in flight for one Intake, and only after 10 s without an answer.
 
 ## Contract
 

@@ -62,8 +62,9 @@ def build_app(settings: Settings | None = None) -> FastAPI:
         else IntakeAgent(
             pack,
             settings.intake_model,
-            timeout=settings.intake_timeout_seconds,
-            attempts=settings.intake_attempts,
+            deadline=settings.intake_deadline_seconds,
+            hedge_after=settings.intake_hedge_after_seconds,
+            max_calls=settings.intake_max_calls,
         )
         for pack in app.state.packs.values()
     }

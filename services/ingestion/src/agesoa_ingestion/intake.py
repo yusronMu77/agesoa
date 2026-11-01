@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any, Literal
@@ -145,19 +145,87 @@ def _transient(exc: BaseException) -> bool:
     return isinstance(exc, TimeoutError) or (isinstance(exc, errors.APIError) and exc.code in TRANSIENT_CODES)
 
 
-class IntakeAgent:
-    """`draft` gives the model `timeout` seconds per attempt and tries again once on a timeout or a quota/server error
-    (Vertex AI under load answers 429 or holds a request for minutes). `timeout * attempts` stays under the 60 s
-    request limit of the service; when it runs out the reporter fills the draft by hand."""
+async def hedged[T](
+    call: Callable[[], Awaitable[T]],
+    *,
+    deadline: float,
+    hedge_after: float,
+    max_calls: int,
+) -> T:
+    """The first answer of `call()`, started again in parallel (never instead of) while it has not answered.
 
-    def __init__(self, pack: DomainPack, model: str | BaseLlm, *, timeout: float = 20, attempts: int = 2):
+    A call that is only slow is not cut: it keeps running, and a second one starts `hedge_after` seconds after the
+    previous one, up to `max_calls`; whichever answers first wins and the others are cancelled. A call that fails with
+    a 429/5xx is replaced after RETRY_DELAY_SECONDS without waiting for the hedge. Any other failure is raised at
+    once. After `deadline` seconds in all, TimeoutError (or the last transient failure, when nothing is running)."""
+    loop = asyncio.get_running_loop()
+    end = loop.time() + deadline
+    running: set[asyncio.Task[T]] = set()
+    started, next_start = 0, loop.time()
+    last_error: BaseException | None = None
+    try:
+        while True:
+            now = loop.time()
+            if now >= end:
+                raise TimeoutError(f"no answer within {deadline:g} s") from last_error
+            if started < max_calls and now >= next_start:
+                started += 1
+                running.add(asyncio.ensure_future(call()))
+                next_start = now + hedge_after
+                if started > 1:
+                    log.warning(
+                        "intake model call is slow or failed, asking again in parallel",
+                        extra={"detail": {"call": started, "running": len(running)}},
+                    )
+            wake = end if started >= max_calls else min(end, next_start)
+            if not running:
+                if started >= max_calls:
+                    raise last_error or TimeoutError("no model call left")
+                await asyncio.sleep(max(0.0, wake - loop.time()))
+                continue
+            done, _ = await asyncio.wait(
+                running, timeout=max(0.0, wake - now), return_when=asyncio.FIRST_COMPLETED
+            )
+            for task in done:
+                running.discard(task)
+                if (exc := task.exception()) is None:
+                    if started > 1:
+                        log.info("intake model answered", extra={"detail": {"calls_started": started}})
+                    return task.result()
+                if not _transient(exc):
+                    raise exc
+                last_error = exc
+                log.warning("intake model call failed", extra={"detail": {"error": repr(exc)[:200]}})
+                next_start = min(next_start, loop.time() + RETRY_DELAY_SECONDS)
+    finally:
+        for task in running:
+            task.cancel()
+        await asyncio.gather(*running, return_exceptions=True)
+
+
+class IntakeAgent:
+    """`draft` asks the model and, while it has not answered, asks again in parallel (`hedged`): Vertex AI under load
+    holds a request for minutes or answers 429, and about a quarter of the calls hang for more than 20 s while the
+    next one answers in a few. A slow call is never cut for a new one. `deadline` stays under the 60 s request limit of
+    the service; when it runs out the reporter fills the draft by hand."""
+
+    def __init__(
+        self,
+        pack: DomainPack,
+        model: str | BaseLlm,
+        *,
+        deadline: float = 45,
+        hedge_after: float = 10,
+        max_calls: int = 3,
+    ):
         self.pack = pack
         self.model_name = model if isinstance(model, str) else model.model
         self.schema = output_schema(pack)
         self._model = model
         self._planner = None if isinstance(model, RulesModel) else LOW_THINKING
-        self._timeout = timeout
-        self._attempts = max(1, attempts)
+        self._deadline = deadline
+        self._hedge_after = hedge_after
+        self._max_calls = max(1, max_calls)
 
     @classmethod
     def rules(cls, pack: DomainPack) -> IntakeAgent:
@@ -166,19 +234,12 @@ class IntakeAgent:
     async def draft(
         self, narrative: str | None, media: list[IntakeMedia], received_at: datetime
     ) -> IntakeDraft:
-        for attempt in range(1, self._attempts + 1):
-            try:
-                async with asyncio.timeout(self._timeout):
-                    return await self._draft_once(narrative, media, received_at)
-            except Exception as exc:
-                if attempt == self._attempts or not _transient(exc):
-                    raise
-                log.warning(
-                    "intake model call failed, trying again",
-                    extra={"detail": {"attempt": attempt, "error": repr(exc)[:200]}},
-                )
-                await asyncio.sleep(RETRY_DELAY_SECONDS)
-        raise AssertionError("unreachable")  # the last attempt returns or raises
+        return await hedged(
+            lambda: self._draft_once(narrative, media, received_at),
+            deadline=self._deadline,
+            hedge_after=self._hedge_after,
+            max_calls=self._max_calls,
+        )
 
     async def _draft_once(
         self, narrative: str | None, media: list[IntakeMedia], received_at: datetime
