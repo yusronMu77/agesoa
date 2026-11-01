@@ -10,7 +10,7 @@ Owns the Postgres database `case_audit`; no other service reads it. Generated fr
 | `src/agesoa_case_audit/api.py` | public HTTP API (`/v1/...`) |
 | `src/agesoa_case_audit/cases.py` | case rules as code: grouping, evidence deadline, status cap (pure functions) |
 | `src/agesoa_case_audit/audit.py` | one audit round: hypotheses, witness questions, pattern tests |
-| `src/agesoa_case_audit/rounds.py` | runs the round after the event has committed: one at a time per case, at most `AUDIT_PARALLEL_ROUNDS` (4) on the model at once; no transaction is open while the model answers |
+| `src/agesoa_case_audit/rounds.py` | runs the round after the event or the witness answer has committed: one at a time per case, at most `AUDIT_PARALLEL_ROUNDS` (4) on the model at once; no transaction is open while the model answers |
 | `src/agesoa_case_audit/interview.py` | witness questions (which next, who may answer) and answers |
 | `src/agesoa_case_audit/patterns.py` | pattern tests: fixed metric queries per cause branch, incident stores |
 | `src/agesoa_case_audit/events.py` | handlers for the events routed here by `packages/contracts/events/catalog.json` |

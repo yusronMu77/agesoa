@@ -34,18 +34,21 @@ def build_app(settings: Settings | None = None) -> FastAPI:
     ranker = AuditAgent(
         settings.audit_model, timeout=settings.audit_timeout_seconds, attempts=settings.audit_attempts
     )
+    # One runner for the event handlers and the witness answers: they share the case locks and the model slots.
+    rounds = RoundRunner(settings.audit_parallel_rounds)
     app = create_app(
         settings=settings,
         title="AGESOA case-audit",
         description=DESCRIPTION,
         version=__version__,
         routers=[router],
-        event_handlers=build_handlers(packs, store, ranker, RoundRunner(settings.audit_parallel_rounds)),
+        event_handlers=build_handlers(packs, store, ranker, rounds),
     )
     _keep_sessions_in_database(app, ranker)
     app.state.packs = packs
     app.state.incident_store = store
     app.state.ranker = ranker
+    app.state.rounds = rounds
     return app
 
 

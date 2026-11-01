@@ -11,7 +11,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from agesoa_case_audit.audit import run_round
 from agesoa_case_audit.decisions import decision_event
 from agesoa_case_audit.interview import WITNESS, InterviewError, pending_for_reporter, record_answer
 from agesoa_case_audit.tables import audit_trail, cases, findings
@@ -151,7 +150,8 @@ async def answer_question(
     witness: Annotated[Principal, Depends(authenticate)],
 ) -> AuditStep:
     at = utc_now()
-    async with request.app.state.db.transaction() as session:
+    state = request.app.state
+    async with state.db.transaction() as session:
         case = (await session.execute(select(cases).where(cases.c.id == case_id))).mappings().one_or_none()
         if case is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "no such question for this reporter")
@@ -183,13 +183,11 @@ async def answer_question(
                 status_label="alleged",
             ),
         )
-        await run_round(
-            session,
-            case_id=case_id,
-            pack=request.app.state.packs[case["domain"]],
-            store=request.app.state.incident_store,
-            at=at,
-            ranker=request.app.state.ranker,
-        )
-    background.add_task(request.app.state.outbox.dispatch)
+        pack = state.packs[case["domain"]]
+    # The answer is committed; the round that follows waits on the model with no transaction open, like the round
+    # of an event. A round that fails is logged and leaves the answer stored.
+    await state.rounds.run(
+        state.db, case_id=case_id, pack=pack, store=state.incident_store, at=at, ranker=state.ranker
+    )
+    background.add_task(state.outbox.dispatch)
     return AuditStep(**step)

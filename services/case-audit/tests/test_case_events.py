@@ -2,9 +2,12 @@
 (TEST_DATABASE_URL, isolated schema); skipped otherwise."""
 
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import pytest
+from agesoa_case_audit import rounds
+from agesoa_case_audit.agent import LexicalRanker
 from agesoa_case_audit.main import build_app
 from agesoa_case_audit.settings import Settings
 from agesoa_contracts import validate_event
@@ -355,6 +358,58 @@ def test_an_answer_is_stored_in_the_trail_as_the_reporters_own_word(client):
     assert [s["content"]["question_id"] for s in steps_of(client, "answer")] == [question["question_id"]]
     assert question["question_id"] not in [q["question_id"] for q in my_questions(client)]
     assert "audit.answer_received" in actions(client)
+
+
+def test_an_answer_is_committed_before_the_round_waits_on_the_model(client):
+    deliver(client, witness_report())
+    question = my_questions(client)[0]
+    db = client.app.state.db
+    open_now, open_when_asked = {"n": 0}, []
+    original = db.transaction
+
+    @asynccontextmanager
+    async def counted():
+        async with original() as session:
+            open_now["n"] += 1
+            try:
+                yield session
+            finally:
+                open_now["n"] -= 1
+
+    class Probe(LexicalRanker):
+        async def rank(self, *args, **kwargs):
+            open_when_asked.append(open_now["n"])
+            return await super().rank(*args, **kwargs)
+
+    db.transaction = counted
+    client.app.state.ranker = Probe()
+
+    assert answer(client, question).status_code == 202
+    assert open_when_asked == [0]  # the answer was stored and committed, no transaction waits on the model
+    assert open_now["n"] == 0
+    assert [s["content"]["question_id"] for s in steps_of(client, "answer")] == [question["question_id"]]
+
+
+def test_a_round_that_fails_leaves_the_answer_stored(client, monkeypatch):
+    deliver(client, witness_report())
+    question = my_questions(client)[0]
+
+    async def broken(*args, **kwargs):
+        raise RuntimeError("database went away")
+
+    monkeypatch.setattr(rounds, "run_round_detached", broken)
+
+    response = answer(client, question)
+
+    assert response.status_code == 202, response.text
+    assert [s["content"]["question_id"] for s in steps_of(client, "answer")] == [question["question_id"]]
+    assert "audit.answer_received" in actions(client)
+    assert answer(client, question).status_code == 409  # it was stored, not rolled back with the round
+
+
+def test_the_answers_and_the_events_share_one_round_runner(client):
+    assert client.app.state.rounds is not None
+    assert client.app.state.rounds._model._value == client.app.state.settings.audit_parallel_rounds
 
 
 def test_answering_keeps_two_questions_waiting_until_the_limit(client):
