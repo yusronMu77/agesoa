@@ -105,8 +105,8 @@ attestation. The package is `com.agesoa.witness`; `versionName` is the tag witho
 `MAJOR*10000 + MINOR*100 + PATCH`, so every release installs over the previous one. The release key is registered
 for the package in Android developer verification: on certified phones in Indonesia and Singapore an APK from an
 unverified developer does not install outside `adb`. The key never enters the repository; the workflow header lists
-the secrets and variables it needs. A manual run of the workflow in a private repository builds an unsigned APK as
-a workflow artifact, to check the build without releasing.
+the secrets and variables it needs. The workflow runs in the public repository only: the private development
+repository never builds or stores an APK.
 
 Local release build (unsigned unless `WITNESS_KEYSTORE_FILE` and the matching passwords and alias are set):
 

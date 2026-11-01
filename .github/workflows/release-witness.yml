@@ -1,10 +1,10 @@
 # Builds the Witness Android app (APK) for the demo environment and attaches it to a GitHub Release of the tag.
-# The release is made in the public repository only: publish-public.yml pushes every version tag there with a deploy
-# key (a push that triggers workflows), and this workflow, published with the code, builds exactly that tag. In this
-# repository a tag push does nothing; a manual run builds an unsigned APK as a workflow artifact to check the build.
-# Setup (both repositories, values from `tofu output` in infra/tofu/envs/demo; the web API key is public by design):
+# The APK is built in the public repository only: publish-public.yml pushes every version tag there with a deploy key
+# (a push that triggers workflows), and this workflow, published with the code, builds exactly that tag. In this
+# (private) repository the job never runs, so no APK is ever built or stored here.
+# Setup (public repository; values from `tofu output` in infra/tofu/envs/demo, the web API key is public by design):
 #   variables WITNESS_INGESTION_URL, WITNESS_CASE_AUDIT_URL, WITNESS_FIREBASE_PROJECT_ID, WITNESS_FIREBASE_API_KEY
-# Setup (public repository only): the release key, registered for com.agesoa.witness in Android developer verification
+#   the release key, registered for com.agesoa.witness in Android developer verification:
 #   secrets   WITNESS_KEYSTORE_B64 (base64 of the keystore), WITNESS_KEYSTORE_PASSWORD, WITNESS_KEY_PASSWORD
 #   variables WITNESS_KEY_ALIAS (not a secret: a secret's value is masked everywhere in the logs),
 #             WITNESS_CERT_SHA256 (SHA-256 of the registered signing certificate; a release signed otherwise fails)
@@ -13,11 +13,6 @@ name: release-witness
 on:
   push:
     tags: ["v*"]
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "versionName of the test build (MAJOR.MINOR.PATCH)"
-        default: "0.0.0"
 
 permissions:
   contents: read
@@ -28,26 +23,22 @@ concurrency:
 
 jobs:
   apk:
-    if: github.event_name == 'workflow_dispatch' || !github.event.repository.private
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write # the release
       id-token: write # build provenance attestation
       attestations: write
-    env:
-      RELEASE: ${{ github.event_name == 'push' }}
     steps:
       - uses: actions/checkout@v7
 
       - name: Version from the tag
         id: version
-        env:
-          INPUT: ${{ inputs.version }}
         run: |
           set -eu
-          if [ "$RELEASE" = true ]; then version="${GITHUB_REF_NAME#v}"; else version="$INPUT"; fi
+          version="${GITHUB_REF_NAME#v}"
           if ! echo "$version" | grep -qE '^[0-9]+\.[0-9]{1,2}\.[0-9]{1,2}$'; then
-            echo "::error::version must be MAJOR.MINOR.PATCH (tag vMAJOR.MINOR.PATCH), got '$version'"; exit 1
+            echo "::error::tag must be vMAJOR.MINOR.PATCH, got '$GITHUB_REF_NAME'"; exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
@@ -80,13 +71,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Release key
-        if: env.RELEASE == 'true'
         env:
           KEYSTORE_B64: ${{ secrets.WITNESS_KEYSTORE_B64 }}
         run: |
           set -eu
           if [ -z "$KEYSTORE_B64" ]; then echo "::error::secret WITNESS_KEYSTORE_B64 is not set"; exit 1; fi
-          keystore="$RUNNER_TEMP/witness-release.jks"
+          keystore="$RUNNER_TEMP/release-key.p12"
           install -m 600 /dev/null "$keystore"
           printf '%s' "$KEYSTORE_B64" | base64 -d > "$keystore"
           echo "WITNESS_KEYSTORE_FILE=$keystore" >> "$GITHUB_ENV"
@@ -107,33 +97,26 @@ jobs:
           EXPECTED_CERT: ${{ vars.WITNESS_CERT_SHA256 }}
         run: |
           set -eu
-          rm -f "${WITNESS_KEYSTORE_FILE:-/nonexistent}"
-          out=apps/witness/android/app/build/outputs/apk/release
+          rm -f "$WITNESS_KEYSTORE_FILE"
           apk="$RUNNER_TEMP/agesoa-witness-$VERSION.apk"
-          if [ "$RELEASE" = true ]; then
-            cp "$out/app-release.apk" "$apk"
-            apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
-            "$apksigner" verify --verbose --print-certs "$apk" | tee "$RUNNER_TEMP/certs.txt"
-            cert=$(grep -m1 'certificate SHA-256 digest' "$RUNNER_TEMP/certs.txt" | awk '{print $NF}')
-            expected=$(echo "$EXPECTED_CERT" | tr -d ':' | tr 'A-F' 'a-f')
-            if [ -z "$expected" ] || [ "$cert" != "$expected" ]; then
-              echo "::error::APK certificate $cert is not the registered one (variable WITNESS_CERT_SHA256)"; exit 1
-            fi
-            echo "cert=$cert" >> "$GITHUB_OUTPUT"
-          else
-            cp "$out/app-release-unsigned.apk" "$apk"
+          cp apps/witness/android/app/build/outputs/apk/release/app-release.apk "$apk"
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
+          "$apksigner" verify --verbose --print-certs "$apk" | tee "$RUNNER_TEMP/certs.txt"
+          cert=$(grep -m1 'certificate SHA-256 digest' "$RUNNER_TEMP/certs.txt" | awk '{print $NF}')
+          expected=$(echo "$EXPECTED_CERT" | tr -d ':' | tr 'A-F' 'a-f')
+          if [ -z "$expected" ] || [ "$cert" != "$expected" ]; then
+            echo "::error::APK certificate $cert is not the registered one (variable WITNESS_CERT_SHA256)"; exit 1
           fi
           (cd "$RUNNER_TEMP" && sha256sum "$(basename "$apk")" > "$(basename "$apk").sha256")
           echo "path=$apk" >> "$GITHUB_OUTPUT"
           echo "sha256=$(cut -d' ' -f1 "$apk.sha256")" >> "$GITHUB_OUTPUT"
+          echo "cert=$cert" >> "$GITHUB_OUTPUT"
 
       - uses: actions/attest-build-provenance@v4
-        if: env.RELEASE == 'true'
         with:
           subject-path: ${{ steps.apk.outputs.path }}
 
       - name: Publish the release
-        if: env.RELEASE == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -167,10 +150,3 @@ jobs:
               --title "AGESOA $GITHUB_REF_NAME" --notes-file "$notes"
           fi
           echo "Released $(basename "$APK") ($SHA256) on $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$GITHUB_REF_NAME" >> "$GITHUB_STEP_SUMMARY"
-
-      - uses: actions/upload-artifact@v7
-        if: env.RELEASE != 'true'
-        with:
-          name: agesoa-witness-${{ steps.version.outputs.version }}-unsigned
-          path: ${{ steps.apk.outputs.path }}
-          retention-days: 7
