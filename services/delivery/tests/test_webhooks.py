@@ -108,6 +108,15 @@ def sent(client, event_type):
     return [e for e in client.app.state.test_publisher.sent if e["type"] == f"agesoa.{event_type}"]
 
 
+def sent_at_least(client, event_type, count, timeout=5):
+    """The outbox publishes an event right after the delivery's status is committed: a test that has seen the status
+    waits for the event instead of counting it at once."""
+    deadline = time.monotonic() + timeout
+    while len(found := sent(client, event_type)) < count and time.monotonic() < deadline:
+        time.sleep(0.05)
+    return found
+
+
 def subscribe(client, headers=ADMIN, org=AGENCY, **extra):
     return client.put(
         f"/v1/institutions/{org}/subscription",
@@ -275,9 +284,9 @@ def test_delivered_report_then_follow_up_and_right_of_reply(client, receiver):
     assert body["case"]["validations"] == ["Journalist, Sukamaju", "Nutritionist"]
     assert body["case"]["url"] == "https://portal.example/cases/CASE-DEMO-1"
     assert body["case"]["root_causes"][0]["evidence"] == ["E-1"]
-    (dikirim,) = sent(client, "audit_report.sent")
+    (dikirim,) = sent_at_least(client, "audit_report.sent", 1)
     validate_event(dikirim)
-    actions = [e["data"]["action"] for e in sent(client, "decision.recorded")]
+    actions = [e["data"]["action"] for e in sent_at_least(client, "decision.recorded", 1)]
     assert actions == ["audit_report.delivered"]
     assert client.post("/internal/demo/audit-reports", json=REPORT).status_code == 409
 
@@ -372,7 +381,7 @@ def test_paused_webhook_holds_reports_then_resume_sends_them_in_order(client, re
     secret_ok = [c.headers["x-agesoa-signature"].startswith("v1=") for c in receiver.calls]
     assert all(secret_ok)
     assert {c.headers["x-agesoa-event-id"] for c in receiver.calls} == {r["event_id"] for r in rows}
-    assert len(sent(client, "audit_report.sent")) == 3
+    assert len(sent_at_least(client, "audit_report.sent", 3)) == 3
 
 
 def test_pause_and_resume_are_idempotent_and_admin_only(client, receiver):
