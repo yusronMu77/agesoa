@@ -77,6 +77,15 @@ the storage and media permissions, so a library update cannot add them back. Che
 Firebase Auth inside the app uses `initializeAuth` with IndexedDB persistence (`src/firebase.ts`); the browser
 uses `getAuth`.
 
+The launcher icon is the AGESOA mark from the design repository's `assets/logo-agesoa-source.png` (the wordmark is
+left out: it cannot be read at 48 dp), on the logo's cream background. `scripts/app_icon.py` writes the adaptive
+foreground (mark inside the 66 dp safe circle), the background colour and the legacy square and round icons for
+every density. Run it again when the logo changes:
+
+```sh
+uv run --no-project --with pillow python scripts/app_icon.py <path>/agesoa-uiux/assets/logo-agesoa-source.png
+```
+
 Build (JDK 21 for Gradle 8.14, Android SDK with platform 36; `android/local.properties` holds `sdk.dir` and is
 ignored by git):
 
