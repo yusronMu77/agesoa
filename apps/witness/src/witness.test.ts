@@ -16,6 +16,7 @@ import {
 } from "./device";
 import { appendDictated, dictationSupported, startDictation } from "./dictation";
 import { errorText } from "./errors";
+import { withoutDenied } from "./state";
 import { fieldsFromQuery, parseShare, receive } from "./share";
 import {
   LANGUAGE_CATALOG,
@@ -711,5 +712,13 @@ describe("anonymous sign-in", () => {
     expect(new Set(tokens)).toEqual(new Set(["token-of-uid-1"]));
     expect(await anonymousIdToken(config)).toBe("token-of-uid-1"); // later calls reuse the persisted user
     expect(signIns).toBe(1);
+  });
+});
+
+describe("refused permissions", () => {
+  test("a permission that works again leaves the refused list; the others stay", () => {
+    expect(withoutDenied(["microphone", "camera"], "microphone")).toEqual(["camera"]);
+    expect(withoutDenied(["camera"], "geolocation")).toEqual(["camera"]);
+    expect(withoutDenied([], "microphone")).toEqual([]);
   });
 });

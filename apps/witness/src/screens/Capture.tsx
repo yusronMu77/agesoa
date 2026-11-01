@@ -21,7 +21,7 @@ import {
 import { isNative } from "../native";
 import type { CaptureState, EvidenceItem } from "../state";
 import { errorText } from "../errors";
-import { newItem } from "../state";
+import { newItem, withoutDenied } from "../state";
 
 const DENIED_TEXT = {
   camera: "TXT-WIT-048",
@@ -93,6 +93,9 @@ export function Capture({
   const markDenied = (kind: Capability) => {
     if (!denied.includes(kind)) update({ denied: [...denied, kind] });
   };
+  const clearDenied = (kind: Capability) => {
+    if (denied.includes(kind)) update({ denied: withoutDenied(denied, kind) });
+  };
   const addItems = (items: EvidenceItem[]) => update({ items: [...state.items, ...items] });
 
   /** The way out of a failed location: the district picker, focused. */
@@ -122,12 +125,22 @@ export function Capture({
         setLocalError(null);
         if (isNative()) {
           void takeNativePhoto().then(
-            (blob) => blob && addItems([newItem("photo", blob, `photo-${state.items.length + 1}.jpg`)]),
+            (blob) => {
+              if (!blob) return;
+              clearDenied("camera");
+              addItems([newItem("photo", blob, `photo-${state.items.length + 1}.jpg`)]);
+            },
             (err) => failed("camera", err),
           );
           return;
         }
-        void openCamera().then(setStream, (err) => failed("camera", err));
+        void openCamera().then(
+          (opened) => {
+            clearDenied("camera");
+            setStream(opened);
+          },
+          (err) => failed("camera", err),
+        );
       },
       () => markDenied("camera"),
     );
@@ -145,7 +158,13 @@ export function Capture({
       "microphone",
       () => {
         setLocalError(null);
-        void startRecording().then(setRecording, (err) => failed("microphone", err));
+        void startRecording().then(
+          (started) => {
+            clearDenied("microphone");
+            setRecording(started);
+          },
+          (err) => failed("microphone", err),
+        );
       },
       () => {
         markDenied("microphone");
@@ -193,6 +212,7 @@ export function Capture({
         setLocalError(null);
         try {
           const { lat, lon } = await approximatePosition();
+          clearDenied("geolocation");
           update({ district: await client.resolveDistrict(lat, lon) });
         } catch (err) {
           if (err instanceof ApiError && err.status === 404) {

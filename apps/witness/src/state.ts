@@ -38,6 +38,11 @@ export function newItem(kind: EvidenceKind, blob: Blob, name: string): EvidenceI
   return { key: crypto.randomUUID(), kind, blob, name, previewUrl: URL.createObjectURL(blob) };
 }
 
+/** A permission that works now is no longer refused: its notice goes away. */
+export function withoutDenied(denied: Capability[], kind: Capability): Capability[] {
+  return denied.filter((k) => k !== kind);
+}
+
 export function hasContent(state: CaptureState): boolean {
   return state.narrative.trim() !== "" || state.items.length > 0 || state.sharedPost !== null;
 }
