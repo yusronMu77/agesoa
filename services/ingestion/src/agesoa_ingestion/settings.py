@@ -19,6 +19,15 @@ class Settings(ServiceSettings):
         "rules",
         description="Model of Agen Intake: a Gemini model id, or `rules` (rule-based fallback, local or demo_mode).",
     )
+    intake_timeout_seconds: float = Field(
+        20,
+        gt=0,
+        description="Seconds Agen Intake gives the model per attempt. With `intake_attempts` it must stay under the "
+        "60 s request limit of the service; when it runs out the reporter fills the draft by hand.",
+    )
+    intake_attempts: int = Field(
+        2, ge=1, description="Model calls per Intake (one retry on a timeout or 429/5xx)."
+    )
     media_bucket: str | None = Field(None, description="GCS bucket for evidence; unset = local folder.")
     media_dir: Path = LOCAL_MEDIA_DIR
 

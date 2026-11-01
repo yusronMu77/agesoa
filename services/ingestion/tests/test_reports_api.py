@@ -71,6 +71,24 @@ def test_reports_need_a_token(client):
     assert client.get("/v1/regions/districts").status_code == 401
 
 
+def test_intake_that_runs_out_of_time_answers_503_and_logs_the_traceback(client, flaky_intake, caplog):
+    report = create(client)
+    client.app.state.intake = {
+        k: flaky_intake(p, "hang", "hang", timeout=0.2)[0] for k, p in client.app.state.packs.items()
+    }
+
+    with caplog.at_level("ERROR", logger="agesoa_ingestion.reports"):
+        response = client.post(f"/v1/reports/{report['id']}/intake", headers=ME)
+
+    assert response.status_code == 503
+    failed = [r for r in caplog.records if r.getMessage() == "intake failed"]
+    assert failed
+    assert failed[0].exc_info and failed[0].exc_info[0] is TimeoutError
+    assert (
+        client.get(f"/v1/reports/{report['id']}", headers=ME).json()["intake"] is None
+    )  # the reporter fills it in
+
+
 def test_custom_text_fields_survive_reload_intake_and_submission(client):
     report = create(client, domain="general", narrative="qa-custom: Akses jalan fiktif terhalang.")
     path = f"/v1/reports/{report['id']}"

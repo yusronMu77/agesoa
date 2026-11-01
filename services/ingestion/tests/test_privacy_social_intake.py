@@ -3,16 +3,18 @@
 import asyncio
 import io
 import struct
+import time
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
-from agesoa_ingestion import intake_rules
+from agesoa_ingestion import intake, intake_rules
 from agesoa_ingestion.intake import IntakeAgent, coerce_fields
 from agesoa_ingestion.privacy import EvidenceRejected, clean_evidence
 from agesoa_ingestion.social import InvalidPostUrl, canonical_post, mask_handles
 from agesoa_packs import load_pack
+from google.genai import errors
 from PIL import Image
 
 PACK = load_pack(Path(__file__).resolve().parents[3] / "domain-packs" / "mbg")
@@ -184,6 +186,49 @@ def test_intake_agent_runs_through_adk_and_checks_the_output():
     assert draft.category == "poisoning"
     assert draft.fields == {"symptoms": ["diarrhea", "fever"], "affected_count": 12}
     assert draft.model == "rules"
+
+
+def quota_error() -> errors.ClientError:
+    return errors.ClientError(429, {"error": {"code": 429, "status": "RESOURCE_EXHAUSTED"}})
+
+
+@pytest.fixture
+def no_retry_pause(monkeypatch):
+    monkeypatch.setattr(intake, "RETRY_DELAY_SECONDS", 0)
+
+
+def test_intake_tries_again_when_the_model_does_not_answer_in_time(flaky_intake, no_retry_pause):
+    agent, model = flaky_intake(PACK, "hang")
+    draft = asyncio.run(agent.draft("Sorenya 12 siswa diare.", [], RECEIVED))
+    assert draft.fields["affected_count"] == 12
+    assert model.calls == 2
+
+
+def test_intake_tries_again_after_a_quota_error(flaky_intake, no_retry_pause):
+    agent, model = flaky_intake(PACK, quota_error())
+    assert asyncio.run(agent.draft("Sorenya 12 siswa diare.", [], RECEIVED)).category == "poisoning"
+    assert model.calls == 2
+
+
+def test_intake_gives_up_after_the_attempts_and_within_their_time(flaky_intake, no_retry_pause):
+    agent, model = flaky_intake(PACK, "hang", "hang", timeout=0.2)
+    started = time.monotonic()
+    with pytest.raises(TimeoutError):
+        asyncio.run(agent.draft("Sorenya 12 siswa diare.", [], RECEIVED))
+    assert model.calls == 2
+    assert time.monotonic() - started < 2
+
+
+def test_intake_does_not_repeat_a_failure_that_another_try_cannot_fix(flaky_intake, no_retry_pause):
+    agent, model = flaky_intake(PACK, ValueError("bad output"))
+    with pytest.raises(ValueError, match="bad output"):
+        asyncio.run(agent.draft("Sorenya 12 siswa diare.", [], RECEIVED))
+    assert model.calls == 1
+
+
+def test_only_a_gemini_model_gets_the_low_thinking_planner():
+    assert IntakeAgent.rules(PACK)._planner is None
+    assert IntakeAgent(PACK, "gemini-3.8-flash")._planner is intake.LOW_THINKING
 
 
 def test_model_output_with_unknown_fields_or_bad_types_is_cleaned():

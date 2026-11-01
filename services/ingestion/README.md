@@ -25,6 +25,13 @@ uv run alembic upgrade head
 uv run uvicorn agesoa_ingestion.main:app --port 8001 --reload
 ```
 
+## Agen Intake model limits
+
+`POST /v1/reports/{id}/intake` gives the model `INTAKE_TIMEOUT_SECONDS` (20) per attempt and `INTAKE_ATTEMPTS` (2) attempts
+(the second only after a timeout or a 429/5xx), so it answers within about 41 s, under the 60 s request limit of the
+Cloud Run service. When both attempts fail the endpoint answers 503 and the reporter fills the draft by hand. Keep
+`timeout x attempts` below that limit if you change either value.
+
 ## Contract
 
 ```powershell

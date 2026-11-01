@@ -9,6 +9,7 @@ Rules (e.g. the 4-hour rule) are never asked of the model; they are computed by 
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from collections.abc import AsyncGenerator
@@ -21,14 +22,19 @@ from google.adk.agents import LlmAgent
 from google.adk.models.base_llm import BaseLlm
 from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
+from google.adk.planners import BuiltInPlanner
 from google.adk.runners import InMemoryRunner
-from google.genai import types
+from google.genai import errors, types
 from pydantic import BaseModel, Field, create_model
 
 from agesoa_ingestion import intake_rules
 
 log = logging.getLogger(__name__)
 APP_NAME = "agesoa-intake"
+TRANSIENT_CODES = frozenset({429, 500, 502, 503, 504})
+RETRY_DELAY_SECONDS = 1.0
+# Extracting a few fields is not a reasoning task: low thinking took the model call from 4.5-9 s to 2-5 s.
+LOW_THINKING = BuiltInPlanner(thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel.LOW))
 _PY_TYPES: dict[str, Any] = {
     "string": str,
     "string_list": list[str],
@@ -135,12 +141,23 @@ def _report_part(llm_request: LlmRequest) -> dict[str, Any]:
     raise ValueError("intake request has no report part")
 
 
+def _transient(exc: BaseException) -> bool:
+    return isinstance(exc, TimeoutError) or (isinstance(exc, errors.APIError) and exc.code in TRANSIENT_CODES)
+
+
 class IntakeAgent:
-    def __init__(self, pack: DomainPack, model: str | BaseLlm):
+    """`draft` gives the model `timeout` seconds per attempt and tries again once on a timeout or a quota/server error
+    (Vertex AI under load answers 429 or holds a request for minutes). `timeout * attempts` stays under the 60 s
+    request limit of the service; when it runs out the reporter fills the draft by hand."""
+
+    def __init__(self, pack: DomainPack, model: str | BaseLlm, *, timeout: float = 20, attempts: int = 2):
         self.pack = pack
         self.model_name = model if isinstance(model, str) else model.model
         self.schema = output_schema(pack)
         self._model = model
+        self._planner = None if isinstance(model, RulesModel) else LOW_THINKING
+        self._timeout = timeout
+        self._attempts = max(1, attempts)
 
     @classmethod
     def rules(cls, pack: DomainPack) -> IntakeAgent:
@@ -149,11 +166,29 @@ class IntakeAgent:
     async def draft(
         self, narrative: str | None, media: list[IntakeMedia], received_at: datetime
     ) -> IntakeDraft:
+        for attempt in range(1, self._attempts + 1):
+            try:
+                async with asyncio.timeout(self._timeout):
+                    return await self._draft_once(narrative, media, received_at)
+            except Exception as exc:
+                if attempt == self._attempts or not _transient(exc):
+                    raise
+                log.warning(
+                    "intake model call failed, trying again",
+                    extra={"detail": {"attempt": attempt, "error": repr(exc)[:200]}},
+                )
+                await asyncio.sleep(RETRY_DELAY_SECONDS)
+        raise AssertionError("unreachable")  # the last attempt returns or raises
+
+    async def _draft_once(
+        self, narrative: str | None, media: list[IntakeMedia], received_at: datetime
+    ) -> IntakeDraft:
         agent = LlmAgent(
             name="intake",
             model=self._model,
             instruction=_instruction(self.pack, received_at),
             output_schema=self.schema,
+            planner=self._planner,
             disallow_transfer_to_parent=True,
             disallow_transfer_to_peers=True,
         )

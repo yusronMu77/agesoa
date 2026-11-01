@@ -59,7 +59,12 @@ def build_app(settings: Settings | None = None) -> FastAPI:
     app.state.intake = {
         pack.id: IntakeAgent.rules(pack)
         if settings.intake_model == "rules"
-        else IntakeAgent(pack, settings.intake_model)
+        else IntakeAgent(
+            pack,
+            settings.intake_model,
+            timeout=settings.intake_timeout_seconds,
+            attempts=settings.intake_attempts,
+        )
         for pack in app.state.packs.values()
     }
     return app
