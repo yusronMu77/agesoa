@@ -50,7 +50,7 @@ TOP_K = 5  # findings handed to the agent (and the most an answer can cite)
 EXTRACTIVE_ITEMS = 3  # findings named in the extractive answer
 MAX_ANSWER_CHARS = 800
 TIMEOUT_SECONDS = 20  # a reader is waiting: a slow model falls back instead
-MIN_PARTIAL = 4  # shortest term matched as part of a longer word (racun / keracunan)
+MIN_PARTIAL = 4  # shortest term matched as part of a longer word (lapor / pelaporan)
 EXTRACTIVE = "extractive"
 
 STOPWORDS = frozenset(
@@ -237,7 +237,7 @@ def _matches(term: str, words: frozenset[str]) -> bool:
         return True
     if len(term) < MIN_PARTIAL:
         return False
-    # Indonesian affixes: "racun" finds "keracunan", "keracunan" finds "racun".
+    # Indonesian affixes: "lapor" finds "pelaporan", "pelaporan" finds "lapor".
     return any(len(w) >= MIN_PARTIAL and (term in w or w in term) for w in words)
 
 
