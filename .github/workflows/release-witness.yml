@@ -5,8 +5,9 @@
 # Setup (both repositories, values from `tofu output` in infra/tofu/envs/demo; the web API key is public by design):
 #   variables WITNESS_INGESTION_URL, WITNESS_CASE_AUDIT_URL, WITNESS_FIREBASE_PROJECT_ID, WITNESS_FIREBASE_API_KEY
 # Setup (public repository only): the release key, registered for com.agesoa.witness in Android developer verification
-#   secrets  WITNESS_KEYSTORE_B64 (base64 of the .jks), WITNESS_KEYSTORE_PASSWORD, WITNESS_KEY_ALIAS, WITNESS_KEY_PASSWORD
-#   variable WITNESS_CERT_SHA256 (SHA-256 of the registered signing certificate; a release signed otherwise fails)
+#   secrets   WITNESS_KEYSTORE_B64 (base64 of the keystore), WITNESS_KEYSTORE_PASSWORD, WITNESS_KEY_PASSWORD
+#   variables WITNESS_KEY_ALIAS (not a secret: a secret's value is masked everywhere in the logs),
+#             WITNESS_CERT_SHA256 (SHA-256 of the registered signing certificate; a release signed otherwise fails)
 name: release-witness
 
 on:
@@ -94,7 +95,7 @@ jobs:
         working-directory: apps/witness/android
         env:
           WITNESS_KEYSTORE_PASSWORD: ${{ secrets.WITNESS_KEYSTORE_PASSWORD }}
-          WITNESS_KEY_ALIAS: ${{ secrets.WITNESS_KEY_ALIAS }}
+          WITNESS_KEY_ALIAS: ${{ vars.WITNESS_KEY_ALIAS }}
           WITNESS_KEY_PASSWORD: ${{ secrets.WITNESS_KEY_PASSWORD }}
           VERSION: ${{ steps.version.outputs.version }}
         run: ./gradlew --no-daemon assembleRelease "-PwitnessVersion=$VERSION"
