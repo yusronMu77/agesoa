@@ -1,8 +1,9 @@
 """Bounded model calls: each attempt gets a time limit, and a timeout or a quota/server error is tried once more.
 
 Vertex AI under load answers 429 or holds a request for minutes, and the genai client neither times out nor retries on
-its own. About a quarter of the calls hang for more than 20 s while the next one answers in a few seconds, so a short
-limit with a second attempt beats one long wait. Anything else (bad output, a bug) is not repeated.
+its own. About a quarter of the calls hang for more than 20 s while the next one answers in a few seconds, but the model
+can also be slow everywhere, and then a short limit would cut every attempt. The limit is therefore long (45 s at the
+callers), so only a call that is really stuck is asked again. Anything else (bad output, a bug) is not repeated.
 """
 
 from __future__ import annotations

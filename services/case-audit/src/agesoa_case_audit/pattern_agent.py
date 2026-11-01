@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 APP_NAME = "agesoa-audit-patterns"
 USER_ID = "audit"
 TOOL = "check_pattern"
-TIMEOUT_SECONDS = 25  # per attempt; with `ATTEMPTS` about 51 s in all (`model_call`)
+TIMEOUT_SECONDS = 45  # per attempt; with `ATTEMPTS` about 91 s in all (`model_call`)
 ATTEMPTS = 2
 MAX_CALLS = 12  # tool calls honoured in one round
 
